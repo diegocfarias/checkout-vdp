@@ -26,7 +26,26 @@ class OrderCheckoutController extends Controller
             return response()->view('checkout.not-found', [], 404);
         }
 
-        return view('checkout.show', [
+        return view('checkout.resumo', [
+            'order' => $order,
+            'outbound' => $order->flights->firstWhere('direction', 'outbound'),
+            'inbound' => $order->flights->firstWhere('direction', 'inbound'),
+        ]);
+    }
+
+    public function showPassengers(string $token)
+    {
+        $order = Order::with('flights')
+            ->where('token', $token)
+            ->pending()
+            ->notExpired()
+            ->first();
+
+        if (! $order) {
+            return response()->view('checkout.not-found', [], 404);
+        }
+
+        return view('checkout.passengers', [
             'order' => $order,
             'outbound' => $order->flights->firstWhere('direction', 'outbound'),
             'inbound' => $order->flights->firstWhere('direction', 'inbound'),
