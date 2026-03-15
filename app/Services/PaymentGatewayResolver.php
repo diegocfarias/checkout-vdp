@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Services;
+
+use App\Contracts\PaymentGatewayInterface;
+use App\Models\OrderPayment;
+use InvalidArgumentException;
+
+class PaymentGatewayResolver
+{
+    public function __construct(
+        private AppMaxService $appMaxService,
+        private C6BankService $c6BankService,
+    ) {}
+
+    /**
+     * Retorna o gateway configurado (AppMax ou C6Bank).
+     */
+    public function resolve(): PaymentGatewayInterface
+    {
+        $gateway = config('services.payment.gateway', 'c6bank');
+
+        return match ($gateway) {
+            'appmax' => $this->appMaxService,
+            'c6bank' => $this->c6BankService,
+            default => throw new InvalidArgumentException("Gateway de pagamento inválido: {$gateway}"),
+        };
+    }
+
+    /**
+     * Retorna o gateway apropriado para um pagamento existente (baseado no gateway usado).
+     */
+    public function resolveForPayment(OrderPayment $payment): PaymentGatewayInterface
+    {
+        return match ($payment->gateway) {
+            'appmax' => $this->appMaxService,
+            'c6bank' => $this->c6BankService,
+            default => throw new InvalidArgumentException("Gateway de pagamento desconhecido: {$payment->gateway}"),
+        };
+    }
+}

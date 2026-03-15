@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Order;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreOrderPassengersRequest extends FormRequest
@@ -54,14 +55,25 @@ class StoreOrderPassengersRequest extends FormRequest
             }]
             : ['required', 'string', 'max:50'];
 
-        return [
+        $paymentMethod = $this->input('payment_method', 'pix');
+        $isCreditCard = $paymentMethod === 'credit_card';
+
+        return array_merge([
             'passengers' => 'required|array',
             'passengers.*.full_name' => 'required|string|max:255',
             'passengers.*.document' => $documentRule,
             'passengers.*.birth_date' => 'required|date',
             'passengers.*.email' => 'required|email|max:255',
             'passengers.*.phone' => 'required|string|max:30',
-        ];
+            'payment_method' => ['required', 'string', Rule::in(['credit_card', 'boleto', 'pix'])],
+        ], $isCreditCard ? [
+            'card_number' => ['required', 'string', 'min:13'],
+            'card_cvv' => ['required', 'string', 'min:2', 'max:4'],
+            'card_month' => ['required', 'integer', 'min:1', 'max:12'],
+            'card_year' => ['required', 'integer', 'min:' . (int) date('y'), 'max:' . ((int) date('y') + 15)],
+            'card_name' => ['required', 'string', 'min:2', 'max:255'],
+            'installments' => ['required', 'integer', 'min:1', 'max:12'],
+        ] : []);
     }
 
     public function messages(): array
@@ -69,6 +81,10 @@ class StoreOrderPassengersRequest extends FormRequest
         return [
             'passengers.*.document.regex' => 'Para voos dentro do Mercosul, informe um CPF válido (ex: 123.456.789-00).',
             'passengers.*.birth_date.date' => 'Informe uma data de nascimento válida (dd/mm/aaaa).',
+            'payment_method.in' => 'Selecione uma forma de pagamento válida.',
+            'card_number.required' => 'Informe o número do cartão.',
+            'card_cvv.required' => 'Informe o CVV do cartão.',
+            'card_name.required' => 'Informe o nome impresso no cartão.',
         ];
     }
 

@@ -207,6 +207,79 @@
                 </details>
             @endfor
 
+            {{-- Forma de pagamento --}}
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800 mb-3">Forma de pagamento</h3>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
+                        <input type="radio" name="payment_method" value="credit_card" {{ old('payment_method', 'pix') === 'credit_card' ? 'checked' : '' }} class="payment-method-radio">
+                        <span class="font-medium">Cartão de crédito</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
+                        <input type="radio" name="payment_method" value="boleto" {{ old('payment_method') === 'boleto' ? 'checked' : '' }} class="payment-method-radio">
+                        <span class="font-medium">Boleto bancário</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
+                        <input type="radio" name="payment_method" value="pix" {{ old('payment_method', 'pix') === 'pix' ? 'checked' : '' }} class="payment-method-radio">
+                        <span class="font-medium">PIX</span>
+                    </label>
+                </div>
+
+                {{-- Campos do cartão (exibidos quando cartão selecionado) --}}
+                <div id="card-fields" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hidden">
+                    <h4 class="text-sm font-medium text-gray-700 mb-3">Dados do cartão</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label for="card_number" class="block text-sm font-medium text-gray-700 mb-1">Número do cartão</label>
+                            <input type="text" name="card_number" id="card_number" maxlength="19" placeholder="0000 0000 0000 0000"
+                                   inputmode="numeric" data-mask="card" data-validate="card"
+                                   class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                   value="{{ old('card_number') }}">
+                            <span class="error-msg"></span>
+                        </div>
+                        <div>
+                            <label for="card_name" class="block text-sm font-medium text-gray-700 mb-1">Nome no cartão</label>
+                            <input type="text" name="card_name" id="card_name" placeholder="Como está no cartão"
+                                   class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                   value="{{ old('card_name') }}">
+                            <span class="error-msg"></span>
+                        </div>
+                        <div>
+                            <label for="card_cvv" class="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                            <input type="text" name="card_cvv" id="card_cvv" maxlength="4" placeholder="123"
+                                   inputmode="numeric" data-mask="cvv" data-validate="cvv"
+                                   class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                   value="{{ old('card_cvv') }}">
+                            <span class="error-msg"></span>
+                        </div>
+                        <div>
+                            <label for="card_month" class="block text-sm font-medium text-gray-700 mb-1">Validade (mês)</label>
+                            <select name="card_month" id="card_month" class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                @for($m = 1; $m <= 12; $m++)
+                                    <option value="{{ $m }}" {{ old('card_month', date('n')) == $m ? 'selected' : '' }}>{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                        <div>
+                            <label for="card_year" class="block text-sm font-medium text-gray-700 mb-1">Validade (ano)</label>
+                            <select name="card_year" id="card_year" class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                @for($y = date('y'); $y <= date('y') + 15; $y++)
+                                    <option value="{{ $y }}" {{ old('card_year') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                        <div>
+                            <label for="installments" class="block text-sm font-medium text-gray-700 mb-1">Parcelas</label>
+                            <select name="installments" id="installments" class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                @for($i = 1; $i <= 12; $i++)
+                                    <option value="{{ $i }}" {{ old('installments', 1) == $i ? 'selected' : '' }}>{{ $i }}x</option>
+                                @endfor
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <button type="submit"
                     class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 mt-4">
                 Confirmar Passageiros
@@ -239,6 +312,38 @@
     </style>
 
     <script>
+        // Toggle campos do cartão conforme forma de pagamento
+        const cardFields = document.getElementById('card-fields');
+        const paymentRadios = document.querySelectorAll('.payment-method-radio');
+        const cardInputs = document.querySelectorAll('.card-input');
+
+        function toggleCardFields() {
+            const selected = document.querySelector('input[name="payment_method"]:checked');
+            if (selected && selected.value === 'credit_card') {
+                cardFields.classList.remove('hidden');
+                cardInputs.forEach(i => { i.required = true; });
+            } else {
+                cardFields.classList.add('hidden');
+                cardInputs.forEach(i => { i.required = false; });
+            }
+        }
+
+        paymentRadios.forEach(r => r.addEventListener('change', toggleCardFields));
+        toggleCardFields();
+
+        document.querySelectorAll('[data-mask="card"]').forEach(input => {
+            input.addEventListener('input', function () {
+                let v = this.value.replace(/\D/g, '').slice(0, 16);
+                this.value = v.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+            });
+        });
+
+        document.querySelectorAll('[data-mask="cvv"]').forEach(input => {
+            input.addEventListener('input', function () {
+                this.value = this.value.replace(/\D/g, '').slice(0, 4);
+            });
+        });
+
         document.querySelectorAll('.passenger-accordion').forEach(el => {
             el.addEventListener('toggle', function () {
                 if (this.open) {
@@ -327,6 +432,12 @@
                     case 'phone':
                         if (val.replace(/\D/g, '').length < 8) error = 'Telefone inválido (mín. 8 dígitos).';
                         break;
+                    case 'card':
+                        if (val.replace(/\D/g, '').length < 13) error = 'Número do cartão inválido.';
+                        break;
+                    case 'cvv':
+                        if (val.length < 2 || val.length > 4) error = 'CVV inválido (2 a 4 dígitos).';
+                        break;
                     case 'required':
                         break;
                 }
@@ -356,7 +467,8 @@
         });
 
         document.querySelector('form').addEventListener('submit', function (e) {
-            const inputs = this.querySelectorAll('.v-input');
+            const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';
+            const inputs = this.querySelectorAll(isCreditCard ? '.v-input' : '.v-input:not(.card-input)');
             let firstInvalid = null;
 
             inputs.forEach(input => {
@@ -372,6 +484,8 @@
                     document.querySelectorAll('.passenger-accordion').forEach(el => el.removeAttribute('open'));
                     accordion.setAttribute('open', '');
                 }
+                const cardFieldsEl = firstInvalid.closest('#card-fields');
+                if (cardFieldsEl) cardFieldsEl.classList.remove('hidden');
                 firstInvalid.focus();
             }
         });

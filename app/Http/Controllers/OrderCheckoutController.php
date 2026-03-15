@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreOrderPassengersRequest;
 use App\Models\Order;
 use App\Services\BotpressNotifier;
-use App\Services\C6BankService;
+use App\Services\PaymentGatewayResolver;
 use Illuminate\Support\Facades\Log;
 
 class OrderCheckoutController extends Controller
 {
     public function __construct(
-        private C6BankService $c6BankService,
+        private PaymentGatewayResolver $paymentResolver,
     ) {}
 
     public function show(string $token)
@@ -45,8 +45,14 @@ class OrderCheckoutController extends Controller
             $order->passengers()->create($passenger);
         }
 
+        $paymentMethod = $request->input('payment_method', 'pix');
+        $cardData = $paymentMethod === 'credit_card'
+            ? $request->only(['card_number', 'card_cvv', 'card_month', 'card_year', 'card_name', 'installments'])
+            : null;
+
         try {
-            $payment = $this->c6BankService->createCheckout($order->load('flights'));
+            $gateway = $this->paymentResolver->resolve();
+            $payment = $gateway->createCheckout($order->load('flights'), $paymentMethod, $cardData);
 
             $order->update(['status' => 'awaiting_payment']);
 
@@ -54,10 +60,14 @@ class OrderCheckoutController extends Controller
                 return redirect()->away($payment->payment_url);
             }
 
-            return view('checkout.awaiting-payment', ['order' => $order]);
+            return view('checkout.awaiting-payment', [
+                'order' => $order,
+                'payment' => $payment,
+            ]);
         } catch (\Throwable $e) {
-            Log::error('Checkout: falha ao criar pagamento C6Bank', [
+            Log::error('Checkout: falha ao criar pagamento', [
                 'order_id' => $order->id,
+                'gateway' => config('services.payment.gateway'),
                 'error' => $e->getMessage(),
             ]);
 
@@ -88,9 +98,9 @@ class OrderCheckoutController extends Controller
         }
 
         try {
-            $status = $this->c6BankService->getCheckoutStatus($payment);
+            $status = $this->paymentResolver->resolveForPayment($payment)->getCheckoutStatus($payment);
         } catch (\Throwable $e) {
-            Log::error('Checkout: falha ao consultar status C6Bank', [
+            Log::error('Checkout: falha ao consultar status', [
                 'order_id' => $order->id,
                 'payment_id' => $payment->id,
                 'error' => $e->getMessage(),

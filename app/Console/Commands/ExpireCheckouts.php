@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Order;
 use App\Services\BotpressNotifier;
-use App\Services\C6BankService;
+use App\Services\PaymentGatewayResolver;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -14,7 +14,7 @@ class ExpireCheckouts extends Command
 
     protected $description = 'Cancela checkouts de pedidos expirados e notifica o usuário';
 
-    public function handle(C6BankService $c6BankService): int
+    public function handle(PaymentGatewayResolver $paymentResolver): int
     {
         $orders = Order::awaitingPayment()
             ->where('expires_at', '<', now())
@@ -33,7 +33,7 @@ class ExpireCheckouts extends Command
                 $payment = $order->latestPayment;
 
                 if ($payment && $payment->status === 'pending') {
-                    $c6BankService->cancelCheckout($payment);
+                    $paymentResolver->resolveForPayment($payment)->cancelCheckout($payment);
                 }
 
                 $order->update(['status' => 'cancelled']);

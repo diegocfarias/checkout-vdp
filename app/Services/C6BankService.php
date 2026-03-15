@@ -2,12 +2,13 @@
 
 namespace App\Services;
 
+use App\Contracts\PaymentGatewayInterface;
 use App\Models\Order;
 use App\Models\OrderPayment;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class C6BankService
+class C6BankService implements PaymentGatewayInterface
 {
     private string $baseUrl;
     private string $clientId;
@@ -24,8 +25,10 @@ class C6BankService
 
     /**
      * Cria um checkout na C6Bank e retorna o OrderPayment criado.
+     *
+     * @param  array<string, mixed>|null  $cardData  Ignorado pelo C6Bank (checkout hospedado)
      */
-    public function createCheckout(Order $order): OrderPayment
+    public function createCheckout(Order $order, ?string $paymentMethod = null, ?array $cardData = null): OrderPayment
     {
         $amount = $this->calculateOrderAmount($order);
 

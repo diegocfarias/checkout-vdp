@@ -54,4 +54,14 @@ return [
         'api_key' => env('C6BANK_API_KEY'),
     ],
 
+    'payment' => [
+        'gateway' => env('PAYMENT_GATEWAY', 'c6bank'),
+    ],
+
+    'appmax' => [
+        'base_url' => env('APPMAX_BASE_URL', 'https://homolog.sandboxappmax.com.br'),
+        'access_token' => env('APPMAX_ACCESS_TOKEN'),
+        'default_payment_method' => env('APPMAX_DEFAULT_PAYMENT_METHOD', 'pix'),
+    ],
+
 ];
