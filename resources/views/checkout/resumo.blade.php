@@ -83,16 +83,28 @@
         @endif
 
         @php
-            $orderTotal = 0;
+            $subtotalPassagens = 0;
+            $subtotalTaxas = 0;
             foreach ($order->flights ?? [] as $flight) {
-                $orderTotal += (float) ($flight->money_price ?? 0);
-                $orderTotal += (float) ($flight->tax ?? 0);
+                $subtotalPassagens += (float) ($flight->money_price ?? 0);
+                $subtotalTaxas += (float) ($flight->tax ?? 0);
             }
+            $orderTotal = $subtotalPassagens + $subtotalTaxas;
         @endphp
 
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t border-gray-200">
-            <p class="text-gray-600">Valor total</p>
-            <p class="text-2xl font-bold text-gray-900">R$ {{ number_format($orderTotal, 2, ',', '.') }}</p>
+        <div class="pt-4 border-t border-gray-200 space-y-2">
+            <div class="flex justify-between text-gray-600">
+                <span>Passagens</span>
+                <span>R$ {{ number_format($subtotalPassagens, 2, ',', '.') }}</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>Taxas</span>
+                <span>R$ {{ number_format($subtotalTaxas, 2, ',', '.') }}</span>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-gray-100">
+                <span class="font-medium text-gray-700">Valor total</span>
+                <span class="text-2xl font-bold text-gray-900">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
+            </div>
         </div>
 
         <a href="{{ route('checkout.passengers', $order->token) }}"
