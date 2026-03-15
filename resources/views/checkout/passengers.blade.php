@@ -4,11 +4,13 @@
 
 @section('content')
     @php
-        $orderTotal = 0;
+        $subtotalPassagens = 0;
+        $subtotalTaxas = 0;
         foreach ($order->flights ?? [] as $flight) {
-            $orderTotal += (float) ($flight->money_price ?? 0);
-            $orderTotal += (float) ($flight->tax ?? 0);
+            $subtotalPassagens += (float) ($flight->money_price ?? 0);
+            $subtotalTaxas += (float) ($flight->tax ?? 0);
         }
+        $orderTotal = $subtotalPassagens + $subtotalTaxas;
     @endphp
 
     <div class="pb-32">
@@ -193,25 +195,12 @@
     {{-- Rodapé fixo --}}
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-10">
         <div class="max-w-4xl mx-auto px-4 py-4">
-            <details class="group mb-3">
-                <summary class="cursor-pointer text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1">
-                    <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                    Ver detalhes da compra
-                </summary>
-                <div class="mt-2 pt-2 border-t border-gray-100 text-sm text-gray-600 space-y-1">
-                    @foreach($order->flights ?? [] as $flight)
-                        @php
-                            $flightTotal = (float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0);
-                        @endphp
-                        <div class="flex justify-between">
-                            <span>{{ $flight->direction === 'outbound' ? 'Ida' : 'Volta' }} {{ $flight->departure_location }} → {{ $flight->arrival_location }}</span>
-                            <span>R$ {{ number_format($flightTotal, 2, ',', '.') }}</span>
-                        </div>
-                    @endforeach
-                </div>
-            </details>
+            <button type="button" id="btn-detalhes-compra" class="mb-3 text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Ver detalhes da compra
+            </button>
             <div class="flex items-center justify-between gap-4">
                 <div>
                     <p class="text-sm text-gray-500">Total</p>
@@ -225,6 +214,91 @@
         </div>
     </div>
 
+    {{-- Modal Detalhes da compra --}}
+    <div id="modal-detalhes" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+        <div class="fixed inset-0 bg-black/50" id="modal-backdrop"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                    <h3 id="modal-titulo" class="text-lg font-semibold text-gray-800">Detalhes da compra</h3>
+                    <button type="button" id="modal-fechar" class="p-1 text-gray-400 hover:text-gray-600 rounded">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    @if($outbound)
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">IDA</span>
+                                <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
+                                @if($outbound->flight_number)
+                                    <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
+                                @endif
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <div>
+                                    <p class="font-medium text-gray-800">{{ $outbound->departure_location }}</p>
+                                    <p class="text-gray-500">{{ $outbound->departure_time }}</p>
+                                </div>
+                                <div class="flex-1 mx-3 text-center">
+                                    @if($outbound->total_flight_duration)
+                                        <span class="text-gray-400">{{ $outbound->total_flight_duration }}</span>
+                                    @endif
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-medium text-gray-800">{{ $outbound->arrival_location }}</p>
+                                    <p class="text-gray-500">{{ $outbound->arrival_time }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                    @if($inbound)
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">VOLTA</span>
+                                <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
+                                @if($inbound->flight_number)
+                                    <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
+                                @endif
+                            </div>
+                            <div class="flex items-center justify-between text-sm">
+                                <div>
+                                    <p class="font-medium text-gray-800">{{ $inbound->departure_location }}</p>
+                                    <p class="text-gray-500">{{ $inbound->departure_time }}</p>
+                                </div>
+                                <div class="flex-1 mx-3 text-center">
+                                    @if($inbound->total_flight_duration)
+                                        <span class="text-gray-400">{{ $inbound->total_flight_duration }}</span>
+                                    @endif
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-medium text-gray-800">{{ $inbound->arrival_location }}</p>
+                                    <p class="text-gray-500">{{ $inbound->arrival_time }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                    <div class="pt-4 border-t border-gray-200 space-y-2">
+                        <div class="flex justify-between text-gray-600">
+                            <span>Passagens</span>
+                            <span>R$ {{ number_format($subtotalPassagens, 2, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600">
+                            <span>Taxas</span>
+                            <span>R$ {{ number_format($subtotalTaxas, 2, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-gray-100">
+                            <span class="font-medium text-gray-700">Total</span>
+                            <span class="text-xl font-bold text-gray-900">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <style>
         details[open] .details-open-rotate { transform: rotate(180deg); }
         .input-error { border-color: #ef4444 !important; }
@@ -234,6 +308,29 @@
     </style>
 
     <script>
+        const modal = document.getElementById('modal-detalhes');
+        const btnDetalhes = document.getElementById('btn-detalhes-compra');
+        const modalFechar = document.getElementById('modal-fechar');
+        const modalBackdrop = document.getElementById('modal-backdrop');
+
+        function abrirModal() {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function fecharModal() {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        btnDetalhes.addEventListener('click', abrirModal);
+        modalFechar.addEventListener('click', fecharModal);
+        modalBackdrop.addEventListener('click', fecharModal);
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) fecharModal();
+        });
+
         const cardFields = document.getElementById('card-fields');
         const paymentRadios = document.querySelectorAll('.payment-method-radio');
         const cardInputs = document.querySelectorAll('.card-input');
