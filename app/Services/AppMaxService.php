@@ -17,7 +17,7 @@ class AppMaxService implements PaymentGatewayInterface
     public function __construct()
     {
         $this->baseUrl = rtrim(config('services.appmax.base_url', ''), '/');
-        $this->accessToken = config('services.appmax.access_token', '');
+        $this->accessToken = (string) (config('services.appmax.access_token') ?? '');
     }
 
     /**
@@ -177,18 +177,19 @@ class AppMaxService implements PaymentGatewayInterface
         };
 
         if ($paymentMethod === 'credit_card' || $paymentMethod === 'credit-card') {
-            if (! $cardData || empty($cardData['number'] ?? null)) {
+            $cardNumber = $cardData['card_number'] ?? $cardData['number'] ?? null;
+            if (! $cardData || empty($cardNumber)) {
                 throw new \RuntimeException('Dados do cartão são obrigatórios para pagamento com cartão de crédito.');
             }
 
             $basePayload['payment'] = [
                 'CreditCard' => [
-                    'number' => preg_replace('/\D/', '', $cardData['number'] ?? ''),
-                    'cvv' => $cardData['cvv'] ?? '',
-                    'month' => (int) ($cardData['month'] ?? 1),
-                    'year' => (int) ($cardData['year'] ?? date('y')),
+                    'number' => preg_replace('/\D/', '', $cardNumber),
+                    'cvv' => $cardData['card_cvv'] ?? $cardData['cvv'] ?? '',
+                    'month' => (int) ($cardData['card_month'] ?? $cardData['month'] ?? 1),
+                    'year' => (int) ($cardData['card_year'] ?? $cardData['year'] ?? date('y')),
                     'document_number' => $documentFormatted,
-                    'name' => $cardData['name'] ?? $firstPassenger->full_name,
+                    'name' => $cardData['card_name'] ?? $cardData['name'] ?? $firstPassenger->full_name,
                     'installments' => (int) ($cardData['installments'] ?? 1),
                     'soft_descriptor' => config('app.name', 'VDP') ?: 'VDP',
                 ],

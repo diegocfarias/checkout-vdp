@@ -42,17 +42,6 @@
                         @endif
                     </div>
                 </div>
-                <div class="mt-3 flex gap-4 text-sm text-gray-500">
-                    @if($outbound->miles_price)
-                        <span>{{ number_format((int) $outbound->miles_price, 0, ',', '.') }} milhas</span>
-                    @endif
-                    @if($outbound->money_price)
-                        <span>R$ {{ $outbound->money_price }}</span>
-                    @endif
-                    @if($outbound->tax)
-                        <span>Taxa: R$ {{ $outbound->tax }}</span>
-                    @endif
-                </div>
             </div>
         @endif
 
@@ -91,19 +80,25 @@
                         @endif
                     </div>
                 </div>
-                <div class="mt-3 flex gap-4 text-sm text-gray-500">
-                    @if($inbound->miles_price)
-                        <span>{{ number_format((int) $inbound->miles_price, 0, ',', '.') }} milhas</span>
-                    @endif
-                    @if($inbound->money_price)
-                        <span>R$ {{ $inbound->money_price }}</span>
-                    @endif
-                    @if($inbound->tax)
-                        <span>Taxa: R$ {{ $inbound->tax }}</span>
-                    @endif
-                </div>
             </div>
         @endif
+
+        @php
+            $orderTotal = 0;
+            foreach ($order->flights ?? [] as $flight) {
+                $orderTotal += (float) ($flight->money_price ?? 0);
+                $orderTotal += (float) ($flight->tax ?? 0);
+            }
+        @endphp
+
+        {{-- Resumo do pedido --}}
+        <div class="mt-6 bg-white rounded-lg shadow p-5 border border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">Resumo do pedido</h3>
+            <div class="flex justify-between items-center text-gray-700">
+                <span>Total</span>
+                <span class="text-xl font-bold text-gray-900">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
+            </div>
+        </div>
     </div>
 
     {{-- Passenger form --}}
@@ -212,16 +207,12 @@
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Forma de pagamento</h3>
                 <div class="space-y-3">
                     <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
-                        <input type="radio" name="payment_method" value="credit_card" {{ old('payment_method', 'pix') === 'credit_card' ? 'checked' : '' }} class="payment-method-radio">
-                        <span class="font-medium">Cartão de crédito</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
-                        <input type="radio" name="payment_method" value="boleto" {{ old('payment_method') === 'boleto' ? 'checked' : '' }} class="payment-method-radio">
-                        <span class="font-medium">Boleto bancário</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
                         <input type="radio" name="payment_method" value="pix" {{ old('payment_method', 'pix') === 'pix' ? 'checked' : '' }} class="payment-method-radio">
                         <span class="font-medium">PIX</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
+                        <input type="radio" name="payment_method" value="credit_card" {{ old('payment_method') === 'credit_card' ? 'checked' : '' }} class="payment-method-radio">
+                        <span class="font-medium">Cartão de crédito</span>
                     </label>
                 </div>
 
@@ -244,29 +235,30 @@
                                    value="{{ old('card_name') }}">
                             <span class="error-msg"></span>
                         </div>
-                        <div>
-                            <label for="card_cvv" class="block text-sm font-medium text-gray-700 mb-1">CVV</label>
-                            <input type="text" name="card_cvv" id="card_cvv" maxlength="4" placeholder="123"
-                                   inputmode="numeric" data-mask="cvv" data-validate="cvv"
-                                   class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
-                                   value="{{ old('card_cvv') }}">
-                            <span class="error-msg"></span>
-                        </div>
-                        <div>
-                            <label for="card_month" class="block text-sm font-medium text-gray-700 mb-1">Validade (mês)</label>
-                            <select name="card_month" id="card_month" class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
-                                @for($m = 1; $m <= 12; $m++)
-                                    <option value="{{ $m }}" {{ old('card_month', date('n')) == $m ? 'selected' : '' }}>{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}</option>
-                                @endfor
-                            </select>
-                        </div>
-                        <div>
-                            <label for="card_year" class="block text-sm font-medium text-gray-700 mb-1">Validade (ano)</label>
-                            <select name="card_year" id="card_year" class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
-                                @for($y = date('y'); $y <= date('y') + 15; $y++)
-                                    <option value="{{ $y }}" {{ old('card_year') == $y ? 'selected' : '' }}>{{ $y }}</option>
-                                @endfor
-                            </select>
+                        <div class="md:col-span-2 card-validity-row flex flex-wrap gap-4">
+                            <div class="card-validity-group">
+                                <label for="card_month" class="block text-sm font-medium text-gray-700 mb-1">Validade</label>
+                                <div class="flex items-center gap-1">
+                                    <input type="text" name="card_month" id="card_month" maxlength="2" placeholder="MM"
+                                           inputmode="numeric" data-mask="card-month" data-validate="card-month"
+                                           class="card-input v-input w-14 text-center rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-2 py-2 border"
+                                           value="{{ old('card_month') }}">
+                                    <span class="text-gray-500 font-medium">/</span>
+                                    <input type="text" name="card_year" id="card_year" maxlength="2" placeholder="AA"
+                                           inputmode="numeric" data-mask="card-year" data-validate="card-year"
+                                           class="card-input v-input w-14 text-center rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-2 py-2 border"
+                                           value="{{ old('card_year') }}">
+                                </div>
+                                <span class="error-msg card-validity-error"></span>
+                            </div>
+                            <div>
+                                <label for="card_cvv" class="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                                <input type="text" name="card_cvv" id="card_cvv" maxlength="4" placeholder="123"
+                                       inputmode="numeric" data-mask="cvv" data-validate="cvv"
+                                       class="card-input v-input w-20 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-2 py-2 border"
+                                       value="{{ old('card_cvv') }}">
+                                <span class="error-msg"></span>
+                            </div>
                         </div>
                         <div>
                             <label for="installments" class="block text-sm font-medium text-gray-700 mb-1">Parcelas</label>
@@ -281,8 +273,8 @@
             </div>
 
             <button type="submit"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 mt-4">
-                Confirmar Passageiros
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 mt-4">
+                Finalizar Compra
             </button>
         </form>
     </div>
@@ -344,6 +336,21 @@
             });
         });
 
+        document.querySelectorAll('[data-mask="card-month"]').forEach(input => {
+            input.addEventListener('input', function () {
+                let v = this.value.replace(/\D/g, '').slice(0, 2);
+                if (v.length === 2 && parseInt(v) > 12) v = '12';
+                if (v.length === 2 && parseInt(v) < 1) v = '01';
+                this.value = v;
+            });
+        });
+
+        document.querySelectorAll('[data-mask="card-year"]').forEach(input => {
+            input.addEventListener('input', function () {
+                this.value = this.value.replace(/\D/g, '').slice(0, 2);
+            });
+        });
+
         document.querySelectorAll('.passenger-accordion').forEach(el => {
             el.addEventListener('toggle', function () {
                 if (this.open) {
@@ -397,7 +404,14 @@
         function validateField(input) {
             const type = input.dataset.validate;
             const val = input.value.trim();
-            const span = input.nextElementSibling;
+            let span = input.nextElementSibling;
+            if (type === 'card-month' || type === 'card-year') {
+                const row = input.closest('.card-validity-row');
+                span = row ? row.querySelector('.card-validity-error') : span;
+            }
+            if (!span || !span.classList.contains('error-msg')) {
+                span = input.parentElement?.querySelector('.error-msg') || span;
+            }
             let error = '';
 
             if (!val) {
@@ -437,6 +451,18 @@
                         break;
                     case 'cvv':
                         if (val.length < 2 || val.length > 4) error = 'CVV inválido (2 a 4 dígitos).';
+                        break;
+                    case 'card-month':
+                        if (val.length !== 2) error = 'Mês inválido (MM).';
+                        else if (parseInt(val) < 1 || parseInt(val) > 12) error = 'Mês deve ser entre 01 e 12.';
+                        break;
+                    case 'card-year':
+                        if (val.length !== 2) error = 'Ano inválido (AA).';
+                        else {
+                            const y = parseInt(val);
+                            const currentYear = new Date().getFullYear() % 100;
+                            if (y < currentYear || y > currentYear + 15) error = 'Ano inválido.';
+                        }
                         break;
                     case 'required':
                         break;

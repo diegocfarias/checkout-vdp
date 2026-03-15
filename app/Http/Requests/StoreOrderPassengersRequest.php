@@ -65,7 +65,7 @@ class StoreOrderPassengersRequest extends FormRequest
             'passengers.*.birth_date' => 'required|date',
             'passengers.*.email' => 'required|email|max:255',
             'passengers.*.phone' => 'required|string|max:30',
-            'payment_method' => ['required', 'string', Rule::in(['credit_card', 'boleto', 'pix'])],
+            'payment_method' => ['required', 'string', Rule::in(['credit_card', 'pix'])],
         ], $isCreditCard ? [
             'card_number' => ['required', 'string', 'min:13'],
             'card_cvv' => ['required', 'string', 'min:2', 'max:4'],
