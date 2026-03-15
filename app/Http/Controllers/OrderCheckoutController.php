@@ -45,10 +45,16 @@ class OrderCheckoutController extends Controller
             return response()->view('checkout.not-found', [], 404);
         }
 
+        $cardConfig = config('checkout.card', []);
+        $maxInstallments = $cardConfig['max_installments'] ?? 12;
+        $interestRates = $cardConfig['interest_rates'] ?? [];
+
         return view('checkout.passengers', [
             'order' => $order,
             'outbound' => $order->flights->firstWhere('direction', 'outbound'),
             'inbound' => $order->flights->firstWhere('direction', 'inbound'),
+            'maxInstallments' => $maxInstallments,
+            'interestRates' => $interestRates,
         ]);
     }
 

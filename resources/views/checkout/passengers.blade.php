@@ -180,8 +180,15 @@
                             <div>
                                 <label for="installments" class="block text-sm font-medium text-gray-700 mb-1">Parcelas</label>
                                 <select name="installments" id="installments" class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
-                                    @for($i = 1; $i <= 12; $i++)
-                                        <option value="{{ $i }}" {{ old('installments', 1) == $i ? 'selected' : '' }}>{{ $i }}x</option>
+                                    @for($i = 1; $i <= ($maxInstallments ?? 12); $i++)
+                                        @php
+                                            $rate = $interestRates[$i] ?? 0;
+                                            $totalComJuros = $orderTotal * (1 + $rate / 100);
+                                            $valorParcela = $totalComJuros / $i;
+                                        @endphp
+                                        <option value="{{ $i }}" data-total="{{ number_format($totalComJuros, 2, '.', '') }}" {{ old('installments', 1) == $i ? 'selected' : '' }}>
+                                            {{ $i }}x de R$ {{ number_format($valorParcela, 2, ',', '.') }}{{ $rate > 0 ? ' com juros' : ' sem juros' }}
+                                        </option>
                                     @endfor
                                 </select>
                             </div>
@@ -204,7 +211,7 @@
             <div class="flex items-center justify-between gap-4">
                 <div>
                     <p class="text-sm text-gray-500">Total</p>
-                    <p class="text-xl font-bold text-gray-900">R$ {{ number_format($orderTotal, 2, ',', '.') }}</p>
+                    <p id="footer-total" class="text-xl font-bold text-gray-900" data-base="{{ $orderTotal }}">R$ {{ number_format($orderTotal, 2, ',', '.') }}</p>
                 </div>
                 <button type="submit" form="checkout-form"
                         class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
@@ -344,10 +351,30 @@
                 cardFields.classList.add('hidden');
                 cardInputs.forEach(i => { i.required = false; });
             }
+            atualizarTotalFooter();
+        }
+
+        function atualizarTotalFooter() {
+            const footerTotal = document.getElementById('footer-total');
+            const baseTotal = parseFloat(footerTotal.dataset.base || 0);
+            const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';
+
+            if (!isCreditCard) {
+                footerTotal.textContent = 'R$ ' + baseTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return;
+            }
+
+            const installmentsSelect = document.getElementById('installments');
+            const selectedOption = installmentsSelect?.options[installmentsSelect.selectedIndex];
+            const totalComJuros = selectedOption?.dataset.total ? parseFloat(selectedOption.dataset.total) : baseTotal;
+
+            footerTotal.textContent = 'R$ ' + totalComJuros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         paymentRadios.forEach(r => r.addEventListener('change', toggleCardFields));
         toggleCardFields();
+
+        document.getElementById('installments')?.addEventListener('change', atualizarTotalFooter);
 
         document.querySelectorAll('[data-mask="card"]').forEach(input => {
             input.addEventListener('input', function () {

@@ -72,7 +72,7 @@ class StoreOrderPassengersRequest extends FormRequest
             'card_month' => ['required', 'integer', 'min:1', 'max:12'],
             'card_year' => ['required', 'integer', 'min:' . (int) date('y'), 'max:' . ((int) date('y') + 15)],
             'card_name' => ['required', 'string', 'min:2', 'max:255'],
-            'installments' => ['required', 'integer', 'min:1', 'max:12'],
+            'installments' => ['required', 'integer', 'min:1', 'max:' . (config('checkout.card.max_installments', 12))],
         ] : []);
     }
 
