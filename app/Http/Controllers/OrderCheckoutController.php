@@ -75,6 +75,20 @@ class OrderCheckoutController extends Controller
             ? $request->only(['card_number', 'card_cvv', 'card_month', 'card_year', 'card_name', 'installments'])
             : null;
 
+        if ($cardData && config('services.payment.gateway') === 'appmax') {
+            $installments = (int) ($cardData['installments'] ?? 1);
+            if ($installments > 1) {
+                $order->load('flights');
+                $baseTotal = 0;
+                foreach ($order->flights as $flight) {
+                    $baseTotal += (float) ($flight->money_price ?? 0);
+                    $baseTotal += (float) ($flight->tax ?? 0);
+                }
+                $rate = config("checkout.card.interest_rates.{$installments}", 0);
+                $cardData['total_with_interest'] = round($baseTotal * (1 + $rate / 100), 2);
+            }
+        }
+
         try {
             $gateway = $this->paymentResolver->resolve();
             $payment = $gateway->createCheckout($order->load('flights'), $paymentMethod, $cardData);

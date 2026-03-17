@@ -23,7 +23,7 @@ class AppMaxService implements PaymentGatewayInterface
     /**
      * Cria um checkout na AppMax (Customer → Order → Payment) e retorna o OrderPayment criado.
      *
-     * @param  array<string, mixed>|null  $cardData  Dados do cartão quando paymentMethod = credit_card
+     * @param  array<string, mixed>|null  $cardData  Dados do cartão quando paymentMethod = credit_card. Pode incluir total_with_interest para parcelamento com juros.
      */
     public function createCheckout(Order $order, ?string $paymentMethod = null, ?array $cardData = null): OrderPayment
     {
@@ -35,10 +35,17 @@ class AppMaxService implements PaymentGatewayInterface
             throw new \RuntimeException('Pedido sem passageiros para criar checkout AppMax.');
         }
 
-        $customerId = $this->createCustomer($order, $firstPassenger);
-        $appMaxOrderId = $this->createOrder($order, $customerId);
+        $orderAmount = $cardData['total_with_interest'] ?? null;
+        if ($orderAmount === null) {
+            $orderAmount = $this->calculateOrderAmount($order);
+        } else {
+            $orderAmount = (float) $orderAmount;
+        }
 
-        return $this->createPayment($order, $firstPassenger, $appMaxOrderId, $customerId, $paymentMethod, $cardData);
+        $customerId = $this->createCustomer($order, $firstPassenger);
+        $appMaxOrderId = $this->createOrder($order, $customerId, $orderAmount);
+
+        return $this->createPayment($order, $firstPassenger, $appMaxOrderId, $customerId, $paymentMethod, $cardData, $orderAmount);
     }
 
     /**
@@ -95,7 +102,7 @@ class AppMaxService implements PaymentGatewayInterface
             throw new \RuntimeException("Falha ao criar customer AppMax: HTTP {$response->status()}");
         }
 
-        $data = $response->json();
+        $data = $this->extractResponseData($response->json());
         $customerId = $data['customer_id'] ?? $data['id'] ?? null;
 
         if (! $customerId) {
@@ -105,10 +112,8 @@ class AppMaxService implements PaymentGatewayInterface
         return (int) $customerId;
     }
 
-    private function createOrder(Order $order, int $customerId): int
+    private function createOrder(Order $order, int $customerId, float $amount): int
     {
-        $amount = $this->calculateOrderAmount($order);
-
         $payload = [
             'access-token' => $this->accessToken,
             'total' => $amount,
@@ -139,7 +144,7 @@ class AppMaxService implements PaymentGatewayInterface
             throw new \RuntimeException("Falha ao criar order AppMax: HTTP {$response->status()}");
         }
 
-        $data = $response->json();
+        $data = $this->extractResponseData($response->json());
         $orderId = $data['order_id'] ?? $data['id'] ?? null;
 
         if (! $orderId) {
@@ -155,9 +160,9 @@ class AppMaxService implements PaymentGatewayInterface
         int $appMaxOrderId,
         int $customerId,
         string $paymentMethod,
-        ?array $cardData
+        ?array $cardData,
+        float $amount
     ): OrderPayment {
-        $amount = $this->calculateOrderAmount($order);
         $document = preg_replace('/\D/', '', $firstPassenger->document ?? '');
         $documentFormatted = strlen($document) === 11
             ? substr($document, 0, 3) . '.' . substr($document, 3, 3) . '.' . substr($document, 6, 3) . '-' . substr($document, 9, 2)
@@ -177,22 +182,39 @@ class AppMaxService implements PaymentGatewayInterface
         };
 
         if ($paymentMethod === 'credit_card' || $paymentMethod === 'credit-card') {
+            $cardToken = $cardData['token'] ?? $cardData['hash'] ?? null;
             $cardNumber = $cardData['card_number'] ?? $cardData['number'] ?? null;
-            if (! $cardData || empty($cardNumber)) {
+
+            if (! $cardData) {
+                throw new \RuntimeException('Dados do cartão são obrigatórios para pagamento com cartão de crédito.');
+            }
+
+            if (empty($cardToken) && ! empty($cardNumber)) {
+                $cardToken = $this->tokenizeCard($cardData);
+            }
+
+            $creditCardPayload = [
+                'cvv' => $cardData['card_cvv'] ?? $cardData['cvv'] ?? '',
+                'document_number' => $documentFormatted,
+                'name' => $cardData['card_name'] ?? $cardData['name'] ?? $firstPassenger->full_name,
+                'installments' => (int) ($cardData['installments'] ?? 1),
+                'soft_descriptor' => config('app.name', 'VDP') ?: 'VDP',
+            ];
+
+            if ($cardToken) {
+                $creditCardPayload['token'] = $cardToken;
+            } else {
+                $creditCardPayload['number'] = preg_replace('/\D/', '', $cardNumber ?? '');
+                $creditCardPayload['month'] = (int) ($cardData['card_month'] ?? $cardData['month'] ?? 1);
+                $creditCardPayload['year'] = (int) ($cardData['card_year'] ?? $cardData['year'] ?? (int) date('y'));
+            }
+
+            if (empty($creditCardPayload['token']) && empty($creditCardPayload['number'])) {
                 throw new \RuntimeException('Dados do cartão são obrigatórios para pagamento com cartão de crédito.');
             }
 
             $basePayload['payment'] = [
-                'CreditCard' => [
-                    'number' => preg_replace('/\D/', '', $cardNumber),
-                    'cvv' => $cardData['card_cvv'] ?? $cardData['cvv'] ?? '',
-                    'month' => (int) ($cardData['card_month'] ?? $cardData['month'] ?? 1),
-                    'year' => (int) ($cardData['card_year'] ?? $cardData['year'] ?? date('y')),
-                    'document_number' => $documentFormatted,
-                    'name' => $cardData['card_name'] ?? $cardData['name'] ?? $firstPassenger->full_name,
-                    'installments' => (int) ($cardData['installments'] ?? 1),
-                    'soft_descriptor' => config('app.name', 'VDP') ?: 'VDP',
-                ],
+                'CreditCard' => $creditCardPayload,
             ];
         } elseif ($paymentMethod === 'boleto') {
             $basePayload['payment'] = [
@@ -229,7 +251,7 @@ class AppMaxService implements PaymentGatewayInterface
             throw new \RuntimeException("Falha ao criar payment AppMax: HTTP {$response->status()}");
         }
 
-        $data = $response->json();
+        $data = $this->extractResponseData($response->json());
 
         $paymentUrl = $data['payment_url'] ?? $data['boleto_url'] ?? $data['pix_copy_paste'] ?? null;
         if (is_array($paymentUrl)) {
@@ -247,6 +269,60 @@ class AppMaxService implements PaymentGatewayInterface
             'payment_method' => $paymentMethod,
             'gateway_response' => $data,
         ]);
+    }
+
+    /**
+     * Tokeniza o cartão na AppMax. Retorna o token ou null em caso de falha (fallback para number).
+     */
+    private function tokenizeCard(array $cardData): ?string
+    {
+        $cardNumber = preg_replace('/\D/', '', $cardData['card_number'] ?? $cardData['number'] ?? '');
+        if (strlen($cardNumber) < 13) {
+            return null;
+        }
+
+        $payload = [
+            'access-token' => $this->accessToken,
+            'card' => [
+                'number' => $cardNumber,
+                'cvv' => $cardData['card_cvv'] ?? $cardData['cvv'] ?? '',
+                'month' => (int) ($cardData['card_month'] ?? $cardData['month'] ?? 1),
+                'year' => (int) ($cardData['card_year'] ?? $cardData['year'] ?? (int) date('y')),
+            ],
+        ];
+
+        if (! empty($cardData['card_name'] ?? $cardData['name'])) {
+            $payload['card']['name'] = $cardData['card_name'] ?? $cardData['name'];
+        }
+
+        $response = Http::asJson()
+            ->timeout(15)
+            ->post("{$this->baseUrl}/api/v3/tokenize/card", $payload);
+
+        if ($response->failed()) {
+            Log::warning('AppMax: tokenização falhou, usando number', [
+                'status' => $response->status(),
+            ]);
+
+            return null;
+        }
+
+        $data = $this->extractResponseData($response->json());
+
+        return $data['token'] ?? null;
+    }
+
+    /**
+     * Extrai o payload principal da resposta da API AppMax.
+     * A API pode retornar { "status": 200, "data": { ... } } ou os campos na raiz.
+     */
+    private function extractResponseData(array $response): array
+    {
+        if (isset($response['data']) && is_array($response['data'])) {
+            return $response['data'];
+        }
+
+        return $response;
     }
 
     private function calculateOrderAmount(Order $order): float

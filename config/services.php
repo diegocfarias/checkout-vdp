@@ -62,6 +62,8 @@ return [
         'base_url' => env('APPMAX_BASE_URL', 'https://homolog.sandboxappmax.com.br'),
         'access_token' => env('APPMAX_ACCESS_TOKEN'),
         'default_payment_method' => env('APPMAX_DEFAULT_PAYMENT_METHOD', 'pix'),
+        'webhook_secret' => env('APPMAX_WEBHOOK_SECRET'),
+        'webhook_signature_header' => env('APPMAX_WEBHOOK_SIGNATURE_HEADER', 'X-Appmax-Signature'),
     ],
 
 ];

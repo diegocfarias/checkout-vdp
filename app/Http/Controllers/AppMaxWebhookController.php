@@ -13,9 +13,37 @@ class AppMaxWebhookController extends Controller
     /**
      * Processa notificações de pagamento da AppMax.
      * Documentação: https://docs.appmax.com.br/webhooks
+     *
+     * Validação: configure APPMAX_WEBHOOK_SECRET para validar assinatura HMAC-SHA256.
+     * O header pode ser customizado via APPMAX_WEBHOOK_SIGNATURE_HEADER (padrão: X-Appmax-Signature).
      */
     public function __invoke(Request $request): JsonResponse
     {
+        $secret = config('services.appmax.webhook_secret');
+        if ($secret) {
+            $signatureHeader = config('services.appmax.webhook_signature_header', 'X-Appmax-Signature');
+            $receivedSignature = $request->header($signatureHeader);
+
+            if (empty($receivedSignature)) {
+                Log::warning('AppMax webhook: assinatura ausente');
+
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            $payload = $request->getContent();
+            $computedHash = hash_hmac('sha256', $payload, $secret);
+            $expectedWithPrefix = 'sha256=' . $computedHash;
+
+            $valid = hash_equals($expectedWithPrefix, $receivedSignature)
+                || hash_equals($computedHash, $receivedSignature);
+
+            if (! $valid) {
+                Log::warning('AppMax webhook: assinatura inválida');
+
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+        }
+
         Log::info('AppMax webhook recebido', [
             'payload' => $request->all(),
         ]);
