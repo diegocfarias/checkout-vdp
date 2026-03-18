@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Checkout') - VDP</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    @stack('head')
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
     <header class="bg-white border-b border-gray-200">
@@ -22,5 +23,6 @@
             &copy; {{ date('Y') }} VDP
         </div>
     </footer>
+    @stack('scripts')
 </body>
 </html>

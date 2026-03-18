@@ -72,10 +72,18 @@ class OrderCheckoutController extends Controller
 
         $paymentMethod = $request->input('payment_method', 'pix');
         $cardData = $paymentMethod === 'credit_card'
-            ? $request->only(['card_number', 'card_cvv', 'card_month', 'card_year', 'card_name', 'installments'])
+            ? $request->only(['card_number', 'card_cvv', 'card_month', 'card_year', 'card_name', 'installments', 'card_token'])
             : null;
 
-        if ($cardData && config('services.payment.gateway') === 'appmax') {
+        $clientIp = $request->input('client_ip') ?: $request->ip();
+
+        if ($cardData === null) {
+            $cardData = ['client_ip' => $clientIp];
+        } else {
+            $cardData['client_ip'] = $clientIp;
+        }
+
+        if ($paymentMethod === 'credit_card' && config('services.payment.gateway') === 'appmax') {
             $installments = (int) ($cardData['installments'] ?? 1);
             if ($installments > 1) {
                 $order->load('flights');

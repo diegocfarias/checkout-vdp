@@ -2,6 +2,10 @@
 
 @section('title', 'Dados dos Passageiros')
 
+@push('head')
+    <script src="https://scripts.appmax.com.br/appmax.min.js"></script>
+@endpush
+
 @section('content')
     @php
         $subtotalPassagens = 0;
@@ -35,6 +39,8 @@
 
             <form action="{{ route('checkout.store', $order->token) }}" method="POST" id="checkout-form">
                 @csrf
+                <input type="hidden" name="client_ip" id="client_ip" value="">
+                <input type="hidden" name="card_token" id="card_token" value="">
 
                 @for($i = 0; $i < $order->passengers_count; $i++)
                     <details class="passenger-accordion mb-4 border border-gray-200 rounded-lg overflow-hidden" {{ $i === 0 ? 'open' : '' }}>
@@ -544,6 +550,18 @@
                 validateField(this);
             });
         });
+
+        if (typeof AppmaxScripts !== 'undefined') {
+            try {
+                AppmaxScripts.init();
+                const ip = AppmaxScripts.getIp ? AppmaxScripts.getIp() : null;
+                if (ip) {
+                    document.getElementById('client_ip').value = ip;
+                }
+            } catch (err) {
+                console.warn('AppMax JS init error:', err);
+            }
+        }
 
         document.getElementById('checkout-form').addEventListener('submit', function (e) {
             const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';

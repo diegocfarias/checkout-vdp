@@ -59,11 +59,12 @@ return [
     ],
 
     'appmax' => [
-        'base_url' => env('APPMAX_BASE_URL', 'https://homolog.sandboxappmax.com.br'),
-        'access_token' => env('APPMAX_ACCESS_TOKEN'),
+        'api_url' => env('APPMAX_API_URL', 'https://api.appmax.com.br'),
+        'auth_url' => env('APPMAX_AUTH_URL', 'https://auth.appmax.com.br'),
+        'client_id' => env('APPMAX_CLIENT_ID'),
+        'client_secret' => env('APPMAX_CLIENT_SECRET'),
         'default_payment_method' => env('APPMAX_DEFAULT_PAYMENT_METHOD', 'pix'),
-        'webhook_secret' => env('APPMAX_WEBHOOK_SECRET'),
-        'webhook_signature_header' => env('APPMAX_WEBHOOK_SIGNATURE_HEADER', 'X-Appmax-Signature'),
+        'soft_descriptor' => env('APPMAX_SOFT_DESCRIPTOR', 'VDP'),
     ],
 
 ];

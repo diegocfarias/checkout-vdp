@@ -11,45 +11,26 @@ use Illuminate\Support\Facades\Log;
 class AppMaxWebhookController extends Controller
 {
     /**
-     * Processa notificações de pagamento da AppMax.
-     * Documentação: https://docs.appmax.com.br/webhooks
+     * Processa notificações de pagamento da AppMax (API v1).
      *
-     * Validação: configure APPMAX_WEBHOOK_SECRET para validar assinatura HMAC-SHA256.
-     * O header pode ser customizado via APPMAX_WEBHOOK_SIGNATURE_HEADER (padrão: X-Appmax-Signature).
+     * Payload esperado:
+     *   event: "order_paid" | "order_approved" | "order_authorized" | "order_pix_created" | ...
+     *   event_type: "order"
+     *   data.order_id: int
+     *   data.status: "pendente" | "aprovado" | "autorizado" | "cancelado" | "estornado" | ...
      */
     public function __invoke(Request $request): JsonResponse
     {
-        $secret = config('services.appmax.webhook_secret');
-        if ($secret) {
-            $signatureHeader = config('services.appmax.webhook_signature_header', 'X-Appmax-Signature');
-            $receivedSignature = $request->header($signatureHeader);
-
-            if (empty($receivedSignature)) {
-                Log::warning('AppMax webhook: assinatura ausente');
-
-                return response()->json(['error' => 'Unauthorized'], 401);
-            }
-
-            $payload = $request->getContent();
-            $computedHash = hash_hmac('sha256', $payload, $secret);
-            $expectedWithPrefix = 'sha256=' . $computedHash;
-
-            $valid = hash_equals($expectedWithPrefix, $receivedSignature)
-                || hash_equals($computedHash, $receivedSignature);
-
-            if (! $valid) {
-                Log::warning('AppMax webhook: assinatura inválida');
-
-                return response()->json(['error' => 'Unauthorized'], 401);
-            }
-        }
-
         Log::info('AppMax webhook recebido', [
             'payload' => $request->all(),
         ]);
 
-        $orderId = $request->input('order_id') ?? $request->input('orderId');
-        $status = $request->input('status') ?? $request->input('order_status');
+        $event = $request->input('event');
+        $eventType = $request->input('event_type');
+        $data = $request->input('data', []);
+
+        $orderId = $data['order_id'] ?? $request->input('order_id');
+        $status = $data['status'] ?? $request->input('status');
 
         if (! $orderId) {
             Log::warning('AppMax webhook: order_id não encontrado no payload');
@@ -69,13 +50,13 @@ class AppMaxWebhookController extends Controller
 
         $order = $payment->order;
 
-        if ($this->isPaidStatus($status)) {
+        if ($this->isPaidEvent($event) || $this->isPaidStatus($status)) {
             if ($payment->status !== 'paid') {
                 $payment->update([
                     'status' => 'paid',
                     'paid_at' => now(),
-                    'payment_method' => $request->input('payment_method') ?? $payment->payment_method,
-                    'external_payment_id' => $request->input('transaction_id') ?? $request->input('payment_id'),
+                    'payment_method' => $data['payment_method'] ?? $payment->payment_method,
+                    'external_payment_id' => $data['transaction_id'] ?? $data['payment_id'] ?? null,
                     'gateway_response' => array_merge($payment->gateway_response ?? [], $request->all()),
                 ]);
 
@@ -93,23 +74,51 @@ class AppMaxWebhookController extends Controller
                 }
 
                 Log::info('AppMax webhook: pagamento confirmado', [
+                    'event' => $event,
                     'payment_id' => $payment->id,
                     'order_id' => $order->id,
                 ]);
             }
-        } elseif ($this->isCancelledStatus($status)) {
+        } elseif ($this->isCancelledEvent($event) || $this->isCancelledStatus($status)) {
             if ($payment->status === 'pending') {
                 $payment->update(['status' => 'cancelled']);
                 $order->update(['status' => 'cancelled']);
 
-                Log::info('AppMax webhook: pagamento cancelado', [
+                Log::info('AppMax webhook: pagamento cancelado/recusado', [
+                    'event' => $event,
                     'payment_id' => $payment->id,
                     'order_id' => $order->id,
                 ]);
             }
+        } elseif ($this->isRefundEvent($event) || $this->isRefundStatus($status)) {
+            $payment->update([
+                'status' => 'refunded',
+                'gateway_response' => array_merge($payment->gateway_response ?? [], $request->all()),
+            ]);
+            $order->update(['status' => 'cancelled']);
+
+            Log::info('AppMax webhook: pagamento estornado', [
+                'event' => $event,
+                'payment_id' => $payment->id,
+                'order_id' => $order->id,
+            ]);
         }
 
         return response()->json(['received' => true], 200);
+    }
+
+    private function isPaidEvent(?string $event): bool
+    {
+        if (! $event) {
+            return false;
+        }
+
+        return in_array($event, [
+            'order_paid',
+            'order_approved',
+            'order_authorized',
+            'order_paid_by_pix',
+        ], true);
     }
 
     private function isPaidStatus(?string $status): bool
@@ -120,7 +129,20 @@ class AppMaxWebhookController extends Controller
 
         $status = strtolower($status);
 
-        return in_array($status, ['paid', 'approved', 'confirmed', 'integrado', 'completed'], true);
+        return in_array($status, ['aprovado', 'autorizado', 'integrado'], true);
+    }
+
+    private function isCancelledEvent(?string $event): bool
+    {
+        if (! $event) {
+            return false;
+        }
+
+        return in_array($event, [
+            'payment_not_authorized',
+            'order_pix_expired',
+            'order_boleto_expired',
+        ], true);
     }
 
     private function isCancelledStatus(?string $status): bool
@@ -131,6 +153,29 @@ class AppMaxWebhookController extends Controller
 
         $status = strtolower($status);
 
-        return in_array($status, ['cancelled', 'canceled', 'expired', 'failed'], true);
+        return in_array($status, ['cancelado', 'recusado_por_risco'], true);
+    }
+
+    private function isRefundEvent(?string $event): bool
+    {
+        if (! $event) {
+            return false;
+        }
+
+        return in_array($event, [
+            'order_refunded',
+            'order_chargeback',
+        ], true);
+    }
+
+    private function isRefundStatus(?string $status): bool
+    {
+        if (! $status) {
+            return false;
+        }
+
+        $status = strtolower($status);
+
+        return in_array($status, ['estornado', 'chargeback_em_tratativa'], true);
     }
 }
