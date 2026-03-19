@@ -13,18 +13,29 @@
 
             <h2 class="text-2xl font-bold text-gray-800 mb-2">Aguardando pagamento</h2>
 
-            @if(isset($payment) && $payment->gateway === 'appmax' && $payment->gateway_response)
-                @php $resp = $payment->gateway_response; @endphp
-                @if($payment->payment_method === 'pix' && ($pixCode = $resp['pix_copy_paste'] ?? $resp['copy_paste'] ?? $resp['pix']['copy_paste'] ?? null))
-                    <p class="text-gray-600 mb-4">Copie o código PIX abaixo e cole no app do seu banco para pagar:</p>
+            @if(isset($payment) && $payment->gateway_response)
+                @php
+                    $resp = $payment->gateway_response;
+                    $paymentData = $resp['payment'] ?? $resp;
+                    $pixCode = $paymentData['pix_emv'] ?? $paymentData['copy_paste'] ?? $resp['pix_copy_paste'] ?? $payment->payment_url ?? null;
+                    $pixQrCode = $paymentData['pix_qrcode'] ?? null;
+                    $boletoUrl = $paymentData['boleto_url'] ?? $resp['boleto_url'] ?? $payment->payment_url ?? null;
+                @endphp
+                @if($payment->payment_method === 'pix' && $pixCode && !str_starts_with($pixCode, 'http'))
+                    <p class="text-gray-600 mb-4">Escaneie o QR Code ou copie o código PIX abaixo:</p>
+                    @if($pixQrCode)
+                        <div class="mb-4 flex justify-center">
+                            <img src="data:image/png;base64,{{ $pixQrCode }}" alt="QR Code PIX" class="w-48 h-48 rounded-lg border border-gray-200">
+                        </div>
+                    @endif
                     <div class="bg-gray-100 rounded-lg p-4 mb-4 text-left">
-                        <code id="pix-code" class="text-sm break-all select-all">{{ is_array($pixCode) ? ($pixCode['copy_paste'] ?? json_encode($pixCode)) : $pixCode }}</code>
+                        <code id="pix-code" class="text-sm break-all select-all">{{ $pixCode }}</code>
                     </div>
-                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('pix-code').innerText); this.textContent='Copiado!'; setTimeout(() => this.textContent='Copiar código', 2000)"
+                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('pix-code').innerText); this.textContent='Copiado!'; setTimeout(() => this.textContent='Copiar código PIX', 2000)"
                             class="mb-4 inline-block bg-green-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm">
-                        Copiar código
+                        Copiar código PIX
                     </button>
-                @elseif($payment->payment_method === 'boleto' && ($boletoUrl = $payment->payment_url ?? $resp['boleto_url'] ?? $resp['url'] ?? null))
+                @elseif($payment->payment_method === 'boleto' && $boletoUrl && str_starts_with($boletoUrl, 'http'))
                     <p class="text-gray-600 mb-4">Clique no botão abaixo para visualizar e pagar o boleto:</p>
                     <a href="{{ $boletoUrl }}" target="_blank" rel="noopener"
                        class="inline-block bg-green-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-700 transition mb-4">

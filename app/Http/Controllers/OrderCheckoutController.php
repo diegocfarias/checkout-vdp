@@ -103,7 +103,11 @@ class OrderCheckoutController extends Controller
 
             $order->update(['status' => 'awaiting_payment']);
 
-            if ($payment->payment_url) {
+            $isRedirectableUrl = $payment->payment_url
+                && filter_var($payment->payment_url, FILTER_VALIDATE_URL)
+                && str_starts_with($payment->payment_url, 'http');
+
+            if ($isRedirectableUrl) {
                 return redirect()->away($payment->payment_url);
             }
 
