@@ -65,6 +65,23 @@ Route::post('/webhooks/appmax', AppMaxWebhookController::class)
     ->name('webhooks.appmax')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
+Route::match(['get', 'post'], '/appmax/validate', function (\Illuminate\Http\Request $request) {
+    if ($request->isMethod('post')) {
+        \Illuminate\Support\Facades\Log::info('AppMax: credenciais do merchant recebidas', [
+            'app_id' => $request->input('app_id'),
+            'client_id' => $request->input('client_id'),
+            'client_secret' => $request->input('client_secret'),
+            'external_key' => $request->input('external_key'),
+        ]);
+
+        return response()->json([
+            'external_id' => (string) \Illuminate\Support\Str::uuid(),
+        ]);
+    }
+
+    return response()->json(['status' => 'ok', 'app' => 'checkout-vdp']);
+})->name('appmax.validate')->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
 Route::middleware('throttle:60,1')->group(function () {
     Route::get('/r/{token}', [OrderCheckoutController::class, 'show'])->name('checkout.show');
     Route::get('/r/{token}/passageiros', [OrderCheckoutController::class, 'showPassengers'])->name('checkout.passengers');

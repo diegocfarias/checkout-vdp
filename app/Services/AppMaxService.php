@@ -258,7 +258,7 @@ class AppMaxService implements PaymentGatewayInterface
         }
 
         $data = $response->json('data', $response->json());
-        $customerId = $data['id'] ?? $data['customer_id'] ?? null;
+        $customerId = $data['customer']['id'] ?? $data['id'] ?? $data['customer_id'] ?? null;
 
         if (! $customerId) {
             throw new \RuntimeException('AppMax não retornou customer_id.');
@@ -283,7 +283,7 @@ class AppMaxService implements PaymentGatewayInterface
                 'name' => trim(($flight->cia ?? 'Voo') . ' ' . ($flight->departure_location ?? '') . ' → ' . ($flight->arrival_location ?? '')),
                 'quantity' => 1,
                 'unit_value' => $unitValue,
-                'type' => 'service',
+                'type' => 'physical',
             ];
         }
 
@@ -293,7 +293,7 @@ class AppMaxService implements PaymentGatewayInterface
                 'name' => 'Passagem aérea #' . $order->id,
                 'quantity' => 1,
                 'unit_value' => $amountCents,
-                'type' => 'service',
+                'type' => 'physical',
             ];
         }
 
@@ -321,7 +321,7 @@ class AppMaxService implements PaymentGatewayInterface
         }
 
         $data = $response->json('data', $response->json());
-        $orderId = $data['id'] ?? $data['order_id'] ?? null;
+        $orderId = $data['order']['id'] ?? $data['id'] ?? $data['order_id'] ?? null;
 
         if (! $orderId) {
             throw new \RuntimeException('AppMax não retornou order_id.');
@@ -545,9 +545,9 @@ class AppMaxService implements PaymentGatewayInterface
         }
 
         if ($paymentMethod === 'pix') {
-            $pix = $data['pix'] ?? $data;
+            $pix = $data['payment'] ?? $data['pix'] ?? $data;
 
-            return $pix['copy_paste'] ?? $pix['qr_code'] ?? $pix['pix_copy_paste'] ?? $data['payment_url'] ?? null;
+            return $pix['pix_emv'] ?? $pix['copy_paste'] ?? $pix['qr_code'] ?? $pix['pix_copy_paste'] ?? $data['payment_url'] ?? null;
         }
 
         if ($paymentMethod === 'boleto') {
