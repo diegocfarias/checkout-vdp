@@ -11,10 +11,11 @@ class PaymentGatewayResolver
     public function __construct(
         private AppMaxService $appMaxService,
         private C6BankService $c6BankService,
+        private AbacatePayService $abacatePayService,
     ) {}
 
     /**
-     * Retorna o gateway configurado (AppMax ou C6Bank).
+     * Retorna o gateway configurado (AppMax, C6Bank ou AbacatePay).
      */
     public function resolve(): PaymentGatewayInterface
     {
@@ -23,6 +24,7 @@ class PaymentGatewayResolver
         return match ($gateway) {
             'appmax' => $this->appMaxService,
             'c6bank' => $this->c6BankService,
+            'abacatepay' => $this->abacatePayService,
             default => throw new InvalidArgumentException("Gateway de pagamento inválido: {$gateway}"),
         };
     }
@@ -35,6 +37,7 @@ class PaymentGatewayResolver
         return match ($payment->gateway) {
             'appmax' => $this->appMaxService,
             'c6bank' => $this->c6BankService,
+            'abacatepay' => $this->abacatePayService,
             default => throw new InvalidArgumentException("Gateway de pagamento desconhecido: {$payment->gateway}"),
         };
     }

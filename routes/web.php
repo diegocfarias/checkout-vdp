@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AbacatePayWebhookController;
 use App\Http\Controllers\AppMaxWebhookController;
 use App\Http\Controllers\OrderCheckoutController;
 use App\Models\Order;
@@ -47,6 +48,10 @@ Route::get('/dev/fake-checkout', function () {
 
 Route::post('/webhooks/appmax', AppMaxWebhookController::class)
     ->name('webhooks.appmax')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::post('/webhooks/abacatepay', AbacatePayWebhookController::class)
+    ->name('webhooks.abacatepay')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
 Route::match(['get', 'post'], '/appmax/validate', function (\Illuminate\Http\Request $request) {

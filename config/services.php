@@ -67,4 +67,9 @@ return [
         'soft_descriptor' => env('APPMAX_SOFT_DESCRIPTOR', 'VDP'),
     ],
 
+    'abacatepay' => [
+        'api_url' => env('ABACATEPAY_API_URL', 'https://api.abacatepay.com/v1'),
+        'api_key' => env('ABACATEPAY_API_KEY'),
+    ],
+
 ];
