@@ -37,25 +37,9 @@ Route::get('/dev/fake-checkout', function () {
         'departure_label' => now()->format('d M Y'),
         'arrival_label' => now()->format('d M Y'),
         'total_flight_duration' => '1h15',
-        'miles_price' => '15000',
-        'money_price' => '299.00',
-        'tax' => '89.00',
-    ]);
-
-    $order->flights()->create([
-        'direction' => 'inbound',
-        'cia' => 'G3',
-        'flight_number' => '5678',
-        'departure_time' => '18:00',
-        'arrival_time' => '19:15',
-        'departure_location' => 'Rio de Janeiro (GIG)',
-        'arrival_location' => 'São Paulo (GRU)',
-        'departure_label' => now()->addDays(5)->format('d M Y'),
-        'arrival_label' => now()->addDays(5)->format('d M Y'),
-        'total_flight_duration' => '1h15',
-        'miles_price' => '15000',
-        'money_price' => '299.00',
-        'tax' => '89.00',
+        'miles_price' => '5000',
+        'money_price' => '3.00',
+        'tax' => '2.00',
     ]);
 
     return redirect('/r/' . $order->token);

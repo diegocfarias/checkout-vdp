@@ -32,7 +32,7 @@
                         <code id="pix-code" class="text-sm break-all select-all">{{ $pixCode }}</code>
                     </div>
                     <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('pix-code').innerText); this.textContent='Copiado!'; setTimeout(() => this.textContent='Copiar código PIX', 2000)"
-                            class="mb-4 inline-block bg-green-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm">
+                            class="mb-4 inline-block bg-green-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-700 transition">
                         Copiar código PIX
                     </button>
                 @elseif($payment->payment_method === 'boleto' && $boletoUrl && str_starts_with($boletoUrl, 'http'))
@@ -48,16 +48,56 @@
                 <p class="text-gray-500 mb-6">Seu pagamento ainda não foi confirmado. Se você já realizou o pagamento, aguarde alguns instantes e atualize esta página.</p>
             @endif
 
-            <a href="{{ route('checkout.payment-callback', $order->token) }}"
+            <a href="{{ route('checkout.payment-callback', $order->token) }}" id="btn-verificar"
                class="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition">
                 Verificar pagamento
             </a>
 
+            <p class="text-xs text-gray-400 mt-4" id="status-msg">Verificando automaticamente a cada 5 segundos...</p>
+
             @if($order->expires_at)
-                <p class="text-xs text-gray-400 mt-4">
+                <p class="text-xs text-gray-400 mt-2">
                     Link expira em {{ $order->expires_at->format('d/m/Y H:i') }}
                 </p>
             @endif
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        (function() {
+            const callbackUrl = @json(route('checkout.payment-callback', $order->token));
+            let attempts = 0;
+            const maxAttempts = 120;
+
+            function checkPayment() {
+                if (attempts >= maxAttempts) {
+                    document.getElementById('status-msg').textContent = 'Tempo de verificação esgotado. Clique em "Verificar pagamento".';
+                    return;
+                }
+                attempts++;
+                fetch(callbackUrl, { redirect: 'follow' })
+                    .then(function(resp) {
+                        if (resp.redirected) {
+                            window.location.href = resp.url;
+                            return;
+                        }
+                        return resp.text();
+                    })
+                    .then(function(html) {
+                        if (!html) return;
+                        if (html.includes('Pagamento confirmado') || html.includes('awaiting_emission')) {
+                            window.location.href = callbackUrl;
+                            return;
+                        }
+                        setTimeout(checkPayment, 5000);
+                    })
+                    .catch(function() {
+                        setTimeout(checkPayment, 5000);
+                    });
+            }
+            setTimeout(checkPayment, 5000);
+        })();
+    </script>
+    @endpush
 @endsection

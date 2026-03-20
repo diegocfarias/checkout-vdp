@@ -67,17 +67,25 @@ class AppMaxService implements PaymentGatewayInterface
             if ($response->failed()) {
                 Log::warning('AppMax: falha ao consultar status do pedido', [
                     'external_order_id' => $externalOrderId,
-                    'status' => $response->status(),
+                    'http_status' => $response->status(),
+                    'body' => $response->body(),
                 ]);
 
                 return $payment->status === 'paid' ? 'paid' : 'pending';
             }
 
-            $data = $response->json('data', $response->json());
-            $appmaxStatus = strtolower($data['status'] ?? '');
+            $json = $response->json();
+            $data = $json['data'] ?? $json;
+            $orderData = $data['order'] ?? $data;
+            $appmaxStatus = strtolower($orderData['status'] ?? '');
+
+            Log::info('AppMax: status do pedido consultado', [
+                'external_order_id' => $externalOrderId,
+                'appmax_status' => $appmaxStatus,
+            ]);
 
             return match ($appmaxStatus) {
-                'aprovado', 'autorizado', 'integrado' => 'paid',
+                'aprovado', 'autorizado', 'integrado', 'pago' => 'paid',
                 'pendente', 'pendente_integracao' => 'pending',
                 'cancelado', 'estornado', 'recusado_por_risco', 'chargeback_em_tratativa' => 'cancelled',
                 default => 'pending',
