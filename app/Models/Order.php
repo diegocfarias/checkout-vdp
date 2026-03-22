@@ -12,6 +12,7 @@ class Order extends Model
 {
     protected $fillable = [
         'token',
+        'tracking_code',
         'total_adults',
         'total_children',
         'total_babies',
@@ -39,6 +40,12 @@ class Order extends Model
             if (empty($order->token)) {
                 $order->token = (string) Str::ulid();
             }
+            if (empty($order->tracking_code)) {
+                do {
+                    $code = 'VDP-' . strtoupper(Str::random(4));
+                } while (static::where('tracking_code', $code)->exists());
+                $order->tracking_code = $code;
+            }
         });
     }
 
@@ -60,6 +67,11 @@ class Order extends Model
     public function latestPayment(): HasOne
     {
         return $this->hasOne(OrderPayment::class)->latestOfMany();
+    }
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at');
     }
 
     protected function passengersCount(): Attribute

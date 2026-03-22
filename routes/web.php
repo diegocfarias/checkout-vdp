@@ -3,6 +3,7 @@
 use App\Http\Controllers\AbacatePayWebhookController;
 use App\Http\Controllers\AppMaxWebhookController;
 use App\Http\Controllers\OrderCheckoutController;
+use App\Http\Controllers\OrderTrackingController;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
@@ -76,4 +77,8 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/r/{token}/passageiros', [OrderCheckoutController::class, 'showPassengers'])->name('checkout.passengers');
     Route::post('/r/{order:token}', [OrderCheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/r/{order:token}/payment-callback', [OrderCheckoutController::class, 'paymentCallback'])->name('checkout.payment-callback');
+
+    Route::get('/pedido', [OrderTrackingController::class, 'showForm'])->name('tracking.form');
+    Route::post('/pedido', [OrderTrackingController::class, 'search'])->name('tracking.search');
+    Route::get('/pedido/{trackingCode}', [OrderTrackingController::class, 'show'])->name('tracking.show');
 });

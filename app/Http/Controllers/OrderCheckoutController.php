@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderPassengersRequest;
 use App\Models\Order;
-use App\Services\BotpressNotifier;
 use App\Services\PaymentGatewayResolver;
 use Illuminate\Support\Facades\Log;
 
@@ -135,7 +134,9 @@ class OrderCheckoutController extends Controller
         }
 
         if ($order->status === 'awaiting_emission' || $order->status === 'completed') {
-            return view('checkout.success', ['order' => $order->load('flights')]);
+            session(["tracking_verified_{$order->tracking_code}" => true]);
+
+            return redirect()->route('tracking.show', $order->tracking_code);
         }
 
         if ($order->status !== 'awaiting_payment') {
@@ -175,15 +176,9 @@ class OrderCheckoutController extends Controller
                 'paid_at' => $now,
             ]);
 
-            if ($order->conversation_id && $order->user_id) {
-                BotpressNotifier::send(
-                    $order->conversation_id,
-                    $order->user_id,
-                    'Pagamento confirmado! Seu pedido está sendo encaminhado para emissão. Em breve você receberá a confirmação.'
-                );
-            }
+            session(["tracking_verified_{$order->tracking_code}" => true]);
 
-            return view('checkout.success', ['order' => $order->load('flights')]);
+            return redirect()->route('tracking.show', $order->tracking_code);
         }
 
         if (in_array($status, ['cancelled', 'expired', 'failed'])) {

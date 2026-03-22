@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderPayment;
-use App\Services\BotpressNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -64,14 +63,6 @@ class AppMaxWebhookController extends Controller
                     'status' => 'awaiting_emission',
                     'paid_at' => now(),
                 ]);
-
-                if ($order->conversation_id && $order->user_id) {
-                    BotpressNotifier::send(
-                        $order->conversation_id,
-                        $order->user_id,
-                        'Pagamento confirmado! Seu pedido está sendo encaminhado para emissão. Em breve você receberá a confirmação.'
-                    );
-                }
 
                 Log::info('AppMax webhook: pagamento confirmado', [
                     'event' => $event,

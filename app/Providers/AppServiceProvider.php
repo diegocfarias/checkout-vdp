@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Contracts\PaymentGatewayInterface;
+use App\Models\Order;
+use App\Observers\OrderObserver;
 use App\Services\PaymentGatewayResolver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -22,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Order::observe(OrderObserver::class);
+
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(30)->by(
                 $request->header('X-API-KEY') ?: $request->ip()
