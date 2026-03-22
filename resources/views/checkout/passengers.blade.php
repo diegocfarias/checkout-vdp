@@ -206,24 +206,24 @@
     </div>
 
     {{-- Rodapé fixo --}}
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-10">
-        <div class="max-w-4xl mx-auto px-4 py-4">
-            <button type="button" id="btn-detalhes-compra" class="mb-3 text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Ver detalhes da compra
-            </button>
-            <div class="flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-sm text-gray-500">Total</p>
-                    <p id="footer-total" class="text-xl font-bold text-gray-900" data-base="{{ $orderTotal }}">R$ {{ number_format($orderTotal, 2, ',', '.') }}</p>
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-10">
+        <div class="max-w-4xl mx-auto px-4 py-4 space-y-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-baseline gap-2">
+                    <span class="text-sm text-gray-500">Total</span>
+                    <span id="footer-total" class="text-2xl font-bold text-gray-900" data-base="{{ $orderTotal }}">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
                 </div>
-                <button type="submit" form="checkout-form"
-                        class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors">
-                    Finalizar compra
+                <button type="button" id="btn-detalhes-compra" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Detalhes
                 </button>
             </div>
+            <button type="submit" form="checkout-form"
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-base">
+                Finalizar compra
+            </button>
         </div>
     </div>
 
