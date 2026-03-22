@@ -9,8 +9,8 @@
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
     <header class="bg-gray-900">
-        <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-center">
-            <img src="/images/logo-vdp.png" alt="Voe de Primeira" class="w-44 sm:w-52">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-center">
+            <img src="/images/logo-vdp.png" alt="Voe de Primeira" class="w-36">
         </div>
     </header>
 
