@@ -8,9 +8,9 @@
     @stack('head')
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
-    <header class="bg-white border-b border-gray-200">
-        <div class="max-w-4xl mx-auto px-4 py-4">
-            <h1 class="text-xl font-bold text-gray-800">VDP Checkout</h1>
+    <header class="bg-gray-900 border-b border-gray-800">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-center">
+            <img src="/images/logo-vdp.png" alt="Voe de Primeira" class="h-10">
         </div>
     </header>
 
@@ -18,9 +18,9 @@
         @yield('content')
     </main>
 
-    <footer class="bg-white border-t border-gray-200 mt-auto">
-        <div class="max-w-4xl mx-auto px-4 py-4 text-center text-sm text-gray-500">
-            &copy; {{ date('Y') }} VDP
+    <footer class="bg-gray-900 border-t border-gray-800 mt-auto">
+        <div class="max-w-4xl mx-auto px-4 py-4 text-center text-sm text-gray-400">
+            &copy; {{ date('Y') }} Voe de Primeira
         </div>
     </footer>
     @stack('scripts')
