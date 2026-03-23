@@ -55,9 +55,9 @@ class VdpFlightService
             [
                 'direction' => 'outbound',
                 'cia' => $ida['cia'],
-                'miles_price' => $ida['miles_price'],
-                'money_price' => $ida['money_price'],
-                'tax' => $ida['tax'],
+                'miles_price' => $this->parseMoneyValue($ida['miles_price']),
+                'money_price' => $this->parseMoneyValue($ida['money_price']),
+                'tax' => $this->parseMoneyValue($ida['tax']),
                 ...$this->mapFlightData($outboundFlight),
             ],
         ];
@@ -66,9 +66,9 @@ class VdpFlightService
             $flights[] = [
                 'direction' => 'inbound',
                 'cia' => $volta['cia'],
-                'miles_price' => $volta['miles_price'],
-                'money_price' => $volta['money_price'],
-                'tax' => $volta['tax'],
+                'miles_price' => $this->parseMoneyValue($volta['miles_price']),
+                'money_price' => $this->parseMoneyValue($volta['money_price']),
+                'tax' => $this->parseMoneyValue($volta['tax']),
                 ...$this->mapFlightData($inboundFlight),
             ];
         }
@@ -111,6 +111,24 @@ class VdpFlightService
         }
 
         return null;
+    }
+
+    /**
+     * Converte valor monetário em formato BR ("1.151" ou "1.151,50") para decimal padrão ("1151" ou "1151.50").
+     */
+    private function parseMoneyValue(string $value): string
+    {
+        $value = trim($value);
+
+        if (str_contains($value, ',')) {
+            return str_replace(',', '.', str_replace('.', '', $value));
+        }
+
+        if (preg_match('/\.\d{3}$/', $value)) {
+            return str_replace('.', '', $value);
+        }
+
+        return $value;
     }
 
     private function mapFlightData(array $flight): array
