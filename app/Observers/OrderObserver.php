@@ -13,9 +13,11 @@ class OrderObserver
 {
     public function created(Order $order): void
     {
+        $status = $order->status ?? 'pending';
+
         $order->statusHistories()->create([
-            'status' => $order->status,
-            'description' => OrderStatusHistory::statusLabel($order->status),
+            'status' => $status,
+            'description' => OrderStatusHistory::statusLabel($status),
         ]);
     }
 
