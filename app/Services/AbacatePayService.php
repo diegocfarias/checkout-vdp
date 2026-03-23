@@ -141,6 +141,74 @@ class AbacatePayService implements PaymentGatewayInterface
         $payment->update(['status' => 'cancelled']);
     }
 
+    public function refundPayment(OrderPayment $payment): bool
+    {
+        $order = $payment->order;
+        $order->loadMissing('passengers');
+
+        $passenger = $order->passengers->first();
+        $cpf = $passenger?->document ?? null;
+
+        if (! $cpf) {
+            Log::warning('AbacatePay: estorno sem CPF do passageiro', ['payment_id' => $payment->id]);
+
+            return false;
+        }
+
+        $amountCents = (int) round(($payment->amount ?? 0) * 100);
+        if ($amountCents < 350) {
+            Log::warning('AbacatePay: valor abaixo do mínimo para saque (R$3,50)', [
+                'payment_id' => $payment->id,
+                'amount_cents' => $amountCents,
+            ]);
+
+            return false;
+        }
+
+        $cpfClean = preg_replace('/\D/', '', $cpf);
+
+        try {
+            $response = $this->request()
+                ->post("{$this->apiUrl}/withdraw/create", [
+                    'externalId' => "refund-{$payment->id}",
+                    'method' => 'PIX',
+                    'amount' => $amountCents,
+                    'description' => "Estorno pedido #{$order->id} - {$order->tracking_code}",
+                    'pix' => [
+                        'type' => 'CPF',
+                        'key' => $cpfClean,
+                    ],
+                ]);
+
+            if ($response->failed()) {
+                Log::error('AbacatePay: falha ao processar estorno', [
+                    'payment_id' => $payment->id,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return false;
+            }
+
+            $data = $response->json('data', $response->json());
+
+            Log::info('AbacatePay: estorno processado', [
+                'payment_id' => $payment->id,
+                'withdraw_id' => $data['id'] ?? null,
+                'amount_cents' => $amountCents,
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('AbacatePay: erro ao processar estorno', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
     /**
      * Simula pagamento em modo dev (útil para testes).
      */

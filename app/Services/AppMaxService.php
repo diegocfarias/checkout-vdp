@@ -102,6 +102,51 @@ class AppMaxService implements PaymentGatewayInterface
         $payment->update(['status' => 'cancelled']);
     }
 
+    public function refundPayment(OrderPayment $payment): bool
+    {
+        $appMaxOrderId = $payment->external_checkout_id;
+
+        if (! $appMaxOrderId) {
+            Log::warning('AppMax: estorno sem order_id externo', ['payment_id' => $payment->id]);
+
+            return false;
+        }
+
+        try {
+            $response = $this->authenticatedRequest()
+                ->post("{$this->apiUrl}/v1/refund", [
+                    'order_id' => (int) $appMaxOrderId,
+                    'refund_type' => 'total',
+                ]);
+
+            if ($response->failed()) {
+                Log::error('AppMax: falha ao processar estorno', [
+                    'payment_id' => $payment->id,
+                    'appmax_order_id' => $appMaxOrderId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return false;
+            }
+
+            Log::info('AppMax: estorno processado', [
+                'payment_id' => $payment->id,
+                'appmax_order_id' => $appMaxOrderId,
+                'response' => $response->json(),
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('AppMax: erro ao processar estorno', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
     /**
      * Consulta parcelas disponíveis na AppMax para um valor.
      *

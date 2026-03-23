@@ -170,6 +170,27 @@ class C6BankService implements PaymentGatewayInterface
         }
     }
 
+    public function refundPayment(OrderPayment $payment): bool
+    {
+        $checkoutId = $payment->external_checkout_id;
+
+        if (! $checkoutId) {
+            Log::warning('C6Bank: estorno sem checkout_id externo', ['payment_id' => $payment->id]);
+
+            return false;
+        }
+
+        // TODO: implementar quando a documentação de estorno da C6Bank estiver disponível.
+        // Esperado: POST /checkout/{checkoutId}/refund ou endpoint equivalente.
+        Log::warning('C6Bank: estorno ainda não implementado via API — processar manualmente', [
+            'payment_id' => $payment->id,
+            'external_checkout_id' => $checkoutId,
+            'amount' => $payment->amount,
+        ]);
+
+        return false;
+    }
+
     private function calculateOrderAmount(Order $order): float
     {
         $total = 0;

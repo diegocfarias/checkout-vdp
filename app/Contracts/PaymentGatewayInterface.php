@@ -24,4 +24,10 @@ interface PaymentGatewayInterface
      * Cancela um checkout pendente.
      */
     public function cancelCheckout(OrderPayment $payment): void;
+
+    /**
+     * Estorna um pagamento já confirmado.
+     * Retorna true se o estorno foi processado com sucesso.
+     */
+    public function refundPayment(OrderPayment $payment): bool;
 }
