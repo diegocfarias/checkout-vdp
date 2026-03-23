@@ -48,10 +48,10 @@
                 <p class="text-gray-500 mb-6">Seu pagamento ainda não foi confirmado. Se você já realizou o pagamento, aguarde alguns instantes e atualize esta página.</p>
             @endif
 
-            <a href="{{ route('checkout.payment-callback', $order->token) }}" id="btn-verificar"
-               class="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+            <button type="button" id="btn-verificar"
+                    class="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition cursor-pointer">
                 Verificar pagamento
-            </a>
+            </button>
 
             <p class="text-xs text-gray-400 mt-4" id="status-msg">Verificando automaticamente a cada 5 segundos...</p>
 
@@ -69,33 +69,51 @@
             const callbackUrl = @json(route('checkout.payment-callback', $order->token));
             let attempts = 0;
             const maxAttempts = 120;
+            let checking = false;
 
             function checkPayment() {
+                if (checking) return;
                 if (attempts >= maxAttempts) {
                     document.getElementById('status-msg').textContent = 'Tempo de verificação esgotado. Clique em "Verificar pagamento".';
                     return;
                 }
+                checking = true;
                 attempts++;
-                fetch(callbackUrl, { redirect: 'follow' })
+
+                var btn = document.getElementById('btn-verificar');
+                if (btn) btn.disabled = true;
+
+                fetch(callbackUrl, { redirect: 'follow', credentials: 'same-origin' })
                     .then(function(resp) {
                         if (resp.redirected) {
                             window.location.href = resp.url;
-                            return;
+                            return null;
                         }
                         return resp.text();
                     })
                     .then(function(html) {
-                        if (!html) return;
-                        if (html.includes('Pagamento confirmado') || html.includes('awaiting_emission')) {
+                        checking = false;
+                        if (btn) btn.disabled = false;
+                        if (html === null) return;
+                        if (!html) { setTimeout(checkPayment, 5000); return; }
+                        if (html.includes('tracking_code') || html.includes('Acompanhar pedido')) {
                             window.location.href = callbackUrl;
                             return;
                         }
                         setTimeout(checkPayment, 5000);
                     })
                     .catch(function() {
+                        checking = false;
+                        if (btn) btn.disabled = false;
                         setTimeout(checkPayment, 5000);
                     });
             }
+
+            document.getElementById('btn-verificar').addEventListener('click', function() {
+                document.getElementById('status-msg').textContent = 'Verificando...';
+                checkPayment();
+            });
+
             setTimeout(checkPayment, 5000);
         })();
     </script>

@@ -146,7 +146,7 @@ class OrderCheckoutController extends Controller
         $payment = $order->latestPayment;
 
         if (! $payment) {
-            return view('checkout.awaiting-payment', ['order' => $order]);
+            return view('checkout.awaiting-payment', ['order' => $order, 'payment' => null]);
         }
 
         try {
@@ -158,7 +158,7 @@ class OrderCheckoutController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return view('checkout.awaiting-payment', ['order' => $order]);
+            return view('checkout.awaiting-payment', ['order' => $order, 'payment' => $payment]);
         }
 
         if ($status === 'paid') {
@@ -188,6 +188,6 @@ class OrderCheckoutController extends Controller
             return view('checkout.cancelled', ['order' => $order]);
         }
 
-        return view('checkout.awaiting-payment', ['order' => $order]);
+        return view('checkout.awaiting-payment', ['order' => $order, 'payment' => $payment]);
     }
 }
