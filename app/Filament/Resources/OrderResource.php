@@ -4,9 +4,14 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrderResource\Pages;
 use App\Models\Order;
+use App\Models\OrderStatusHistory;
+use App\Services\PaymentGatewayResolver;
 use BackedEnum;
+use Filament\Actions;
 use Filament\Infolists;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,18 +22,39 @@ class OrderResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shopping-cart';
 
-    protected static ?string $navigationLabel = 'Orders';
+    protected static ?string $navigationLabel = 'Pedidos';
+
+    protected static ?string $modelLabel = 'Pedido';
+
+    protected static ?string $pluralModelLabel = 'Pedidos';
+
+    protected static ?int $navigationSort = 1;
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id')
+                    ->label('#')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('token')
+                Tables\Columns\TextColumn::make('tracking_code')
+                    ->label('Código')
                     ->searchable()
-                    ->limit(12),
+                    ->badge()
+                    ->color('gray'),
+                Tables\Columns\TextColumn::make('route')
+                    ->label('Rota')
+                    ->getStateUsing(fn (Order $record) => $record->departure_iata && $record->arrival_iata
+                        ? strtoupper($record->departure_iata) . ' → ' . strtoupper($record->arrival_iata)
+                        : '-'),
+                Tables\Columns\TextColumn::make('passengers.full_name')
+                    ->label('Passageiro')
+                    ->getStateUsing(fn (Order $record) => $record->passengers->first()?->full_name ?? '-')
+                    ->searchable(query: function ($query, string $search): void {
+                        $query->whereHas('passengers', fn ($q) => $q->where('full_name', 'like', "%{$search}%"));
+                    }),
                 Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'pending' => 'warning',
@@ -37,46 +63,135 @@ class OrderResource extends Resource
                         'completed' => 'success',
                         'cancelled' => 'danger',
                         default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => self::statusLabel($state)),
+                Tables\Columns\TextColumn::make('total_price')
+                    ->label('Valor')
+                    ->getStateUsing(function (Order $record) {
+                        $record->loadMissing('flights');
+                        $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0));
+
+                        return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';
                     }),
-                Tables\Columns\TextColumn::make('total_adults')
-                    ->label('Adults'),
-                Tables\Columns\TextColumn::make('total_children')
-                    ->label('Children'),
-                Tables\Columns\TextColumn::make('total_babies')
-                    ->label('Babies'),
-                Tables\Columns\TextColumn::make('cabin'),
-                Tables\Columns\TextColumn::make('expires_at')
+                Tables\Columns\TextColumn::make('cabin')
+                    ->label('Cabine')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('paid_at')
+                    ->label('Pago em')
                     ->dateTime('d/m/Y H:i')
+                    ->placeholder('-')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
+                    ->label('Criado em')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
             ])
             ->defaultSort('id', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
+                    ->label('Status')
                     ->options([
-                        'pending' => 'Pending',
-                        'awaiting_payment' => 'Awaiting Payment',
-                        'awaiting_emission' => 'Awaiting Emission',
-                        'completed' => 'Completed',
-                        'cancelled' => 'Cancelled',
+                        'pending' => 'Pendente',
+                        'awaiting_payment' => 'Aguardando Pagamento',
+                        'awaiting_emission' => 'Aguardando Emissão',
+                        'completed' => 'Emitido',
+                        'cancelled' => 'Cancelado',
                     ]),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                Actions\ViewAction::make()
+                    ->label('Ver'),
+                Actions\Action::make('mark_completed')
+                    ->label('Emitido')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Confirmar emissão')
+                    ->modalDescription('Marcar este pedido como emitido? O cliente será notificado.')
+                    ->visible(fn (Order $record): bool => $record->status === 'awaiting_emission')
+                    ->action(function (Order $record): void {
+                        $record->update(['status' => 'completed']);
+                        Notification::make()->title('Pedido marcado como emitido')->success()->send();
+                    }),
+                Actions\Action::make('mark_paid')
+                    ->label('Confirmar Pgto')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->modalHeading('Confirmar pagamento manualmente')
+                    ->modalDescription('Marcar este pedido como pago? Use quando o pagamento foi confirmado fora do sistema.')
+                    ->visible(fn (Order $record): bool => in_array($record->status, ['pending', 'awaiting_payment']))
+                    ->action(function (Order $record): void {
+                        $now = now();
+                        $payment = $record->latestPayment;
+                        if ($payment) {
+                            $payment->update(['status' => 'paid', 'paid_at' => $now]);
+                        }
+                        $record->update(['status' => 'awaiting_emission', 'paid_at' => $now]);
+                        Notification::make()->title('Pagamento confirmado')->success()->send();
+                    }),
+                Actions\Action::make('refund')
+                    ->label('Estornar')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Estornar pagamento')
+                    ->modalDescription('O valor será devolvido ao cliente pelo gateway de pagamento original. Tem certeza?')
+                    ->visible(fn (Order $record): bool => in_array($record->status, ['awaiting_emission', 'completed']))
+                    ->action(function (Order $record): void {
+                        $payment = $record->latestPayment;
+                        if (! $payment) {
+                            Notification::make()->title('Nenhum pagamento encontrado')->danger()->send();
+                            return;
+                        }
+
+                        $resolver = app(PaymentGatewayResolver::class);
+                        $gateway = $resolver->resolveForPayment($payment);
+                        $refunded = $gateway->refundPayment($payment);
+
+                        if ($refunded) {
+                            $payment->update(['status' => 'refunded']);
+                            $record->update(['status' => 'cancelled']);
+                            Notification::make()->title('Estorno processado com sucesso')->success()->send();
+                        } else {
+                            Notification::make()
+                                ->title('Falha ao processar estorno no gateway')
+                                ->body('O estorno não foi concluído. Verifique os logs ou faça o estorno manualmente no painel do gateway.')
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Actions\Action::make('cancel')
+                    ->label('Cancelar')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Cancelar pedido')
+                    ->modalDescription('Tem certeza que deseja cancelar este pedido?')
+                    ->visible(fn (Order $record): bool => in_array($record->status, ['pending', 'awaiting_payment', 'awaiting_emission']))
+                    ->action(function (Order $record): void {
+                        $record->update(['status' => 'cancelled']);
+                        Notification::make()->title('Pedido cancelado')->danger()->send();
+                    }),
             ]);
     }
 
     public static function infolist(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->schema([
-                Infolists\Components\Section::make('Order')
+                Section::make('Informações do Pedido')
+                    ->icon('heroicon-o-document-text')
+                    ->columns(3)
                     ->schema([
-                        Infolists\Components\TextEntry::make('token'),
+                        Infolists\Components\TextEntry::make('tracking_code')
+                            ->label('Código de rastreio')
+                            ->badge()
+                            ->color('gray')
+                            ->copyable(),
                         Infolists\Components\TextEntry::make('status')
+                            ->label('Status')
                             ->badge()
                             ->color(fn (string $state): string => match ($state) {
                                 'pending' => 'warning',
@@ -85,90 +200,189 @@ class OrderResource extends Resource
                                 'completed' => 'success',
                                 'cancelled' => 'danger',
                                 default => 'gray',
-                            }),
-                        Infolists\Components\TextEntry::make('total_adults'),
-                        Infolists\Components\TextEntry::make('total_children'),
-                        Infolists\Components\TextEntry::make('total_babies'),
-                        Infolists\Components\TextEntry::make('cabin'),
-                        Infolists\Components\TextEntry::make('user_id'),
-                        Infolists\Components\TextEntry::make('conversation_id'),
-                        Infolists\Components\TextEntry::make('expires_at')
-                            ->dateTime('d/m/Y H:i'),
-                        Infolists\Components\TextEntry::make('paid_at')
-                            ->dateTime('d/m/Y H:i')
-                            ->placeholder('-'),
-                        Infolists\Components\TextEntry::make('created_at')
-                            ->dateTime('d/m/Y H:i'),
-                    ])
-                    ->columns(3),
+                            })
+                            ->formatStateUsing(fn (string $state): string => self::statusLabel($state)),
+                        Infolists\Components\TextEntry::make('route')
+                            ->label('Rota')
+                            ->getStateUsing(fn (Order $record) => $record->departure_iata && $record->arrival_iata
+                                ? strtoupper($record->departure_iata) . ' → ' . strtoupper($record->arrival_iata)
+                                : '-'),
+                        Infolists\Components\TextEntry::make('cabin')
+                            ->label('Cabine')
+                            ->formatStateUsing(fn (?string $state) => $state ? ucfirst($state) : '-'),
+                        Infolists\Components\TextEntry::make('passengers_summary')
+                            ->label('Passageiros')
+                            ->getStateUsing(function (Order $record) {
+                                $parts = [];
+                                if ($record->total_adults > 0) {
+                                    $parts[] = $record->total_adults . ' adulto' . ($record->total_adults > 1 ? 's' : '');
+                                }
+                                if ($record->total_children > 0) {
+                                    $parts[] = $record->total_children . ' criança' . ($record->total_children > 1 ? 's' : '');
+                                }
+                                if ($record->total_babies > 0) {
+                                    $parts[] = $record->total_babies . ' bebê' . ($record->total_babies > 1 ? 's' : '');
+                                }
 
-                Infolists\Components\Section::make('Flights')
+                                return implode(', ', $parts) ?: '-';
+                            }),
+                        Infolists\Components\TextEntry::make('total_value')
+                            ->label('Valor total')
+                            ->getStateUsing(function (Order $record) {
+                                $record->loadMissing('flights');
+                                $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0));
+
+                                return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';
+                            }),
+                        Infolists\Components\TextEntry::make('paid_at')
+                            ->label('Pago em')
+                            ->dateTime('d/m/Y H:i')
+                            ->placeholder('Não pago'),
+                        Infolists\Components\TextEntry::make('expires_at')
+                            ->label('Expira em')
+                            ->dateTime('d/m/Y H:i'),
+                        Infolists\Components\TextEntry::make('created_at')
+                            ->label('Criado em')
+                            ->dateTime('d/m/Y H:i'),
+                    ]),
+
+                Section::make('Voos')
+                    ->icon('heroicon-o-paper-airplane')
                     ->schema([
                         Infolists\Components\RepeatableEntry::make('flights')
+                            ->label('')
                             ->schema([
                                 Infolists\Components\TextEntry::make('direction')
+                                    ->label('Trecho')
                                     ->badge()
-                                    ->color(fn (string $state): string => match ($state) {
-                                        'outbound' => 'info',
-                                        'inbound' => 'success',
-                                        default => 'gray',
-                                    }),
-                                Infolists\Components\TextEntry::make('cia'),
-                                Infolists\Components\TextEntry::make('flight_number'),
-                                Infolists\Components\TextEntry::make('departure_location'),
-                                Infolists\Components\TextEntry::make('arrival_location'),
-                                Infolists\Components\TextEntry::make('departure_time'),
-                                Infolists\Components\TextEntry::make('arrival_time'),
-                                Infolists\Components\TextEntry::make('miles_price'),
-                                Infolists\Components\TextEntry::make('money_price'),
-                                Infolists\Components\TextEntry::make('tax'),
+                                    ->formatStateUsing(fn (string $state): string => $state === 'outbound' ? 'Ida' : 'Volta')
+                                    ->color(fn (string $state): string => $state === 'outbound' ? 'info' : 'success'),
+                                Infolists\Components\TextEntry::make('flight_info')
+                                    ->label('Voo')
+                                    ->getStateUsing(fn ($record) => trim(($record->cia ?? '') . ' ' . ($record->flight_number ?? '')) ?: '-'),
+                                Infolists\Components\TextEntry::make('departure_info')
+                                    ->label('Origem')
+                                    ->getStateUsing(fn ($record) => ($record->departure_location ?? '-') . ($record->departure_time ? ' · ' . $record->departure_time : '')),
+                                Infolists\Components\TextEntry::make('arrival_info')
+                                    ->label('Destino')
+                                    ->getStateUsing(fn ($record) => ($record->arrival_location ?? '-') . ($record->arrival_time ? ' · ' . $record->arrival_time : '')),
+                                Infolists\Components\TextEntry::make('money_price')
+                                    ->label('Preço')
+                                    ->money('BRL'),
+                                Infolists\Components\TextEntry::make('tax')
+                                    ->label('Taxa')
+                                    ->money('BRL'),
                             ])
-                            ->columns(5),
+                            ->columns(6),
                     ]),
 
-                Infolists\Components\Section::make('Passengers')
+                Section::make('Passageiros')
+                    ->icon('heroicon-o-user-group')
                     ->schema([
                         Infolists\Components\RepeatableEntry::make('passengers')
+                            ->label('')
                             ->schema([
-                                Infolists\Components\TextEntry::make('full_name'),
-                                Infolists\Components\TextEntry::make('document'),
+                                Infolists\Components\TextEntry::make('full_name')
+                                    ->label('Nome completo'),
+                                Infolists\Components\TextEntry::make('document')
+                                    ->label('CPF'),
                                 Infolists\Components\TextEntry::make('birth_date')
+                                    ->label('Nascimento')
                                     ->date('d/m/Y'),
-                                Infolists\Components\TextEntry::make('email'),
-                                Infolists\Components\TextEntry::make('phone'),
+                                Infolists\Components\TextEntry::make('email')
+                                    ->label('E-mail')
+                                    ->copyable(),
+                                Infolists\Components\TextEntry::make('phone')
+                                    ->label('Telefone')
+                                    ->copyable(),
                             ])
                             ->columns(5),
                     ]),
 
-                Infolists\Components\Section::make('Payments')
+                Section::make('Pagamentos')
+                    ->icon('heroicon-o-credit-card')
                     ->schema([
                         Infolists\Components\RepeatableEntry::make('payments')
+                            ->label('')
                             ->schema([
-                                Infolists\Components\TextEntry::make('gateway'),
+                                Infolists\Components\TextEntry::make('gateway')
+                                    ->label('Gateway')
+                                    ->formatStateUsing(fn (string $state): string => ucfirst($state)),
                                 Infolists\Components\TextEntry::make('status')
+                                    ->label('Status')
                                     ->badge()
                                     ->color(fn (string $state): string => match ($state) {
                                         'pending' => 'warning',
                                         'paid' => 'success',
                                         'failed' => 'danger',
+                                        'refunded' => 'info',
                                         'cancelled', 'expired' => 'gray',
                                         default => 'gray',
+                                    })
+                                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                                        'pending' => 'Pendente',
+                                        'paid' => 'Pago',
+                                        'failed' => 'Falhou',
+                                        'refunded' => 'Estornado',
+                                        'cancelled' => 'Cancelado',
+                                        'expired' => 'Expirado',
+                                        default => ucfirst($state),
                                     }),
                                 Infolists\Components\TextEntry::make('payment_method')
+                                    ->label('Método')
+                                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                                        'pix' => 'PIX',
+                                        'credit_card' => 'Cartão de crédito',
+                                        'boleto' => 'Boleto',
+                                        default => $state ?? '-',
+                                    })
                                     ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('amount')
+                                    ->label('Valor')
                                     ->money('BRL')
                                     ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('external_checkout_id')
-                                    ->label('Checkout ID')
+                                    ->label('ID no gateway')
+                                    ->copyable()
                                     ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('paid_at')
+                                    ->label('Pago em')
                                     ->dateTime('d/m/Y H:i')
                                     ->placeholder('-'),
-                                Infolists\Components\TextEntry::make('created_at')
-                                    ->dateTime('d/m/Y H:i'),
                             ])
-                            ->columns(4),
+                            ->columns(3),
+                    ]),
+
+                Section::make('Histórico de Status')
+                    ->icon('heroicon-o-clock')
+                    ->collapsed()
+                    ->schema([
+                        Infolists\Components\RepeatableEntry::make('statusHistories')
+                            ->label('')
+                            ->schema([
+                                Infolists\Components\TextEntry::make('description')
+                                    ->label('Evento'),
+                                Infolists\Components\TextEntry::make('created_at')
+                                    ->label('Data/Hora')
+                                    ->dateTime('d/m/Y H:i:s'),
+                            ])
+                            ->columns(2),
+                    ]),
+
+                Section::make('Dados técnicos')
+                    ->icon('heroicon-o-cog-6-tooth')
+                    ->collapsed()
+                    ->columns(3)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('token')
+                            ->label('Token')
+                            ->copyable(),
+                        Infolists\Components\TextEntry::make('user_id')
+                            ->label('User ID (Botpress)')
+                            ->placeholder('-'),
+                        Infolists\Components\TextEntry::make('conversation_id')
+                            ->label('Conversation ID')
+                            ->placeholder('-'),
                     ]),
             ]);
     }
@@ -189,5 +403,17 @@ class OrderResource extends Resource
     public static function canCreate(): bool
     {
         return false;
+    }
+
+    public static function statusLabel(string $status): string
+    {
+        return match ($status) {
+            'pending' => 'Pendente',
+            'awaiting_payment' => 'Aguardando Pagamento',
+            'awaiting_emission' => 'Aguardando Emissão',
+            'completed' => 'Emitido',
+            'cancelled' => 'Cancelado',
+            default => ucfirst($status),
+        };
     }
 }
