@@ -44,7 +44,15 @@
             @endif
 
             <div class="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p class="text-sm text-blue-700">Acompanhe pelo WhatsApp as atualizações sobre a emissão das suas passagens.</p>
+                @php $waNum = \App\Models\Setting::get('whatsapp_number'); @endphp
+                <p class="text-sm text-blue-700">Acompanhe
+                    @if($waNum)
+                        pelo <a href="https://wa.me/{{ $waNum }}" target="_blank" class="underline font-semibold hover:text-blue-900">WhatsApp</a>
+                    @else
+                        pelo WhatsApp
+                    @endif
+                    as atualizações sobre a emissão das suas passagens.
+                </p>
             </div>
         </div>
     </div>

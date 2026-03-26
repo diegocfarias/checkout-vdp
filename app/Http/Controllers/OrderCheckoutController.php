@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderPassengersRequest;
+use App\Models\FlightSearch;
 use App\Models\Order;
+use App\Models\Setting;
 use App\Services\PaymentGatewayResolver;
+use App\Services\VdpFlightService;
 use Illuminate\Support\Facades\Log;
 
 class OrderCheckoutController extends Controller
 {
     public function __construct(
         private PaymentGatewayResolver $paymentResolver,
+        private VdpFlightService $vdpService,
     ) {}
 
     public function show(string $token)
@@ -44,9 +48,10 @@ class OrderCheckoutController extends Controller
             return response()->view('checkout.not-found', [], 404);
         }
 
-        $cardConfig = config('checkout.card', []);
-        $maxInstallments = $cardConfig['max_installments'] ?? 12;
-        $interestRates = $cardConfig['interest_rates'] ?? [];
+        $maxInstallments = Setting::get('max_installments', 12);
+        $interestRates = Setting::get('interest_rates', []);
+        $pixEnabled = Setting::get('pix_enabled', true);
+        $creditCardEnabled = Setting::get('credit_card_enabled', true);
 
         return view('checkout.passengers', [
             'order' => $order,
@@ -54,6 +59,8 @@ class OrderCheckoutController extends Controller
             'inbound' => $order->flights->firstWhere('direction', 'inbound'),
             'maxInstallments' => $maxInstallments,
             'interestRates' => $interestRates,
+            'pixEnabled' => $pixEnabled,
+            'creditCardEnabled' => $creditCardEnabled,
         ]);
     }
 
@@ -63,10 +70,29 @@ class OrderCheckoutController extends Controller
             return response()->view('checkout.not-found', [], 404);
         }
 
+        $order->load('flights');
+        $priceConfirmed = $request->input('price_confirmed') === '1';
+
+        if (! $priceConfirmed && $order->flight_search_id) {
+            $priceChange = $this->checkPriceChange($order);
+
+            if ($priceChange) {
+                return view('checkout.price-changed', [
+                    'order' => $order,
+                    'oldTotal' => $priceChange['old_total'],
+                    'newTotal' => $priceChange['new_total'],
+                    'diff' => $priceChange['diff'],
+                    'formData' => $request->except(['_token', 'price_confirmed']),
+                ]);
+            }
+        }
+
         $passengers = $request->validated()['passengers'];
 
-        foreach ($passengers as $passenger) {
-            $order->passengers()->create($passenger);
+        if ($order->passengers()->count() === 0) {
+            foreach ($passengers as $passenger) {
+                $order->passengers()->create($passenger);
+            }
         }
 
         $paymentMethod = $request->input('payment_method', 'pix');
@@ -91,7 +117,8 @@ class OrderCheckoutController extends Controller
                     $baseTotal += (float) ($flight->money_price ?? 0);
                     $baseTotal += (float) ($flight->tax ?? 0);
                 }
-                $rate = config("checkout.card.interest_rates.{$installments}", 0);
+                $allRates = Setting::get('interest_rates', []);
+                $rate = $allRates[$installments] ?? 0;
                 $cardData['total_with_interest'] = round($baseTotal * (1 + $rate / 100), 2);
             }
         }
@@ -189,5 +216,102 @@ class OrderCheckoutController extends Controller
         }
 
         return view('checkout.awaiting-payment', ['order' => $order, 'payment' => $payment]);
+    }
+
+    private function checkPriceChange(Order $order): ?array
+    {
+        $flightSearch = FlightSearch::find($order->flight_search_id);
+
+        if (! $flightSearch) {
+            return null;
+        }
+
+        $obFlight = $order->flights->firstWhere('direction', 'outbound');
+        $ibFlight = $order->flights->firstWhere('direction', 'inbound');
+
+        if (! $obFlight) {
+            return null;
+        }
+
+        $oldTotal = 0;
+        foreach ($order->flights as $f) {
+            $oldTotal += (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0);
+        }
+
+        $baseParams = [
+            'departure' => $flightSearch->departure_iata,
+            'arrival' => $flightSearch->arrival_iata,
+            'outbound_date' => $flightSearch->outbound_date instanceof \Carbon\Carbon
+                ? $flightSearch->outbound_date->format('Y-m-d')
+                : $flightSearch->outbound_date,
+            'inbound_date' => $flightSearch->inbound_date
+                ? ($flightSearch->inbound_date instanceof \Carbon\Carbon
+                    ? $flightSearch->inbound_date->format('Y-m-d')
+                    : $flightSearch->inbound_date)
+                : null,
+            'adults' => $flightSearch->adults,
+            'children' => $flightSearch->children,
+            'infants' => $flightSearch->infants,
+            'cabin' => $flightSearch->cabin,
+        ];
+
+        try {
+            $fresh = $this->vdpService->revalidateFlightPair(
+                $baseParams,
+                $obFlight->unique_id,
+                $obFlight->operator ?? 'all',
+                $ibFlight?->unique_id,
+                $ibFlight?->operator,
+            );
+
+            $freshOb = $fresh['outbound'];
+            $freshIb = $fresh['inbound'];
+
+            if (! $freshOb) {
+                return null;
+            }
+
+            $newTotal = $this->parseFlightPriceFromApi($freshOb);
+
+            if ($freshIb) {
+                $newTotal += $this->parseFlightPriceFromApi($freshIb);
+            }
+
+            if (abs($newTotal - $oldTotal) >= 0.01) {
+                $obFlight->update([
+                    'price_money' => $freshOb['price_money'] ?? $obFlight->price_money,
+                    'boarding_tax' => $freshOb['boarding_tax'] ?? $obFlight->boarding_tax,
+                    'money_price' => $this->vdpService->parseMoneyValue($freshOb['price_money'] ?? '0'),
+                    'tax' => $this->vdpService->parseMoneyValue($freshOb['boarding_tax'] ?? '0'),
+                ]);
+
+                if ($freshIb && $ibFlight) {
+                    $ibFlight->update([
+                        'price_money' => $freshIb['price_money'] ?? $ibFlight->price_money,
+                        'boarding_tax' => $freshIb['boarding_tax'] ?? $ibFlight->boarding_tax,
+                        'money_price' => $this->vdpService->parseMoneyValue($freshIb['price_money'] ?? '0'),
+                        'tax' => $this->vdpService->parseMoneyValue($freshIb['boarding_tax'] ?? '0'),
+                    ]);
+                }
+
+                return [
+                    'old_total' => round($oldTotal, 2),
+                    'new_total' => round($newTotal, 2),
+                    'diff' => round($newTotal - $oldTotal, 2),
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Checkout: falha ao revalidar preço', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+        }
+
+        return null;
+    }
+
+    private function parseFlightPriceFromApi(array $flight): float
+    {
+        $money = str_replace(['.', ','], ['', '.'], $flight['price_money'] ?? '0');
+        $tax = str_replace(['.', ','], ['', '.'], $flight['boarding_tax'] ?? '0');
+
+        return (float) $money + (float) $tax;
     }
 }

@@ -128,15 +128,22 @@
                 {{-- Forma de pagamento --}}
                 <div class="mt-6 pt-6 border-t border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-3">Forma de pagamento</h3>
+                    @php
+                        $defaultMethod = ($pixEnabled ?? true) ? 'pix' : (($creditCardEnabled ?? true) ? 'credit_card' : 'pix');
+                    @endphp
                     <div class="space-y-3">
-                        <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
-                            <input type="radio" name="payment_method" value="pix" {{ old('payment_method', 'pix') === 'pix' ? 'checked' : '' }} class="payment-method-radio">
-                            <span class="font-medium">PIX</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
-                            <input type="radio" name="payment_method" value="credit_card" {{ old('payment_method') === 'credit_card' ? 'checked' : '' }} class="payment-method-radio">
-                            <span class="font-medium">Cartão de crédito</span>
-                        </label>
+                        @if($pixEnabled ?? true)
+                            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
+                                <input type="radio" name="payment_method" value="pix" {{ old('payment_method', $defaultMethod) === 'pix' ? 'checked' : '' }} class="payment-method-radio">
+                                <span class="font-medium">PIX</span>
+                            </label>
+                        @endif
+                        @if($creditCardEnabled ?? true)
+                            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
+                                <input type="radio" name="payment_method" value="credit_card" {{ old('payment_method', $defaultMethod) === 'credit_card' ? 'checked' : '' }} class="payment-method-radio">
+                                <span class="font-medium">Cartão de crédito</span>
+                            </label>
+                        @endif
                     </div>
 
                     {{-- Campos do cartão --}}
@@ -242,6 +249,10 @@
                 </div>
                 <div class="p-6 space-y-4">
                     @if($outbound)
+                        @php
+                            $obConnsModal = is_array($outbound->connection) ? $outbound->connection : [];
+                            $obStopsModal = max(0, count($obConnsModal) - 1);
+                        @endphp
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="flex items-center gap-2 mb-2">
                                 <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">IDA</span>
@@ -249,6 +260,9 @@
                                 @if($outbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
                                 @endif
+                                <span class="text-[10px] px-1.5 py-0.5 rounded font-medium {{ $obStopsModal > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600' }}">
+                                    {{ $obStopsModal > 0 ? $obStopsModal . ' conexão' : 'Direto' }}
+                                </span>
                             </div>
                             <div class="flex items-center justify-between text-sm">
                                 <div>
@@ -265,9 +279,18 @@
                                     <p class="text-gray-500">{{ $outbound->arrival_time }}</p>
                                 </div>
                             </div>
+                            @if($obStopsModal > 0)
+                                <div class="mt-3 pt-3 border-t border-gray-200">
+                                    @include('partials._connection_details', ['segments' => $obConnsModal, 'accentColor' => 'emerald', 'compact' => false])
+                                </div>
+                            @endif
                         </div>
                     @endif
                     @if($inbound)
+                        @php
+                            $ibConnsModal = is_array($inbound->connection) ? $inbound->connection : [];
+                            $ibStopsModal = max(0, count($ibConnsModal) - 1);
+                        @endphp
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="flex items-center gap-2 mb-2">
                                 <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">VOLTA</span>
@@ -275,6 +298,9 @@
                                 @if($inbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
                                 @endif
+                                <span class="text-[10px] px-1.5 py-0.5 rounded font-medium {{ $ibStopsModal > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600' }}">
+                                    {{ $ibStopsModal > 0 ? $ibStopsModal . ' conexão' : 'Direto' }}
+                                </span>
                             </div>
                             <div class="flex items-center justify-between text-sm">
                                 <div>
@@ -291,6 +317,11 @@
                                     <p class="text-gray-500">{{ $inbound->arrival_time }}</p>
                                 </div>
                             </div>
+                            @if($ibStopsModal > 0)
+                                <div class="mt-3 pt-3 border-t border-gray-200">
+                                    @include('partials._connection_details', ['segments' => $ibConnsModal, 'accentColor' => 'blue', 'compact' => false])
+                                </div>
+                            @endif
                         </div>
                     @endif
                     <div class="pt-4 border-t border-gray-200 space-y-2">
@@ -302,9 +333,13 @@
                             <span>Taxas</span>
                             <span>R$ {{ number_format($subtotalTaxas, 2, ',', '.') }}</span>
                         </div>
+                        <div id="modal-juros-row" class="hidden flex justify-between text-gray-600">
+                            <span>Juros do parcelamento</span>
+                            <span id="modal-juros-valor"></span>
+                        </div>
                         <div class="flex justify-between items-center pt-2 border-t border-gray-100">
                             <span class="font-medium text-gray-700">Total</span>
-                            <span class="text-xl font-bold text-gray-900">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
+                            <span id="modal-total" class="text-xl font-bold text-gray-900">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -362,19 +397,33 @@
 
         function atualizarTotalFooter() {
             const footerTotal = document.getElementById('footer-total');
+            const modalTotal = document.getElementById('modal-total');
+            const modalJurosRow = document.getElementById('modal-juros-row');
+            const modalJurosValor = document.getElementById('modal-juros-valor');
             const baseTotal = parseFloat(footerTotal.dataset.base || 0);
             const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';
+            const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             if (!isCreditCard) {
-                footerTotal.textContent = 'R$ ' + baseTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                footerTotal.textContent = fmt(baseTotal);
+                if (modalTotal) modalTotal.textContent = fmt(baseTotal);
+                if (modalJurosRow) modalJurosRow.classList.add('hidden');
                 return;
             }
 
             const installmentsSelect = document.getElementById('installments');
             const selectedOption = installmentsSelect?.options[installmentsSelect.selectedIndex];
             const totalComJuros = selectedOption?.dataset.total ? parseFloat(selectedOption.dataset.total) : baseTotal;
+            const juros = totalComJuros - baseTotal;
 
-            footerTotal.textContent = 'R$ ' + totalComJuros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            footerTotal.textContent = fmt(totalComJuros);
+            if (modalTotal) modalTotal.textContent = fmt(totalComJuros);
+            if (juros > 0.01) {
+                if (modalJurosRow) modalJurosRow.classList.remove('hidden');
+                if (modalJurosValor) modalJurosValor.textContent = fmt(juros);
+            } else {
+                if (modalJurosRow) modalJurosRow.classList.add('hidden');
+            }
         }
 
         paymentRadios.forEach(r => r.addEventListener('change', toggleCardFields));
@@ -584,6 +633,17 @@
                 const cardFieldsEl = firstInvalid.closest('#card-fields');
                 if (cardFieldsEl) cardFieldsEl.classList.remove('hidden');
                 firstInvalid.focus();
+            } else {
+                showTravelLoading({
+                    title: 'Processando seu pagamento...',
+                    messages: [
+                        'Validando dados do cartão...',
+                        'Confirmando com a operadora...',
+                        'Finalizando sua compra...',
+                        'Quase pronto!'
+                    ],
+                    timeoutMs: 90000
+                });
             }
         });
     </script>

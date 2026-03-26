@@ -13,7 +13,14 @@
 
             <h2 class="text-2xl font-bold text-gray-800 mb-2">Pedido cancelado</h2>
             <p class="text-gray-500 mb-4">O link de pagamento expirou ou o pedido foi cancelado.</p>
-            <p class="text-gray-500">Se ainda deseja prosseguir com a compra, solicite um novo link pelo WhatsApp.</p>
+            @php $waNum = \App\Models\Setting::get('whatsapp_number'); @endphp
+            <p class="text-gray-500">Se ainda deseja prosseguir com a compra, solicite um novo link pelo
+                @if($waNum)
+                    <a href="https://wa.me/{{ $waNum }}" target="_blank" class="text-green-600 underline font-semibold hover:text-green-800">WhatsApp</a>.
+                @else
+                    WhatsApp.
+                @endif
+            </p>
         </div>
     </div>
 @endsection

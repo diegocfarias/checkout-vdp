@@ -7,78 +7,82 @@
         <h2 class="text-2xl font-bold text-gray-800">Sua viagem</h2>
 
         @if($outbound)
+            @php
+                $obConns = is_array($outbound->connection) ? $outbound->connection : [];
+                $obStops = max(0, count($obConns) - 1);
+            @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-0.5 rounded">IDA</span>
-                    <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2.5 py-0.5 rounded">IDA</span>
+                    <span class="text-sm text-gray-600 font-medium uppercase">{{ $outbound->cia }}</span>
                     @if($outbound->flight_number)
-                        <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
+                        <span class="text-sm text-gray-400">{{ $outbound->flight_number }}</span>
                     @endif
                 </div>
-                <div class="flex items-center justify-between">
-                    <div class="text-center">
-                        <p class="text-lg font-bold text-gray-800">{{ $outbound->departure_location }}</p>
-                        <p class="text-sm text-gray-500">{{ $outbound->departure_time }}</p>
-                        @if($outbound->departure_label)
-                            <p class="text-xs text-gray-400">{{ $outbound->departure_label }}</p>
-                        @endif
+                <div class="flex items-center gap-3">
+                    <div class="shrink-0 text-center min-w-[60px]">
+                        <p class="text-xl font-bold text-gray-800">{{ $outbound->departure_time }}</p>
+                        <p class="text-sm font-semibold text-gray-600">{{ $outbound->departure_location }}</p>
                     </div>
-                    <div class="flex-1 mx-4">
+                    <div class="flex-1 px-2">
                         <div class="border-t-2 border-dashed border-gray-300 relative">
-                            @if($outbound->total_flight_duration)
-                                <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-gray-400">{{ $outbound->total_flight_duration }}</span>
-                            @endif
+                            <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-2 text-[11px] text-gray-400 whitespace-nowrap">{{ $outbound->total_flight_duration ?? '' }}</span>
                         </div>
-                        @if(is_array($outbound->connection) && count($outbound->connection) > 0)
-                            <p class="text-center text-xs text-amber-600 mt-1">{{ count($outbound->connection) }} conexão(ões)</p>
-                        @endif
+                        <p class="text-center text-[11px] mt-1 {{ $obStops > 0 ? 'text-amber-600' : 'text-emerald-600' }}">
+                            {{ $obStops > 0 ? $obStops . ' conexão' : 'Direto' }}
+                        </p>
                     </div>
-                    <div class="text-center">
-                        <p class="text-lg font-bold text-gray-800">{{ $outbound->arrival_location }}</p>
-                        <p class="text-sm text-gray-500">{{ $outbound->arrival_time }}</p>
-                        @if($outbound->arrival_label)
-                            <p class="text-xs text-gray-400">{{ $outbound->arrival_label }}</p>
-                        @endif
+                    <div class="shrink-0 text-center min-w-[60px]">
+                        <p class="text-xl font-bold text-gray-800">{{ $outbound->arrival_time }}</p>
+                        <p class="text-sm font-semibold text-gray-600">{{ $outbound->arrival_location }}</p>
                     </div>
                 </div>
+                @if($obStops > 0)
+                    <div class="mt-3 pt-3 border-t border-gray-100">
+                        <p class="text-[10px] font-semibold text-gray-500 uppercase mb-1">Trechos do voo</p>
+                        @include('partials._connection_details', ['segments' => $obConns, 'accentColor' => 'emerald', 'compact' => false])
+                    </div>
+                @endif
             </div>
         @endif
 
         @if($inbound)
+            @php
+                $ibConns = is_array($inbound->connection) ? $inbound->connection : [];
+                $ibStops = max(0, count($ibConns) - 1);
+            @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-0.5 rounded">VOLTA</span>
-                    <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded">VOLTA</span>
+                    <span class="text-sm text-gray-600 font-medium uppercase">{{ $inbound->cia }}</span>
                     @if($inbound->flight_number)
-                        <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
+                        <span class="text-sm text-gray-400">{{ $inbound->flight_number }}</span>
                     @endif
                 </div>
-                <div class="flex items-center justify-between">
-                    <div class="text-center">
-                        <p class="text-lg font-bold text-gray-800">{{ $inbound->departure_location }}</p>
-                        <p class="text-sm text-gray-500">{{ $inbound->departure_time }}</p>
-                        @if($inbound->departure_label)
-                            <p class="text-xs text-gray-400">{{ $inbound->departure_label }}</p>
-                        @endif
+                <div class="flex items-center gap-3">
+                    <div class="shrink-0 text-center min-w-[60px]">
+                        <p class="text-xl font-bold text-gray-800">{{ $inbound->departure_time }}</p>
+                        <p class="text-sm font-semibold text-gray-600">{{ $inbound->departure_location }}</p>
                     </div>
-                    <div class="flex-1 mx-4">
+                    <div class="flex-1 px-2">
                         <div class="border-t-2 border-dashed border-gray-300 relative">
-                            @if($inbound->total_flight_duration)
-                                <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-gray-400">{{ $inbound->total_flight_duration }}</span>
-                            @endif
+                            <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-2 text-[11px] text-gray-400 whitespace-nowrap">{{ $inbound->total_flight_duration ?? '' }}</span>
                         </div>
-                        @if(is_array($inbound->connection) && count($inbound->connection) > 0)
-                            <p class="text-center text-xs text-amber-600 mt-1">{{ count($inbound->connection) }} conexão(ões)</p>
-                        @endif
+                        <p class="text-center text-[11px] mt-1 {{ $ibStops > 0 ? 'text-amber-600' : 'text-emerald-600' }}">
+                            {{ $ibStops > 0 ? $ibStops . ' conexão' : 'Direto' }}
+                        </p>
                     </div>
-                    <div class="text-center">
-                        <p class="text-lg font-bold text-gray-800">{{ $inbound->arrival_location }}</p>
-                        <p class="text-sm text-gray-500">{{ $inbound->arrival_time }}</p>
-                        @if($inbound->arrival_label)
-                            <p class="text-xs text-gray-400">{{ $inbound->arrival_label }}</p>
-                        @endif
+                    <div class="shrink-0 text-center min-w-[60px]">
+                        <p class="text-xl font-bold text-gray-800">{{ $inbound->arrival_time }}</p>
+                        <p class="text-sm font-semibold text-gray-600">{{ $inbound->arrival_location }}</p>
                     </div>
                 </div>
+                @if($ibStops > 0)
+                    <div class="mt-3 pt-3 border-t border-gray-100">
+                        <p class="text-[10px] font-semibold text-gray-500 uppercase mb-1">Trechos do voo</p>
+                        @include('partials._connection_details', ['segments' => $ibConns, 'accentColor' => 'blue', 'compact' => false])
+                    </div>
+                @endif
             </div>
         @endif
 
@@ -113,7 +117,13 @@
         </a>
     </div>
 
-    <p class="mt-6 text-center text-sm text-gray-400">
-        Link válido por {{ $order->expires_at->diffForHumans() }}.
-    </p>
+    <div class="mt-4 flex items-center justify-between">
+        <a href="{{ route('search.home') }}" class="text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            Voltar para busca
+        </a>
+        <p class="text-sm text-gray-400">
+            Válido por {{ $order->expires_at->diffForHumans() }}
+        </p>
+    </div>
 @endsection

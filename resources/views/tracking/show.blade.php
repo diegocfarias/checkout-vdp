@@ -42,9 +42,38 @@
                 <div class="bg-green-50 rounded-lg p-3">
                     <p class="text-sm text-green-700">Suas passagens foram emitidas! Confira seu e-mail para mais detalhes.</p>
                 </div>
+                @php
+                    $flightsWithLoc = $order->flights->filter(fn ($f) => $f->loc);
+                @endphp
+                @if($flightsWithLoc->count() > 0)
+                    <div class="mt-3 space-y-2">
+                        @foreach($flightsWithLoc as $flight)
+                            <div class="bg-white border-2 border-green-200 rounded-lg p-4 flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase font-semibold">
+                                        LOC {{ $flight->direction === 'outbound' ? 'Ida' : 'Volta' }}
+                                        <span class="text-gray-400">— {{ strtoupper($flight->cia) }}</span>
+                                    </p>
+                                    <p class="text-2xl font-bold text-gray-900 tracking-widest mt-0.5">{{ $flight->loc }}</p>
+                                </div>
+                                <div class="text-right text-xs text-gray-400">
+                                    <p>{{ $flight->departure_location }} → {{ $flight->arrival_location }}</p>
+                                </div>
+                            </div>
+                        @endforeach
+                        <p class="text-xs text-gray-400 text-center">Use o localizador para realizar o check-in no site da companhia aérea.</p>
+                    </div>
+                @endif
             @elseif($currentStatus === 'cancelled')
                 <div class="bg-red-50 rounded-lg p-3">
-                    <p class="text-sm text-red-700">Este pedido foi cancelado. Entre em contato pelo WhatsApp se precisar de ajuda.</p>
+                    @php $waNum = \App\Models\Setting::get('whatsapp_number'); @endphp
+                    <p class="text-sm text-red-700">Este pedido foi cancelado.
+                        @if($waNum)
+                            Entre em contato pelo <a href="https://wa.me/{{ $waNum }}" target="_blank" class="underline font-semibold hover:text-red-900">WhatsApp</a> se precisar de ajuda.
+                        @else
+                            Entre em contato pelo WhatsApp se precisar de ajuda.
+                        @endif
+                    </p>
                 </div>
             @endif
         </div>
@@ -146,7 +175,14 @@
 
         {{-- Ajuda --}}
         <div class="text-center py-2">
-            <p class="text-xs text-gray-400">Dúvidas? Entre em contato pelo WhatsApp.</p>
+            @php $waNum2 = \App\Models\Setting::get('whatsapp_number'); @endphp
+            <p class="text-xs text-gray-400">Dúvidas?
+                @if($waNum2)
+                    Entre em contato pelo <a href="https://wa.me/{{ $waNum2 }}" target="_blank" class="underline hover:text-gray-600">WhatsApp</a>.
+                @else
+                    Entre em contato pelo WhatsApp.
+                @endif
+            </p>
         </div>
     </div>
 @endsection
