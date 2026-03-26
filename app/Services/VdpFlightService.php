@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -76,6 +77,91 @@ class VdpFlightService
         return $flights;
     }
 
+    /**
+     * Busca voos com cache de 30 minutos.
+     */
+    public function searchFlights(array $params): array
+    {
+        $cacheKey = 'vdp_search:' . md5(json_encode($params));
+
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($params) {
+            return $this->callApi($params);
+        });
+    }
+
+    /**
+     * Busca voos direto na API (sem cache) para revalidação de preço.
+     */
+    public function searchFlightsFresh(array $params): array
+    {
+        return $this->callApi($params);
+    }
+
+    /**
+     * Re-consulta um voo específico pelo unique_id e retorna o voo atualizado com preço atual.
+     * Retorna null se o voo não existir mais.
+     */
+    public function revalidateFlight(array $searchParams, string $uniqueId, string $direction): ?array
+    {
+        try {
+            $results = $this->searchFlightsFresh($searchParams);
+            $flights = $results[$direction] ?? [];
+
+            return $this->findByUniqueId($flights, $uniqueId);
+        } catch (\Throwable $e) {
+            Log::warning('VDP: falha ao revalidar voo', [
+                'unique_id' => $uniqueId,
+                'direction' => $direction,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Revalida ida e volta em 1 chamada (mesma cia) ou 2 chamadas (cias diferentes).
+     *
+     * @return array{outbound: ?array, inbound: ?array}
+     */
+    public function revalidateFlightPair(
+        array $baseParams,
+        string $obUniqueId,
+        string $obCia,
+        ?string $ibUniqueId = null,
+        ?string $ibCia = null,
+    ): array {
+        $obParams = array_merge($baseParams, ['cia' => strtolower($obCia)]);
+
+        $sameCia = $ibCia && strtolower($obCia) === strtolower($ibCia);
+
+        try {
+            $obResults = $this->searchFlightsFresh($obParams);
+            $freshOb = $this->findByUniqueId($obResults['outbound'] ?? [], $obUniqueId);
+
+            $freshIb = null;
+            if ($ibUniqueId && $ibCia) {
+                if ($sameCia) {
+                    $freshIb = $this->findByUniqueId($obResults['inbound'] ?? [], $ibUniqueId);
+                } else {
+                    $ibParams = array_merge($baseParams, ['cia' => strtolower($ibCia)]);
+                    $ibResults = $this->searchFlightsFresh($ibParams);
+                    $freshIb = $this->findByUniqueId($ibResults['inbound'] ?? [], $ibUniqueId);
+                }
+            }
+
+            return ['outbound' => $freshOb, 'inbound' => $freshIb];
+        } catch (\Throwable $e) {
+            Log::warning('VDP: falha ao revalidar par de voos', [
+                'ob_unique_id' => $obUniqueId,
+                'ib_unique_id' => $ibUniqueId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['outbound' => null, 'inbound' => null];
+        }
+    }
+
     private function callApi(array $params): array
     {
         $url = rtrim(config('services.vdp.url'), '/') . '/api/search/flights';
@@ -116,7 +202,7 @@ class VdpFlightService
     /**
      * Converte valor monetário em formato BR ("1.151" ou "1.151,50") para decimal padrão ("1151" ou "1151.50").
      */
-    private function parseMoneyValue(string $value): string
+    public function parseMoneyValue(string $value): string
     {
         $value = trim($value);
 

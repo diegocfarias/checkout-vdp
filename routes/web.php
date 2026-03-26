@@ -1,14 +1,22 @@
 <?php
 
 use App\Http\Controllers\AbacatePayWebhookController;
+use App\Http\Controllers\AirportController;
 use App\Http\Controllers\AppMaxWebhookController;
+use App\Http\Controllers\FlightSearchController;
 use App\Http\Controllers\OrderCheckoutController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
+Route::get('/', [FlightSearchController::class, 'index'])->name('search.home');
+
+Route::post('/api/airports', AirportController::class)
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::middleware('throttle:30,1')->group(function () {
+    Route::get('/voos', [FlightSearchController::class, 'search'])->name('search.results');
+    Route::post('/voos/selecionar', [FlightSearchController::class, 'select'])->name('search.select');
 });
 
 // Rota de desenvolvimento: cria pedido fake e redireciona para o checkout (apenas quando APP_DEBUG=true)
