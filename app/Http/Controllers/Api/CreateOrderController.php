@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\Order;
+use App\Models\Setting;
 use App\Services\BotpressNotifier;
 use App\Services\VdpFlightService;
 use Illuminate\Http\JsonResponse;
@@ -49,7 +50,7 @@ class CreateOrderController extends Controller
             'cabin' => $validated['cabin'],
             'departure_iata' => $validated['departure_iata'],
             'arrival_iata' => $validated['arrival_iata'],
-            'expires_at' => now()->addMinutes(config('app.order_expiration_minutes')),
+            'expires_at' => now()->addMinutes(Setting::get('order_expiration_minutes', 30)),
         ]);
 
         foreach ($flights as $flightData) {

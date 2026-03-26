@@ -8,6 +8,7 @@ use App\Models\OrderStatusHistory;
 use App\Services\PaymentGatewayResolver;
 use BackedEnum;
 use Filament\Actions;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -73,6 +74,16 @@ class OrderResource extends Resource
 
                         return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';
                     }),
+                Tables\Columns\TextColumn::make('device_type')
+                    ->label('Dispositivo')
+                    ->badge()
+                    ->color(fn (?string $state): string => $state === 'mobile' ? 'info' : 'gray')
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'mobile' => 'Mobile',
+                        'desktop' => 'Desktop',
+                        default => '-',
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('cabin')
                     ->label('Cabine')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -105,13 +116,39 @@ class OrderResource extends Resource
                     ->label('Emitido')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->requiresConfirmation()
                     ->modalHeading('Confirmar emissão')
-                    ->modalDescription('Marcar este pedido como emitido? O cliente será notificado.')
+                    ->modalDescription('Informe o LOC de cada trecho.')
+                    ->form(function (Order $record): array {
+                        $record->loadMissing('flights');
+                        $fields = [];
+                        foreach ($record->flights as $flight) {
+                            $dir = $flight->direction === 'outbound' ? 'Ida' : 'Volta';
+                            $label = $dir . ' — ' . strtoupper($flight->cia ?? '');
+                            $fields[] = TextInput::make('loc_' . $flight->id)
+                                ->label($label)
+                                ->placeholder('Ex: ABC123')
+                                ->required()
+                                ->maxLength(20)
+                                ->extraInputAttributes(['style' => 'text-transform: uppercase']);
+                        }
+                        return $fields;
+                    })
                     ->visible(fn (Order $record): bool => $record->status === 'awaiting_emission')
-                    ->action(function (Order $record): void {
-                        $record->update(['status' => 'completed']);
-                        Notification::make()->title('Pedido marcado como emitido')->success()->send();
+                    ->action(function (Order $record, array $data): void {
+                        $record->loadMissing('flights');
+                        $locs = [];
+                        foreach ($record->flights as $flight) {
+                            $loc = strtoupper(trim($data['loc_' . $flight->id] ?? ''));
+                            if ($loc) {
+                                $flight->update(['loc' => $loc]);
+                                $locs[] = $loc;
+                            }
+                        }
+                        $record->update([
+                            'status' => 'completed',
+                            'loc' => implode(' / ', array_unique($locs)),
+                        ]);
+                        Notification::make()->title('Pedido emitido com sucesso')->success()->send();
                     }),
                 Actions\Action::make('mark_paid')
                     ->label('Confirmar Pgto')
@@ -202,6 +239,12 @@ class OrderResource extends Resource
                                 default => 'gray',
                             })
                             ->formatStateUsing(fn (string $state): string => self::statusLabel($state)),
+                        Infolists\Components\TextEntry::make('loc')
+                            ->label('LOC')
+                            ->badge()
+                            ->color('success')
+                            ->copyable()
+                            ->placeholder('Não informado'),
                         Infolists\Components\TextEntry::make('route')
                             ->label('Rota')
                             ->getStateUsing(fn (Order $record) => $record->departure_iata && $record->arrival_iata
@@ -234,6 +277,30 @@ class OrderResource extends Resource
 
                                 return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';
                             }),
+                        Infolists\Components\TextEntry::make('total_miles')
+                            ->label('Total em milhas')
+                            ->getStateUsing(function (Order $record) {
+                                $record->loadMissing('flights');
+                                $parts = [];
+                                foreach ($record->flights as $f) {
+                                    $miles = $f->price_miles ?? $f->miles_price ?? null;
+                                    if ($miles) {
+                                        $dir = $f->direction === 'outbound' ? 'Ida' : 'Volta';
+                                        $parts[] = $dir . ': ' . number_format((float) $miles, 0, '', '.') . ' milhas';
+                                    }
+                                }
+                                return count($parts) > 0 ? implode(' | ', $parts) : '-';
+                            }),
+                        Infolists\Components\TextEntry::make('device_type')
+                            ->label('Dispositivo')
+                            ->badge()
+                            ->color(fn (?string $state): string => $state === 'mobile' ? 'info' : 'gray')
+                            ->formatStateUsing(fn (?string $state): string => match ($state) {
+                                'mobile' => 'Mobile',
+                                'desktop' => 'Desktop',
+                                default => '-',
+                            })
+                            ->placeholder('-'),
                         Infolists\Components\TextEntry::make('paid_at')
                             ->label('Pago em')
                             ->dateTime('d/m/Y H:i')
@@ -272,8 +339,55 @@ class OrderResource extends Resource
                                 Infolists\Components\TextEntry::make('tax')
                                     ->label('Taxa')
                                     ->money('BRL'),
+                                Infolists\Components\TextEntry::make('miles_display')
+                                    ->label('Milhas')
+                                    ->getStateUsing(fn ($record) => ($record->price_miles ?? $record->miles_price)
+                                        ? number_format((float) ($record->price_miles ?? $record->miles_price), 0, '', '.') . ' mi'
+                                        : '-')
+                                    ->placeholder('-'),
+                                Infolists\Components\TextEntry::make('loc')
+                                    ->label('LOC')
+                                    ->badge()
+                                    ->color('success')
+                                    ->copyable()
+                                    ->placeholder('-'),
+                                Infolists\Components\TextEntry::make('connection_details')
+                                    ->label('Conexões')
+                                    ->columnSpanFull()
+                                    ->html()
+                                    ->getStateUsing(function ($record) {
+                                        $conns = is_array($record->connection) ? $record->connection : [];
+                                        if (count($conns) <= 1) {
+                                            return '<span style="color:#059669;font-weight:600;">Direto</span>';
+                                        }
+                                        $html = '<div style="font-size:12px;line-height:1.6;">';
+                                        foreach ($conns as $i => $seg) {
+                                            $dep = $seg['DEPARTURE_TIME'] ?? '';
+                                            $arr = $seg['ARRIVAL_TIME'] ?? '';
+                                            $depIata = $seg['DEPARTURE_LOCATION'] ?? '';
+                                            $arrIata = $seg['ARRIVAL_LOCATION'] ?? '';
+                                            $num = $seg['FLIGHT_NUMBER'] ?? '';
+                                            $dur = $seg['FLIGHT_DURATION'] ?? '';
+                                            $wait = $seg['TIME_WAITING'] ?? '';
+                                            $html .= "<div style='padding:2px 0;'>";
+                                            $html .= "<strong>{$dep}</strong> {$depIata} → <strong>{$arr}</strong> {$arrIata}";
+                                            if ($num) {
+                                                $html .= " <span style='color:#9ca3af;'>({$num})</span>";
+                                            }
+                                            if ($dur) {
+                                                $html .= " <span style='color:#9ca3af;'>· {$dur}</span>";
+                                            }
+                                            $html .= "</div>";
+                                            if ($i < count($conns) - 1 && $wait) {
+                                                $html .= "<div style='padding:1px 0 1px 12px;color:#d97706;font-size:11px;'>⏳ Espera {$wait} em {$arrIata}</div>";
+                                            }
+                                        }
+                                        $html .= '</div>';
+
+                                        return $html;
+                                    }),
                             ])
-                            ->columns(6),
+                            ->columns(4),
                     ]),
 
                 Section::make('Passageiros')

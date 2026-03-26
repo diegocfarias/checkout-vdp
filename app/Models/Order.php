@@ -21,7 +21,10 @@ class Order extends Model
         'cabin',
         'departure_iata',
         'arrival_iata',
+        'flight_search_id',
+        'device_type',
         'status',
+        'loc',
         'expires_at',
         'paid_at',
     ];

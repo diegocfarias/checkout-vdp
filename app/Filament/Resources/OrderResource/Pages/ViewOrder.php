@@ -6,6 +6,7 @@ use App\Filament\Resources\OrderResource;
 use App\Models\Order;
 use App\Services\PaymentGatewayResolver;
 use Filament\Actions;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -20,14 +21,40 @@ class ViewOrder extends ViewRecord
                 ->label('Marcar como Emitido')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->requiresConfirmation()
                 ->modalHeading('Confirmar emissão')
-                ->modalDescription('Marcar este pedido como emitido? O cliente será notificado.')
+                ->modalDescription('Informe o localizador (LOC) de cada trecho para o cliente realizar o check-in.')
+                ->form(function (): array {
+                    $this->record->loadMissing('flights');
+                    $fields = [];
+                    foreach ($this->record->flights as $flight) {
+                        $dir = $flight->direction === 'outbound' ? 'Ida' : 'Volta';
+                        $label = $dir . ' — ' . strtoupper($flight->cia ?? '') . ' (' . ($flight->departure_location ?? '') . ' → ' . ($flight->arrival_location ?? '') . ')';
+                        $fields[] = TextInput::make('loc_' . $flight->id)
+                            ->label($label)
+                            ->placeholder('Ex: ABC123')
+                            ->required()
+                            ->maxLength(20)
+                            ->extraInputAttributes(['style' => 'text-transform: uppercase']);
+                    }
+                    return $fields;
+                })
                 ->visible(fn (): bool => $this->record->status === 'awaiting_emission')
-                ->action(function (): void {
-                    $this->record->update(['status' => 'completed']);
-                    Notification::make()->title('Pedido marcado como emitido')->success()->send();
-                    $this->refreshFormData(['status']);
+                ->action(function (array $data): void {
+                    $this->record->loadMissing('flights');
+                    $locs = [];
+                    foreach ($this->record->flights as $flight) {
+                        $loc = strtoupper(trim($data['loc_' . $flight->id] ?? ''));
+                        if ($loc) {
+                            $flight->update(['loc' => $loc]);
+                            $locs[] = $loc;
+                        }
+                    }
+                    $this->record->update([
+                        'status' => 'completed',
+                        'loc' => implode(' / ', array_unique($locs)),
+                    ]);
+                    Notification::make()->title('Pedido emitido com sucesso')->success()->send();
+                    $this->refreshFormData(['status', 'loc']);
                 }),
 
             Actions\Action::make('mark_paid')

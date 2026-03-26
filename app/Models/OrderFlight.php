@@ -26,6 +26,7 @@ class OrderFlight extends Model
         'price_miles_vip',
         'total_flight_duration',
         'unique_id',
+        'loc',
         'connection',
         'miles_price',
         'money_price',

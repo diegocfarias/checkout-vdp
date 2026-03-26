@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Order;
+use App\Models\Setting;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -72,7 +73,7 @@ class StoreOrderPassengersRequest extends FormRequest
             'card_month' => ['required', 'integer', 'min:1', 'max:12'],
             'card_year' => ['required', 'integer', 'min:' . (int) date('y'), 'max:' . ((int) date('y') + 15)],
             'card_name' => ['required', 'string', 'min:2', 'max:255'],
-            'installments' => ['required', 'integer', 'min:1', 'max:' . (config('checkout.card.max_installments', 12))],
+            'installments' => ['required', 'integer', 'min:1', 'max:' . Setting::get('max_installments', 12)],
         ] : []);
     }
 
