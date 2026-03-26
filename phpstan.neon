@@ -1,0 +1,11 @@
+parameters:
+    level: 4
+    paths:
+        - app/
+    excludePaths:
+        - vendor/
+    ignoreErrors:
+        - '#Access to an undefined property App\\Models\\#'
+        - '#Access to an undefined property App\\Filament\\#'
+        - '#Call to an undefined static method App\\Models\\#'
+        - '#Cannot access property .* on Illuminate\\Database\\Eloquent\\Model\|int\|string#'
