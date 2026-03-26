@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -215,6 +216,84 @@ class VdpFlightService
         }
 
         return $value;
+    }
+
+    /**
+     * Calcula o preço total de um voo (base + taxa) usando a precificação configurada.
+     * Prioridade: milhas > percentual > preço original da API.
+     */
+    public function calculateFlightPrice(array $flight): float
+    {
+        $cia = $this->normalizeCia($flight['operator'] ?? '');
+        $tax = $this->parseMoneyFloat($flight['boarding_tax'] ?? '0');
+
+        $milesEnabled = Setting::get('pricing_miles_enabled', false);
+        $pctEnabled = Setting::get('pricing_pct_enabled', false);
+
+        if ($milesEnabled) {
+            $miles = $this->parseMoneyFloat($flight['price_miles'] ?? '0');
+            if ($miles > 0) {
+                $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
+
+                return ($miles / 1000) * $valorMilheiro + $tax;
+            }
+        }
+
+        if ($pctEnabled) {
+            $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
+            $pct = (float) Setting::get("pricing_pct_{$cia}", 100);
+
+            return $money * ($pct / 100) + $tax;
+        }
+
+        $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
+
+        return $money + $tax;
+    }
+
+    /**
+     * Calcula o preço base de um voo (sem taxa) para gravar no pedido.
+     */
+    public function calculateBasePrice(array $flight): string
+    {
+        $cia = $this->normalizeCia($flight['operator'] ?? '');
+
+        $milesEnabled = Setting::get('pricing_miles_enabled', false);
+        $pctEnabled = Setting::get('pricing_pct_enabled', false);
+
+        if ($milesEnabled) {
+            $miles = $this->parseMoneyFloat($flight['price_miles'] ?? '0');
+            if ($miles > 0) {
+                $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
+
+                return number_format(($miles / 1000) * $valorMilheiro, 2, '.', '');
+            }
+        }
+
+        if ($pctEnabled) {
+            $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
+            $pct = (float) Setting::get("pricing_pct_{$cia}", 100);
+
+            return number_format($money * ($pct / 100), 2, '.', '');
+        }
+
+        return $this->parseMoneyValue($flight['price_money'] ?? '0');
+    }
+
+    private function parseMoneyFloat(string $value): float
+    {
+        return (float) str_replace(['.', ','], ['', '.'], trim($value));
+    }
+
+    private function normalizeCia(string $operator): string
+    {
+        $map = [
+            'gol' => 'gol', 'g3' => 'gol',
+            'azul' => 'azul', 'ad' => 'azul',
+            'latam' => 'latam', 'la' => 'latam', 'jj' => 'latam',
+        ];
+
+        return $map[strtolower(trim($operator))] ?? strtolower(trim($operator));
     }
 
     private function mapFlightData(array $flight): array

@@ -271,25 +271,27 @@ class OrderCheckoutController extends Controller
                 return null;
             }
 
-            $newTotal = $this->parseFlightPriceFromApi($freshOb);
+            $newTotal = $this->vdpService->calculateFlightPrice($freshOb);
 
             if ($freshIb) {
-                $newTotal += $this->parseFlightPriceFromApi($freshIb);
+                $newTotal += $this->vdpService->calculateFlightPrice($freshIb);
             }
 
             if (abs($newTotal - $oldTotal) >= 0.01) {
                 $obFlight->update([
                     'price_money' => $freshOb['price_money'] ?? $obFlight->price_money,
+                    'price_miles' => $freshOb['price_miles'] ?? $obFlight->price_miles,
                     'boarding_tax' => $freshOb['boarding_tax'] ?? $obFlight->boarding_tax,
-                    'money_price' => $this->vdpService->parseMoneyValue($freshOb['price_money'] ?? '0'),
+                    'money_price' => $this->vdpService->calculateBasePrice($freshOb),
                     'tax' => $this->vdpService->parseMoneyValue($freshOb['boarding_tax'] ?? '0'),
                 ]);
 
                 if ($freshIb && $ibFlight) {
                     $ibFlight->update([
                         'price_money' => $freshIb['price_money'] ?? $ibFlight->price_money,
+                        'price_miles' => $freshIb['price_miles'] ?? $ibFlight->price_miles,
                         'boarding_tax' => $freshIb['boarding_tax'] ?? $ibFlight->boarding_tax,
-                        'money_price' => $this->vdpService->parseMoneyValue($freshIb['price_money'] ?? '0'),
+                        'money_price' => $this->vdpService->calculateBasePrice($freshIb),
                         'tax' => $this->vdpService->parseMoneyValue($freshIb['boarding_tax'] ?? '0'),
                     ]);
                 }
@@ -307,11 +309,4 @@ class OrderCheckoutController extends Controller
         return null;
     }
 
-    private function parseFlightPriceFromApi(array $flight): float
-    {
-        $money = str_replace(['.', ','], ['', '.'], $flight['price_money'] ?? '0');
-        $tax = str_replace(['.', ','], ['', '.'], $flight['boarding_tax'] ?? '0');
-
-        return (float) $money + (float) $tax;
-    }
 }

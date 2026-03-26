@@ -21,6 +21,14 @@ class SettingsSeeder extends Seeder
             ]), 'type' => 'json'],
             ['key' => 'order_expiration_minutes', 'value' => '30', 'type' => 'integer'],
             ['key' => 'whatsapp_number', 'value' => '', 'type' => 'string'],
+            ['key' => 'pricing_miles_enabled', 'value' => '1', 'type' => 'boolean'],
+            ['key' => 'pricing_pct_enabled', 'value' => '0', 'type' => 'boolean'],
+            ['key' => 'pricing_miles_azul', 'value' => '30.00', 'type' => 'string'],
+            ['key' => 'pricing_miles_gol', 'value' => '30.00', 'type' => 'string'],
+            ['key' => 'pricing_miles_latam', 'value' => '30.00', 'type' => 'string'],
+            ['key' => 'pricing_pct_azul', 'value' => '80', 'type' => 'string'],
+            ['key' => 'pricing_pct_gol', 'value' => '80', 'type' => 'string'],
+            ['key' => 'pricing_pct_latam', 'value' => '80', 'type' => 'string'],
         ];
 
         foreach ($defaults as $setting) {

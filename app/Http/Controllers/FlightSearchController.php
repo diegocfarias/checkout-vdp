@@ -201,10 +201,7 @@ class FlightSearchController extends Controller
 
     private function parseFlightPrice(array $flight): float
     {
-        $money = str_replace(['.', ','], ['', '.'], $flight['price_money'] ?? '0');
-        $tax = str_replace(['.', ','], ['', '.'], $flight['boarding_tax'] ?? '0');
-
-        return (float) $money + (float) $tax;
+        return $this->vdpService->calculateFlightPrice($flight);
     }
 
     private function parseDurationMinutes(string $duration): int
@@ -358,7 +355,7 @@ class FlightSearchController extends Controller
             'unique_id' => $data['unique_id'] ?? null,
             'connection' => $data['connection'] ?? null,
             'miles_price' => $data['price_miles'] ?? '0',
-            'money_price' => $this->vdpService->parseMoneyValue($data['price_money'] ?? '0'),
+            'money_price' => $this->vdpService->calculateBasePrice($data),
             'tax' => $this->vdpService->parseMoneyValue($data['boarding_tax'] ?? '0'),
         ];
     }
