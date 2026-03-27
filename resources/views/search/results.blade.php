@@ -25,8 +25,15 @@
             <span>{{ $params['adults'] }} ad.{{ $params['children'] > 0 ? ', ' . $params['children'] . ' cr.' : '' }}{{ $params['infants'] > 0 ? ', ' . $params['infants'] . ' bb.' : '' }}</span>
             <span class="text-gray-400">|</span>
             <span>{{ $params['cabin'] === 'EX' ? 'Executiva' : 'Econômica' }}</span>
-            <a href="{{ route('search.home') }}" class="ml-auto text-emerald-600 hover:text-emerald-700 font-medium text-sm">Nova busca</a>
+            <button type="button" id="toggle-search-form" class="ml-auto text-emerald-600 hover:text-emerald-700 font-medium text-sm flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                Nova busca
+            </button>
         </div>
+    </div>
+
+    <div id="inline-search-form" class="hidden">
+        @include('search._search_form', ['prefill' => $params, 'compact' => true])
     </div>
 
     @if(count($groups) === 0)
@@ -198,6 +205,20 @@
 @push('scripts')
 <script>
 (function() {
+    // --- Toggle inline search form ---
+    var toggleBtn = document.getElementById('toggle-search-form');
+    var inlineForm = document.getElementById('inline-search-form');
+    if (toggleBtn && inlineForm) {
+        toggleBtn.addEventListener('click', function() {
+            var isHidden = inlineForm.classList.contains('hidden');
+            inlineForm.classList.toggle('hidden');
+            toggleBtn.textContent = isHidden ? 'Fechar busca' : 'Nova busca';
+            if (isHidden) {
+                inlineForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+    }
+
     var isRoundtrip = @json($isRoundtrip);
     var groupsData = @json($groups);
     var PAGE_SIZE = 10;
