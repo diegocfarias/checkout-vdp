@@ -194,7 +194,7 @@ class OrderCheckoutController extends Controller
             $payment->update([
                 'status' => 'paid',
                 'paid_at' => $now,
-                'payment_method' => $payment->gateway_response['payment_method'] ?? null,
+                'payment_method' => $payment->gateway_response['payment_method'] ?? $payment->payment_method,
                 'external_payment_id' => $payment->gateway_response['payment_id'] ?? $payment->gateway_response['id'] ?? null,
             ]);
 

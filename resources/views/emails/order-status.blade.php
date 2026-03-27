@@ -12,10 +12,12 @@
         $totalPrice += (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0);
     }
 
-    $isPix = $payment && $payment->payment_method === 'pix';
-    $isCard = $payment && $payment->payment_method !== 'pix';
+    $paymentMethod = $payment->payment_method ?? ($payment && $payment->gateway === 'abacatepay' ? 'pix' : null);
+    $isPix = $payment && $paymentMethod === 'pix';
+    $isCard = $payment && $paymentMethod === 'credit_card';
     $pixEmv = $payment ? ($payment->gateway_response['pix_emv'] ?? $payment->payment_url ?? null) : null;
     $pixQr = $payment ? ($payment->gateway_response['pix_qrcode'] ?? null) : null;
+    $paymentLabel = $isPix ? 'PIX' : ($isCard ? 'Cartão de Crédito' : 'Pagamento');
 
     $badgeColor = match($newStatus) {
         'awaiting_payment' => '#f59e0b',
@@ -63,7 +65,7 @@
                                     <td align="center">
                                         <div style="display: inline-block; background-color: {{ $badgeColor }}15; border: 1px solid {{ $badgeColor }}40; padding: 8px 24px; border-radius: 50px;">
                                             <span style="font-size: 14px; font-weight: 700; color: {{ $badgeColor }}; letter-spacing: 0.3px;">
-                                                {{ $badgeIcon }} {{ strtoupper($statusLabel) }}
+                                                {{ $badgeIcon }} {{ mb_strtoupper($statusLabel) }}
                                             </span>
                                         </div>
                                     </td>
@@ -163,7 +165,7 @@
                                             R$ {{ number_format($payment->amount ?? $totalPrice, 2, ',', '.') }}
                                         </p>
                                         <p style="margin: 0; font-size: 13px; color: #6b7280;">
-                                            via {{ $payment->payment_method === 'pix' ? 'PIX' : 'Cartão de Crédito' }}
+                                            via {{ $paymentLabel }}
                                             @if($payment->paid_at)
                                                 em {{ $payment->paid_at->format('d/m/Y \à\s H:i') }}
                                             @endif
