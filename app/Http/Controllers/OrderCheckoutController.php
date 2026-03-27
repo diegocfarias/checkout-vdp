@@ -19,7 +19,7 @@ class OrderCheckoutController extends Controller
 
     public function show(string $token)
     {
-        $order = Order::with('flights')
+        $order = Order::with(['flights', 'flightSearch'])
             ->where('token', $token)
             ->pending()
             ->notExpired()

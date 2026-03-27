@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -70,6 +71,11 @@ class Order extends Model
     public function latestPayment(): HasOne
     {
         return $this->hasOne(OrderPayment::class)->latestOfMany();
+    }
+
+    public function flightSearch(): BelongsTo
+    {
+        return $this->belongsTo(FlightSearch::class);
     }
 
     public function statusHistories(): HasMany
