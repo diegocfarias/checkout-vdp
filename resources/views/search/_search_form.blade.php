@@ -303,6 +303,43 @@
         else hint.textContent = '';
     }
 
+    function getCellClass(date) {
+        var isPast = date < today;
+        var isStart = sameDay(date, dpOutbound);
+        var isEnd = sameDay(date, dpInbound);
+        var inRange = false;
+        if (dpOutbound && !dpInbound && dpHover && date > dpOutbound && date <= dpHover) {
+            inRange = true;
+        } else if (dpOutbound && dpInbound && date > dpOutbound && date < dpInbound) {
+            inRange = true;
+        }
+        var cls = 'h-9 text-sm rounded-lg transition-colors ';
+        if (isPast) {
+            cls += 'text-gray-300 cursor-not-allowed';
+        } else if (isStart || isEnd) {
+            cls += 'bg-emerald-600 text-white font-semibold';
+        } else if (inRange) {
+            cls += 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 cursor-pointer';
+        } else {
+            cls += 'text-gray-700 hover:bg-gray-100 cursor-pointer';
+        }
+        return cls;
+    }
+
+    function dpUpdateHoverStyles() {
+        var cells = document.querySelectorAll('#dp-calendars button[data-date]');
+        for (var i = 0; i < cells.length; i++) {
+            var dk = cells[i].getAttribute('data-date');
+            var parts = dk.split('-');
+            var dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            cells[i].className = getCellClass(dt);
+        }
+        var hint = document.getElementById('dp-hint');
+        if (!dpOutbound) hint.textContent = 'Selecione a data de ida';
+        else if (isRoundtrip() && !dpInbound) hint.textContent = 'Selecione a data de volta';
+        else hint.textContent = '';
+    }
+
     function buildMonth(year, month) {
         var wrap = document.createElement('div');
         wrap.className = 'flex-1 min-w-0';
@@ -334,30 +371,10 @@
             var cell = document.createElement('button');
             cell.type = 'button';
             cell.textContent = d;
-            var isPast = date < today;
-            var isStart = sameDay(date, dpOutbound);
-            var isEnd = sameDay(date, dpInbound);
-            var inRange = false;
+            cell.setAttribute('data-date', dateKey(date));
+            cell.className = getCellClass(date);
 
-            if (dpOutbound && !dpInbound && dpHover && date > dpOutbound && date <= dpHover) {
-                inRange = true;
-            } else if (dpOutbound && dpInbound && date > dpOutbound && date < dpInbound) {
-                inRange = true;
-            }
-
-            var cls = 'h-9 text-sm rounded-lg transition-colors ';
-            if (isPast) {
-                cls += 'text-gray-300 cursor-not-allowed';
-            } else if (isStart || isEnd) {
-                cls += 'bg-emerald-600 text-white font-semibold';
-            } else if (inRange) {
-                cls += 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 cursor-pointer';
-            } else {
-                cls += 'text-gray-700 hover:bg-gray-100 cursor-pointer';
-            }
-            cell.className = cls;
-
-            if (!isPast) {
+            if (date >= today) {
                 (function(dt) {
                     cell.addEventListener('click', function(e) {
                         e.preventDefault();
@@ -368,7 +385,7 @@
                         if (e.pointerType === 'touch') return;
                         if (dpOutbound && !dpInbound && isRoundtrip()) {
                             dpHover = dt;
-                            dpRender();
+                            dpUpdateHoverStyles();
                         }
                     });
                 })(date);
