@@ -248,7 +248,7 @@ class VdpFlightService
         if ($pctEnabled) {
             $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
             $pct = (float) Setting::get("pricing_pct_{$cia}", 100);
-            $price = $money * ($pct / 100) + $tax;
+            $price = $money * (1 + $pct / 100) + $tax;
 
             Log::debug('Pricing: percentual', [
                 'cia' => $cia, 'money' => $money, 'pct' => $pct,
@@ -287,7 +287,7 @@ class VdpFlightService
             $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
             $pct = (float) Setting::get("pricing_pct_{$cia}", 100);
 
-            return number_format($money * ($pct / 100), 2, '.', '');
+            return number_format($money * (1 + $pct / 100), 2, '.', '');
         }
 
         return $this->parseMoneyValue($flight['price_money'] ?? '0');

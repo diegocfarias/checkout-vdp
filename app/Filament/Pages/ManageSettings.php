@@ -104,7 +104,7 @@ class ManageSettings extends Page
 
                         Toggle::make('pricing_pct_enabled')
                             ->label('Precificação por percentual')
-                            ->helperText('Calcula o preço como: preço da API × (percentual / 100) + taxas. Usado como fallback quando milhas não estão disponíveis.')
+                            ->helperText('Acréscimo sobre o preço da API. Ex: 10 = preço 10% acima da API. Fórmula: preço × (1 + %/100) + taxas.')
                             ->default(false)
                             ->live(),
 
