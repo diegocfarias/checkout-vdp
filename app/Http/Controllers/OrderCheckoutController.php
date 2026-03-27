@@ -6,6 +6,7 @@ use App\Http\Requests\StoreOrderPassengersRequest;
 use App\Models\FlightSearch;
 use App\Models\Order;
 use App\Models\Setting;
+use App\Services\CustomerService;
 use App\Services\PaymentGatewayResolver;
 use App\Services\VdpFlightService;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +16,7 @@ class OrderCheckoutController extends Controller
     public function __construct(
         private PaymentGatewayResolver $paymentResolver,
         private VdpFlightService $vdpService,
+        private CustomerService $customerService,
     ) {}
 
     public function show(string $token)
@@ -106,6 +108,41 @@ class OrderCheckoutController extends Controller
             $cardData = ['client_ip' => $clientIp];
         } else {
             $cardData['client_ip'] = $clientIp;
+        }
+
+        $payerData = [
+            'name' => $request->input('payer_name'),
+            'email' => $request->input('payer_email'),
+            'document' => preg_replace('/\D/', '', $request->input('payer_document')),
+        ];
+
+        if ($paymentMethod === 'credit_card') {
+            $payerData['billing'] = [
+                'zipcode' => preg_replace('/\D/', '', $request->input('billing_zipcode', '')),
+                'street' => $request->input('billing_street'),
+                'number' => $request->input('billing_number'),
+                'complement' => $request->input('billing_complement'),
+                'neighborhood' => $request->input('billing_neighborhood'),
+                'city' => $request->input('billing_city'),
+                'state' => $request->input('billing_state'),
+            ];
+        }
+
+        $cardData['payer'] = $payerData;
+
+        if (! $order->customer_id) {
+            try {
+                $customer = auth('customer')->check()
+                    ? auth('customer')->user()
+                    : $this->customerService->findOrCreateFromPayer($payerData);
+
+                $order->update(['customer_id' => $customer->id]);
+            } catch (\Throwable $e) {
+                Log::warning('Checkout: falha ao vincular cliente', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         if ($paymentMethod === 'credit_card' && config('services.payment.gateway') === 'appmax') {

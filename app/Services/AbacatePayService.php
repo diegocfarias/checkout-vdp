@@ -31,14 +31,24 @@ class AbacatePayService implements PaymentGatewayInterface
             'description' => "Pedido #{$order->id} - Voe de Primeira",
         ];
 
-        $firstPassenger = $order->passengers->first();
-        if ($firstPassenger) {
+        $payer = $cardData['payer'] ?? null;
+        if ($payer) {
             $payload['customer'] = [
-                'name' => trim($firstPassenger->first_name . ' ' . $firstPassenger->last_name),
-                'cellphone' => $firstPassenger->phone ?? '',
-                'email' => $firstPassenger->email ?? '',
-                'taxId' => $firstPassenger->document ?? '',
+                'name' => $payer['name'],
+                'cellphone' => $order->passengers->first()->phone ?? '',
+                'email' => $payer['email'],
+                'taxId' => $payer['document'],
             ];
+        } else {
+            $firstPassenger = $order->passengers->first();
+            if ($firstPassenger) {
+                $payload['customer'] = [
+                    'name' => trim($firstPassenger->first_name . ' ' . $firstPassenger->last_name),
+                    'cellphone' => $firstPassenger->phone ?? '',
+                    'email' => $firstPassenger->email ?? '',
+                    'taxId' => $firstPassenger->document ?? '',
+                ];
+            }
         }
 
         $payload['metadata'] = [

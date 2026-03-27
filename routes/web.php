@@ -3,9 +3,18 @@
 use App\Http\Controllers\AbacatePayWebhookController;
 use App\Http\Controllers\AirportController;
 use App\Http\Controllers\AppMaxWebhookController;
+use App\Http\Controllers\Auth\CompleteRegistrationController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\ChangeRequestController;
+use App\Http\Controllers\CustomerAreaController;
 use App\Http\Controllers\FlightSearchController;
 use App\Http\Controllers\OrderCheckoutController;
 use App\Http\Controllers\OrderTrackingController;
+use App\Http\Middleware\EnsureCustomerIsActive;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
@@ -79,6 +88,38 @@ Route::match(['get', 'post'], '/appmax/validate', function (\Illuminate\Http\Req
 
     return response()->json(['status' => 'ok', 'app' => 'checkout-vdp']);
 })->name('appmax.validate')->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
+
+// ── Auth (customer) ──
+
+Route::middleware('guest:customer')->group(function () {
+    Route::get('/login', [LoginController::class, 'showForm'])->name('customer.login');
+    Route::post('/login', [LoginController::class, 'login'])->name('customer.login.submit');
+    Route::get('/registro', [RegisterController::class, 'showForm'])->name('customer.register');
+    Route::post('/registro', [RegisterController::class, 'register'])->name('customer.register.submit');
+    Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('customer.google');
+    Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('customer.google.callback');
+    Route::get('/esqueci-senha', [ForgotPasswordController::class, 'show'])->name('customer.password.request');
+    Route::post('/esqueci-senha', [ForgotPasswordController::class, 'send'])->name('customer.password.email');
+    Route::get('/redefinir-senha/{token}', [PasswordController::class, 'showReset'])->name('customer.password.reset');
+    Route::post('/redefinir-senha', [PasswordController::class, 'reset'])->name('customer.password.update');
+});
+
+Route::middleware('auth:customer')->group(function () {
+    Route::post('/logout', [LoginController::class, 'logout'])->name('customer.logout');
+    Route::get('/completar-cadastro', [CompleteRegistrationController::class, 'show'])->name('customer.complete-registration');
+    Route::post('/completar-cadastro', [CompleteRegistrationController::class, 'store'])->name('customer.complete-registration.submit');
+});
+
+Route::middleware(['auth:customer', EnsureCustomerIsActive::class])->group(function () {
+    Route::get('/minha-conta', [CustomerAreaController::class, 'dashboard'])->name('customer.dashboard');
+    Route::get('/minha-conta/pedidos', [CustomerAreaController::class, 'orders'])->name('customer.orders');
+    Route::get('/minha-conta/pedidos/{order}', [CustomerAreaController::class, 'orderDetail'])->name('customer.order.show');
+    Route::get('/minha-conta/perfil', [CustomerAreaController::class, 'profile'])->name('customer.profile');
+    Route::put('/minha-conta/perfil', [CustomerAreaController::class, 'updateProfile'])->name('customer.profile.update');
+    Route::post('/minha-conta/solicitar-alteracao', [ChangeRequestController::class, 'store'])->name('customer.change-request');
+});
+
+// ── Checkout & Tracking ──
 
 Route::middleware('throttle:60,1')->group(function () {
     Route::get('/r/{token}', [OrderCheckoutController::class, 'show'])->name('checkout.show');

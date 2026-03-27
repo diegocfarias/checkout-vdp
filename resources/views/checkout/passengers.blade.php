@@ -125,6 +125,64 @@
                     </details>
                 @endfor
 
+                {{-- Dados do pagador --}}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-1">Dados do pagador</h3>
+                    <p class="text-sm text-gray-500 mb-4">Informe os dados de quem está realizando o pagamento.</p>
+
+                    @if($order->passengers_count > 0)
+                    <div class="mb-4">
+                        <label for="payer_copy_from" class="block text-sm font-medium text-gray-700 mb-1">Copiar dados do passageiro</label>
+                        <select id="payer_copy_from" class="w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                            <option value="">Preencher manualmente</option>
+                            @for($i = 0; $i < $order->passengers_count; $i++)
+                                <option value="{{ $i }}">Passageiro {{ $i + 1 }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    @endif
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="payer_name" class="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
+                            <input type="text" name="payer_name" id="payer_name"
+                                   value="{{ old('payer_name', auth('customer')->user()?->name) }}"
+                                   data-validate="name"
+                                   class="payer-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                   required>
+                            <span class="error-msg"></span>
+                        </div>
+                        <div>
+                            <label for="payer_email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                            <input type="email" name="payer_email" id="payer_email"
+                                   value="{{ old('payer_email', auth('customer')->user()?->email) }}"
+                                   data-validate="email"
+                                   class="payer-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                   required>
+                            <span class="error-msg"></span>
+                        </div>
+                        <div>
+                            <label for="payer_document" class="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                            @php
+                                $customerCpf = auth('customer')->user()?->document;
+                                $customerCpfFormatted = $customerCpf && strlen($customerCpf) === 11
+                                    ? substr($customerCpf, 0, 3) . '.' . substr($customerCpf, 3, 3) . '.' . substr($customerCpf, 6, 3) . '-' . substr($customerCpf, 9, 2)
+                                    : $customerCpf;
+                            @endphp
+                            <input type="text" name="payer_document" id="payer_document"
+                                   value="{{ old('payer_document', $customerCpfFormatted) }}"
+                                   placeholder="000.000.000-00"
+                                   inputmode="numeric"
+                                   maxlength="14"
+                                   data-mask="cpf"
+                                   data-validate="cpf"
+                                   class="payer-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                   required>
+                            <span class="error-msg"></span>
+                        </div>
+                    </div>
+                </div>
+
                 {{-- Forma de pagamento --}}
                 <div class="mt-6 pt-6 border-t border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-3">Forma de pagamento</h3>
@@ -204,6 +262,80 @@
                                         </option>
                                     @endfor
                                 </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-sm font-medium text-gray-700 mb-3">Endereço de cobrança</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="billing_zipcode" class="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                                    <div class="relative">
+                                        <input type="text" name="billing_zipcode" id="billing_zipcode"
+                                               value="{{ old('billing_zipcode') }}"
+                                               placeholder="00000-000"
+                                               inputmode="numeric"
+                                               maxlength="9"
+                                               data-mask="cep"
+                                               data-validate="cep"
+                                               class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                        <span id="cep-loading" class="hidden absolute right-3 top-1/2 -translate-y-1/2">
+                                            <svg class="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                        </span>
+                                    </div>
+                                    <span class="error-msg"></span>
+                                    <span id="cep-hint" class="hidden text-xs text-amber-600 mt-1"></span>
+                                </div>
+                                <div>
+                                    <label for="billing_street" class="block text-sm font-medium text-gray-700 mb-1">Rua</label>
+                                    <input type="text" name="billing_street" id="billing_street"
+                                           value="{{ old('billing_street') }}"
+                                           data-validate="required"
+                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                    <span class="error-msg"></span>
+                                </div>
+                                <div>
+                                    <label for="billing_number" class="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                                    <input type="text" name="billing_number" id="billing_number"
+                                           value="{{ old('billing_number') }}"
+                                           data-validate="required"
+                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                    <span class="error-msg"></span>
+                                </div>
+                                <div>
+                                    <label for="billing_complement" class="block text-sm font-medium text-gray-700 mb-1">Complemento <span class="text-gray-400 font-normal">(opcional)</span></label>
+                                    <input type="text" name="billing_complement" id="billing_complement"
+                                           value="{{ old('billing_complement') }}"
+                                           class="billing-input card-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                </div>
+                                <div>
+                                    <label for="billing_neighborhood" class="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                                    <input type="text" name="billing_neighborhood" id="billing_neighborhood"
+                                           value="{{ old('billing_neighborhood') }}"
+                                           data-validate="required"
+                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                    <span class="error-msg"></span>
+                                </div>
+                                <div>
+                                    <label for="billing_city" class="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                                    <input type="text" name="billing_city" id="billing_city"
+                                           value="{{ old('billing_city') }}"
+                                           data-validate="required"
+                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                    <span class="error-msg"></span>
+                                </div>
+                                <div>
+                                    <label for="billing_state" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                                    <select name="billing_state" id="billing_state"
+                                            data-validate="required"
+                                            class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                        <option value="">Selecione</option>
+                                        @foreach(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] as $uf)
+                                            <option value="{{ $uf }}" {{ old('billing_state') === $uf ? 'selected' : '' }}>{{ $uf }}</option>
+                                        @endforeach
+                                    </select>
+                                    <span class="error-msg"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -385,9 +517,10 @@
 
         function toggleCardFields() {
             const selected = document.querySelector('input[name="payment_method"]:checked');
-            if (selected && selected.value === 'credit_card') {
+            const isCc = selected && selected.value === 'credit_card';
+            if (isCc) {
                 cardFields.classList.remove('hidden');
-                cardInputs.forEach(i => { i.required = true; });
+                cardInputs.forEach(i => { if (!i.closest('[data-optional]')) i.required = true; });
             } else {
                 cardFields.classList.add('hidden');
                 cardInputs.forEach(i => { i.required = false; });
@@ -481,6 +614,54 @@
             });
         });
 
+        const payerCopySelect = document.getElementById('payer_copy_from');
+        if (payerCopySelect) {
+            payerCopySelect.addEventListener('change', function () {
+                const idx = this.value;
+                if (idx === '') return;
+                const nameInput = document.getElementById('passengers_' + idx + '_full_name');
+                const emailInput = document.getElementById('passengers_' + idx + '_email');
+                const docInput = document.getElementById('passengers_' + idx + '_document');
+                if (nameInput) document.getElementById('payer_name').value = nameInput.value;
+                if (emailInput) document.getElementById('payer_email').value = emailInput.value;
+                if (docInput) document.getElementById('payer_document').value = docInput.value;
+            });
+        }
+
+        document.querySelectorAll('[data-mask="cep"]').forEach(input => {
+            input.addEventListener('input', function () {
+                let v = this.value.replace(/\D/g, '').slice(0, 8);
+                if (v.length > 5) v = v.slice(0, 5) + '-' + v.slice(5);
+                this.value = v;
+                if (v.replace(/\D/g, '').length === 8) fetchCep(v.replace(/\D/g, ''));
+            });
+        });
+
+        function fetchCep(cep) {
+            const loading = document.getElementById('cep-loading');
+            const hint = document.getElementById('cep-hint');
+            if (loading) loading.classList.remove('hidden');
+            if (hint) { hint.classList.add('hidden'); hint.textContent = ''; }
+
+            fetch('https://viacep.com.br/ws/' + cep + '/json/')
+                .then(r => r.json())
+                .then(data => {
+                    if (loading) loading.classList.add('hidden');
+                    if (data.erro) {
+                        if (hint) { hint.textContent = 'CEP não encontrado. Preencha manualmente.'; hint.classList.remove('hidden'); }
+                        return;
+                    }
+                    if (data.logradouro) document.getElementById('billing_street').value = data.logradouro;
+                    if (data.bairro) document.getElementById('billing_neighborhood').value = data.bairro;
+                    if (data.localidade) document.getElementById('billing_city').value = data.localidade;
+                    if (data.uf) document.getElementById('billing_state').value = data.uf;
+                })
+                .catch(() => {
+                    if (loading) loading.classList.add('hidden');
+                    if (hint) { hint.textContent = 'Erro ao buscar CEP. Preencha manualmente.'; hint.classList.remove('hidden'); }
+                });
+        }
+
         document.querySelectorAll('[data-mask="cpf"]').forEach(input => {
             input.addEventListener('input', function () {
                 let v = this.value.replace(/\D/g, '').slice(0, 11);
@@ -572,6 +753,9 @@
                             if (y < currentYear || y > currentYear + 15) error = 'Ano inválido.';
                         }
                         break;
+                    case 'cep':
+                        if (val.replace(/\D/g, '').length !== 8) error = 'CEP inválido (8 dígitos).';
+                        break;
                     case 'required':
                         break;
                 }
@@ -614,7 +798,9 @@
 
         document.getElementById('checkout-form').addEventListener('submit', function (e) {
             const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';
-            const inputs = this.querySelectorAll(isCreditCard ? '.v-input' : '.v-input:not(.card-input)');
+            let selector = '.v-input:not(.card-input):not(.billing-input)';
+            if (isCreditCard) selector = '.v-input';
+            const inputs = this.querySelectorAll(selector);
             let firstInvalid = null;
 
             inputs.forEach(input => {

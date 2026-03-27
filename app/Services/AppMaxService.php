@@ -46,7 +46,8 @@ class AppMaxService implements PaymentGatewayInterface
             $orderAmountDecimal = (float) $orderAmountDecimal;
         }
 
-        $customerId = $this->createCustomer($order, $firstPassenger, $cardData['client_ip'] ?? request()->ip());
+        $payer = $cardData['payer'] ?? null;
+        $customerId = $this->createCustomer($order, $firstPassenger, $cardData['client_ip'] ?? request()->ip(), $payer);
         $appMaxOrderId = $this->createOrder($order, $customerId, $orderAmountDecimal);
 
         return $this->createPayment($order, $firstPassenger, $appMaxOrderId, $customerId, $paymentMethod, $cardData, $orderAmountDecimal);
@@ -270,29 +271,44 @@ class AppMaxService implements PaymentGatewayInterface
     // Customer
     // ──────────────────────────────────────────────
 
-    private function createCustomer(Order $order, $passenger, ?string $clientIp = null): int
+    private function createCustomer(Order $order, $passenger, ?string $clientIp = null, ?array $payer = null): int
     {
-        $nameParts = $this->splitFullName($passenger->full_name);
-        $document = preg_replace('/\D/', '', $passenger->document ?? '');
+        $payerName = $payer['name'] ?? $passenger->full_name;
+        $payerEmail = $payer['email'] ?? $passenger->email;
+        $payerDocument = $payer['document'] ?? preg_replace('/\D/', '', $passenger->document ?? '');
+        $nameParts = $this->splitFullName($payerName);
+        $document = preg_replace('/\D/', '', $payerDocument);
         $phone = preg_replace('/\D/', '', $passenger->phone ?? '');
         $phone = substr($phone, -11);
+
+        $billing = $payer['billing'] ?? null;
+        $address = $billing ? [
+            'street' => $billing['street'] ?? 'N/A',
+            'number' => $billing['number'] ?? '0',
+            'complement' => $billing['complement'] ?? '',
+            'neighborhood' => $billing['neighborhood'] ?? 'N/A',
+            'city' => $billing['city'] ?? 'N/A',
+            'state' => $billing['state'] ?? 'SP',
+            'zip_code' => preg_replace('/\D/', '', $billing['zipcode'] ?? '00000000'),
+            'country' => 'BR',
+        ] : [
+            'street' => 'N/A',
+            'number' => '0',
+            'neighborhood' => 'N/A',
+            'city' => 'N/A',
+            'state' => 'SP',
+            'zip_code' => '00000000',
+            'country' => 'BR',
+        ];
 
         $payload = [
             'first_name' => $nameParts['first_name'],
             'last_name' => $nameParts['last_name'],
-            'email' => $passenger->email,
+            'email' => $payerEmail,
             'phone' => $phone ?: '00000000000',
             'document_number' => $document,
             'ip' => $clientIp ?? request()->ip() ?? '127.0.0.1',
-            'address' => [
-                'street' => 'N/A',
-                'number' => '0',
-                'neighborhood' => 'N/A',
-                'city' => 'N/A',
-                'state' => 'SP',
-                'zip_code' => '00000000',
-                'country' => 'BR',
-            ],
+            'address' => $address,
         ];
 
         Log::info('AppMax: criando customer', ['order_id' => $order->id]);
@@ -396,7 +412,8 @@ class AppMaxService implements PaymentGatewayInterface
         ?array $cardData,
         float $amountDecimal
     ): OrderPayment {
-        $document = preg_replace('/\D/', '', $firstPassenger->document ?? '');
+        $payer = $cardData['payer'] ?? null;
+        $document = $payer ? preg_replace('/\D/', '', $payer['document'] ?? '') : preg_replace('/\D/', '', $firstPassenger->document ?? '');
 
         $paymentResponse = match ($paymentMethod) {
             'credit_card', 'credit-card' => $this->payWithCreditCard($appMaxOrderId, $customerId, $document, $firstPassenger, $cardData ?? []),

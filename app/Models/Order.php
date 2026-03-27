@@ -19,6 +19,7 @@ class Order extends Model
         'total_babies',
         'user_id',
         'conversation_id',
+        'customer_id',
         'cabin',
         'departure_iata',
         'arrival_iata',
@@ -71,6 +72,11 @@ class Order extends Model
     public function latestPayment(): HasOne
     {
         return $this->hasOne(OrderPayment::class)->latestOfMany();
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function flightSearch(): BelongsTo

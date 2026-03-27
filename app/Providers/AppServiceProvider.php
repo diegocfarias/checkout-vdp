@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Contracts\PaymentGatewayInterface;
+use App\Models\Customer;
 use App\Models\Order;
+use App\Observers\CustomerObserver;
 use App\Observers\OrderObserver;
 use App\Services\PaymentGatewayResolver;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -30,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Order::observe(OrderObserver::class);
+        Customer::observe(CustomerObserver::class);
 
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(30)->by(
