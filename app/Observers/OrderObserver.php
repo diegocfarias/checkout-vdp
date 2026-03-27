@@ -83,7 +83,7 @@ class OrderObserver
         }
 
         try {
-            Mail::to($passenger->email)->queue(new OrderStatusMail($order, $status));
+            Mail::to($passenger->email)->send(new OrderStatusMail($order, $status));
         } catch (\Throwable $e) {
             Log::warning('OrderObserver: falha ao enviar e-mail', [
                 'order_id' => $order->id,
