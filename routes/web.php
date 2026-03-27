@@ -105,10 +105,11 @@ Route::middleware('guest:customer')->group(function () {
     Route::post('/redefinir-senha', [PasswordController::class, 'reset'])->name('customer.password.update');
 });
 
+Route::get('/completar-cadastro', [CompleteRegistrationController::class, 'show'])->name('customer.complete-registration');
+Route::post('/completar-cadastro', [CompleteRegistrationController::class, 'store'])->name('customer.complete-registration.submit');
+
 Route::middleware('auth:customer')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('customer.logout');
-    Route::get('/completar-cadastro', [CompleteRegistrationController::class, 'show'])->name('customer.complete-registration');
-    Route::post('/completar-cadastro', [CompleteRegistrationController::class, 'store'])->name('customer.complete-registration.submit');
 });
 
 Route::middleware(['auth:customer', EnsureCustomerIsActive::class])->group(function () {
