@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>@yield('title', 'Checkout') - VDP</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    @stack('styles')
     @stack('head')
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">

@@ -47,55 +47,91 @@
         <div class="flex flex-col lg:flex-row gap-5">
             {{-- Sidebar Filtros (desktop) --}}
             <aside class="hidden lg:block w-64 shrink-0">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sticky top-4 space-y-5">
-                    <div class="flex items-center justify-between">
-                        <h3 class="font-bold text-gray-800 text-sm">Filtros</h3>
-                        <button type="button" onclick="clearFilters()" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Limpar</button>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-4 overflow-hidden">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50/50">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                            <h3 class="font-semibold text-gray-800 text-sm">Filtros</h3>
+                            <span id="active-filter-count" class="hidden text-[10px] font-bold text-white bg-emerald-500 rounded-full w-4.5 h-4.5 flex items-center justify-center leading-none px-1.5 py-0.5">0</span>
+                        </div>
+                        <button type="button" onclick="clearFilters()" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium transition-colors">Limpar</button>
                     </div>
 
                     @if(count($airlines) > 0)
-                    <div>
-                        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Companhia</p>
-                        @foreach($airlines as $cia)
-                        <label class="flex items-center gap-2 py-1 cursor-pointer">
-                            <input type="checkbox" class="filter-cia w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="{{ strtolower($cia) }}" checked>
-                            <span class="text-sm text-gray-700">{{ strtoupper($cia) }}</span>
-                        </label>
-                        @endforeach
+                    <div class="px-5 py-4 border-b border-gray-100">
+                        <div class="flex items-center gap-1.5 mb-3">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Companhia</p>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            @foreach($airlines as $cia)
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-cia sr-only" value="{{ strtolower($cia) }}" checked>
+                                <span class="filter-pill-label inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border transition-all">{{ strtoupper($cia) }}</span>
+                            </label>
+                            @endforeach
+                        </div>
                     </div>
                     @endif
 
-                    <div>
-                        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Paradas</p>
-                        <label class="flex items-center gap-2 py-1 cursor-pointer">
-                            <input type="checkbox" class="filter-stops w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="direct" checked>
-                            <span class="text-sm text-gray-700">Direto</span>
-                        </label>
-                        <label class="flex items-center gap-2 py-1 cursor-pointer">
-                            <input type="checkbox" class="filter-stops w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="connection" checked>
-                            <span class="text-sm text-gray-700">Com conexão</span>
-                        </label>
+                    <div class="px-5 py-4 border-b border-gray-100">
+                        <div class="flex items-center gap-1.5 mb-3">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Paradas</p>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-stops sr-only" value="direct" checked>
+                                <span class="filter-pill-label inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                                    Direto
+                                </span>
+                            </label>
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-stops sr-only" value="connection" checked>
+                                <span class="filter-pill-label inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h7m4 0h7"/></svg>
+                                    Conexão
+                                </span>
+                            </label>
+                        </div>
                     </div>
 
-                    <div>
-                        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Horário ida</p>
-                        @foreach(['madrugada' => 'Madrugada (00-06)', 'manha' => 'Manhã (06-12)', 'tarde' => 'Tarde (12-18)', 'noite' => 'Noite (18-00)'] as $key => $label)
-                        <label class="flex items-center gap-2 py-1 cursor-pointer">
-                            <input type="checkbox" class="filter-ob-period w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="{{ $key }}" checked>
-                            <span class="text-sm text-gray-700">{{ $label }}</span>
-                        </label>
-                        @endforeach
+                    <div class="px-5 py-4 {{ $isRoundtrip ? 'border-b border-gray-100' : '' }}">
+                        <div class="flex items-center gap-1.5 mb-3">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Horário ida</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-ob-period sr-only" value="{{ $key }}" checked>
+                                <span class="filter-pill-label inline-flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-[10px] font-medium border transition-all w-full text-center">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
+                                    {{ $info[0] }}
+                                </span>
+                            </label>
+                            @endforeach
+                        </div>
                     </div>
 
                     @if($isRoundtrip)
-                    <div>
-                        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Horário volta</p>
-                        @foreach(['madrugada' => 'Madrugada (00-06)', 'manha' => 'Manhã (06-12)', 'tarde' => 'Tarde (12-18)', 'noite' => 'Noite (18-00)'] as $key => $label)
-                        <label class="flex items-center gap-2 py-1 cursor-pointer">
-                            <input type="checkbox" class="filter-ib-period w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="{{ $key }}" checked>
-                            <span class="text-sm text-gray-700">{{ $label }}</span>
-                        </label>
-                        @endforeach
+                    <div class="px-5 py-4">
+                        <div class="flex items-center gap-1.5 mb-3">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Horário volta</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-ib-period sr-only" value="{{ $key }}" checked>
+                                <span class="filter-pill-label inline-flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-[10px] font-medium border transition-all w-full text-center">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
+                                    {{ $info[0] }}
+                                </span>
+                            </label>
+                            @endforeach
+                        </div>
                     </div>
                     @endif
                 </div>
@@ -112,9 +148,10 @@
                     </div>
                     <span class="text-sm text-gray-400 ml-auto" id="results-count">{{ count($groups) }} resultado{{ count($groups) !== 1 ? 's' : '' }}</span>
 
-                    <button type="button" onclick="toggleMobileFilters()" class="lg:hidden flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">
+                    <button type="button" onclick="toggleMobileFilters()" class="lg:hidden flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 hover:border-gray-300 transition-colors relative">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                         Filtros
+                        <span id="mobile-btn-filter-count" class="hidden absolute -top-1.5 -right-1.5 text-[10px] font-bold text-white bg-emerald-500 rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
                     </button>
                 </div>
 
@@ -139,70 +176,133 @@
 
         {{-- Modal filtros mobile --}}
         <div id="mobile-filters" class="fixed inset-0 z-50 hidden">
-            <div class="absolute inset-0 bg-black/40" onclick="toggleMobileFilters()"></div>
-            <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[80vh] overflow-y-auto p-5 space-y-5">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="font-bold text-gray-800">Filtros</h3>
-                    <button type="button" onclick="toggleMobileFilters()" class="text-gray-400 hover:text-gray-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="toggleMobileFilters()"></div>
+            <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[85vh] flex flex-col shadow-2xl">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                        <h3 class="font-bold text-gray-800 text-base">Filtros</h3>
+                        <span id="mobile-active-filter-count" class="hidden text-[10px] font-bold text-white bg-emerald-500 rounded-full px-1.5 py-0.5 leading-none">0</span>
+                    </div>
+                    <button type="button" onclick="toggleMobileFilters()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
 
-                @if(count($airlines) > 0)
-                <div>
-                    <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Companhia</p>
-                    @foreach($airlines as $cia)
-                    <label class="flex items-center gap-2 py-1 cursor-pointer">
-                        <input type="checkbox" class="filter-cia w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="{{ strtolower($cia) }}" checked>
-                        <span class="text-sm text-gray-700">{{ strtoupper($cia) }}</span>
-                    </label>
-                    @endforeach
-                </div>
-                @endif
+                <div class="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+                    @if(count($airlines) > 0)
+                    <div>
+                        <div class="flex items-center gap-1.5 mb-3">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Companhia</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($airlines as $cia)
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-cia sr-only" value="{{ strtolower($cia) }}" checked>
+                                <span class="filter-pill-label inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border transition-all">{{ strtoupper($cia) }}</span>
+                            </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
 
-                <div>
-                    <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Paradas</p>
-                    <label class="flex items-center gap-2 py-1 cursor-pointer">
-                        <input type="checkbox" class="filter-stops w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="direct" checked>
-                        <span class="text-sm text-gray-700">Direto</span>
-                    </label>
-                    <label class="flex items-center gap-2 py-1 cursor-pointer">
-                        <input type="checkbox" class="filter-stops w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="connection" checked>
-                        <span class="text-sm text-gray-700">Com conexão</span>
-                    </label>
+                    <div>
+                        <div class="flex items-center gap-1.5 mb-3">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Paradas</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-stops sr-only" value="direct" checked>
+                                <span class="filter-pill-label inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                                    Direto
+                                </span>
+                            </label>
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-stops sr-only" value="connection" checked>
+                                <span class="filter-pill-label inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h7m4 0h7"/></svg>
+                                    Conexão
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center gap-1.5 mb-3">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Horário ida</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-ob-period sr-only" value="{{ $key }}" checked>
+                                <span class="filter-pill-label inline-flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all w-full text-center">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
+                                    {{ $info[0] }}
+                                </span>
+                            </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    @if($isRoundtrip)
+                    <div>
+                        <div class="flex items-center gap-1.5 mb-3">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Horário volta</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
+                            <label class="filter-pill cursor-pointer">
+                                <input type="checkbox" class="filter-ib-period sr-only" value="{{ $key }}" checked>
+                                <span class="filter-pill-label inline-flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all w-full text-center">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
+                                    {{ $info[0] }}
+                                </span>
+                            </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
                 </div>
 
-                <div>
-                    <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Horário ida</p>
-                    @foreach(['madrugada' => 'Madrugada (00-06)', 'manha' => 'Manhã (06-12)', 'tarde' => 'Tarde (12-18)', 'noite' => 'Noite (18-00)'] as $key => $label)
-                    <label class="flex items-center gap-2 py-1 cursor-pointer">
-                        <input type="checkbox" class="filter-ob-period w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="{{ $key }}" checked>
-                        <span class="text-sm text-gray-700">{{ $label }}</span>
-                    </label>
-                    @endforeach
-                </div>
-
-                @if($isRoundtrip)
-                <div>
-                    <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Horário volta</p>
-                    @foreach(['madrugada' => 'Madrugada (00-06)', 'manha' => 'Manhã (06-12)', 'tarde' => 'Tarde (12-18)', 'noite' => 'Noite (18-00)'] as $key => $label)
-                    <label class="flex items-center gap-2 py-1 cursor-pointer">
-                        <input type="checkbox" class="filter-ib-period w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500" value="{{ $key }}" checked>
-                        <span class="text-sm text-gray-700">{{ $label }}</span>
-                    </label>
-                    @endforeach
-                </div>
-                @endif
-
-                <div class="flex gap-3 pt-2 border-t border-gray-100">
-                    <button type="button" onclick="clearFilters()" class="flex-1 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg">Limpar</button>
-                    <button type="button" onclick="toggleMobileFilters()" class="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-lg">Aplicar</button>
+                <div class="flex gap-3 px-5 py-4 border-t border-gray-100 shrink-0 bg-white">
+                    <button type="button" onclick="clearFilters()" class="flex-1 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Limpar</button>
+                    <button type="button" onclick="toggleMobileFilters()" class="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors">Aplicar</button>
                 </div>
             </div>
         </div>
     @endif
 </div>
 @endsection
+
+@push('styles')
+<style>
+    .filter-pill input:checked + .filter-pill-label {
+        background-color: #ecfdf5;
+        border-color: #6ee7b7;
+        color: #047857;
+    }
+    .filter-pill input:not(:checked) + .filter-pill-label {
+        background-color: #f9fafb;
+        border-color: #e5e7eb;
+        color: #6b7280;
+    }
+    .filter-pill input:not(:checked) + .filter-pill-label:hover {
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+    }
+    .filter-pill input:checked + .filter-pill-label svg {
+        color: #059669;
+    }
+    .filter-pill input:not(:checked) + .filter-pill-label svg {
+        color: #9ca3af;
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>
@@ -359,14 +459,37 @@
                 other.checked = checked;
             });
             applyFilters();
+            updateFilterCount();
         });
     });
+
+    function updateFilterCount() {
+        var all = document.querySelectorAll('.filter-cia, .filter-stops, .filter-ob-period, .filter-ib-period');
+        var unchecked = 0;
+        all.forEach(function(el) { if (!el.checked) unchecked++; });
+        var deduped = Math.floor(unchecked / 2);
+        var badges = [
+            document.getElementById('active-filter-count'),
+            document.getElementById('mobile-active-filter-count'),
+            document.getElementById('mobile-btn-filter-count')
+        ];
+        badges.forEach(function(badge) {
+            if (!badge) return;
+            if (deduped > 0) {
+                badge.textContent = deduped;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        });
+    }
 
     window.clearFilters = function() {
         document.querySelectorAll('.filter-cia, .filter-stops, .filter-ob-period, .filter-ib-period').forEach(function(el) {
             el.checked = true;
         });
         applyFilters();
+        updateFilterCount();
     };
 
     // --- Sorting ---
