@@ -155,6 +155,44 @@
 (function() {
     var prefillData = @json($prefill);
 
+    var airportsData = null;
+    var airportsLoading = false;
+    var airportsCallbacks = [];
+
+    function loadAirports(cb) {
+        if (airportsData) { cb(airportsData); return; }
+        airportsCallbacks.push(cb);
+        if (airportsLoading) return;
+        airportsLoading = true;
+        fetch('/data/airports.json')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                airportsData = data;
+                airportsCallbacks.forEach(function(fn) { fn(data); });
+                airportsCallbacks = [];
+            })
+            .catch(function() { airportsLoading = false; });
+    }
+
+    function normalizeStr(s) {
+        return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function searchAirports(airports, term) {
+        var q = normalizeStr(term);
+        var results = [];
+        for (var i = 0; i < airports.length && results.length < 15; i++) {
+            var a = airports[i];
+            if (normalizeStr(a.c).indexOf(q) !== -1 || normalizeStr(a.d).indexOf(q) !== -1) {
+                results.push(a); continue;
+            }
+            for (var j = 0; j < a.t.length; j++) {
+                if (normalizeStr(a.t[j]).indexOf(q) !== -1) { results.push(a); break; }
+            }
+        }
+        return results;
+    }
+
     var debounceTimers = {};
     function debounce(id, fn, delay) {
         clearTimeout(debounceTimers[id]);
@@ -165,42 +203,34 @@
         var input = document.getElementById(inputId);
         var hidden = document.getElementById(hiddenId);
         var dropdown = document.getElementById(dropdownId);
+        input.addEventListener('focus', function() { loadAirports(function(){}); });
         input.addEventListener('input', function() {
             var term = input.value.trim();
             hidden.value = '';
             if (term.length < 2) { dropdown.classList.add('hidden'); return; }
             debounce(inputId, function() {
-                fetch('/api/airports', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({ term: term })
-                })
-                .then(function(r) { return r.json(); })
-                .then(function(response) {
-                    var data = Array.isArray(response) ? response : (response.airports || response.data || []);
-                    if (!Array.isArray(data) || data.length === 0) {
+                loadAirports(function(airports) {
+                    var results = searchAirports(airports, term);
+                    if (results.length === 0) {
                         dropdown.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">Nenhum resultado</div>';
                         dropdown.classList.remove('hidden');
                         return;
                     }
                     dropdown.innerHTML = '';
-                    data.forEach(function(item) {
-                        var iata = item.iata_code || item.iata || item.code || '';
-                        var city = item.city || '';
+                    results.forEach(function(item) {
                         var div = document.createElement('div');
                         div.className = 'px-4 py-3 text-sm hover:bg-emerald-50 cursor-pointer border-b border-gray-50 last:border-0';
-                        div.innerHTML = '<span class="font-semibold text-gray-800">' + iata + '</span> <span class="text-gray-500">' + city + '</span>';
+                        div.innerHTML = '<span class="font-semibold text-gray-800">' + item.c + '</span> <span class="text-gray-500">' + item.d.replace(' (' + item.c + ')', '') + '</span>';
                         div.addEventListener('click', function() {
-                            input.value = iata + ' - ' + city;
-                            hidden.value = iata;
+                            input.value = item.d;
+                            hidden.value = item.c;
                             dropdown.classList.add('hidden');
                         });
                         dropdown.appendChild(div);
                     });
                     dropdown.classList.remove('hidden');
-                })
-                .catch(function() { dropdown.classList.add('hidden'); });
-            }, 300);
+                });
+            }, 150);
         });
         document.addEventListener('click', function(e) {
             if (!input.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden');

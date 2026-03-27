@@ -81,7 +81,21 @@ class FlightSearchController extends Controller
             $inbound = array_values($inbound);
         }
 
-        $isRoundtrip = $validated['trip_type'] === 'roundtrip' && count($inbound) > 0;
+        $isRoundtrip = $validated['trip_type'] === 'roundtrip';
+
+        if ($isRoundtrip && count($inbound) === 0) {
+            $flightSearch->update(['results_count' => 0]);
+
+            return view('search.results', [
+                'search' => $flightSearch,
+                'groups' => [],
+                'airlines' => [],
+                'params' => $validated,
+                'isRoundtrip' => true,
+                'mixEnabled' => Setting::get('mix_enabled', true),
+            ]);
+        }
+
         $groups = $this->buildGroups($outbound, $isRoundtrip ? $inbound : []);
 
         $airlines = collect($groups)
