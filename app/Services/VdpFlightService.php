@@ -231,19 +231,32 @@ class VdpFlightService
         $pctEnabled = Setting::get('pricing_pct_enabled', false);
 
         if ($milesEnabled) {
-            $miles = $this->parseMoneyFloat($flight['price_miles'] ?? '0');
+            $miles = $this->parseMilesValue($flight['price_miles'] ?? null);
             if ($miles > 0) {
                 $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
+                $price = ($miles / 1000) * $valorMilheiro + $tax;
 
-                return ($miles / 1000) * $valorMilheiro + $tax;
+                Log::debug('Pricing: milhas', [
+                    'cia' => $cia, 'miles' => $miles,
+                    'valor_milheiro' => $valorMilheiro, 'tax' => $tax, 'price' => $price,
+                ]);
+
+                return $price;
             }
         }
 
         if ($pctEnabled) {
             $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
             $pct = (float) Setting::get("pricing_pct_{$cia}", 100);
+            $price = $money * ($pct / 100) + $tax;
 
-            return $money * ($pct / 100) + $tax;
+            Log::debug('Pricing: percentual', [
+                'cia' => $cia, 'money' => $money, 'pct' => $pct,
+                'tax' => $tax, 'price' => $price,
+                'miles_raw' => $flight['price_miles'] ?? null,
+            ]);
+
+            return $price;
         }
 
         $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
@@ -262,7 +275,7 @@ class VdpFlightService
         $pctEnabled = Setting::get('pricing_pct_enabled', false);
 
         if ($milesEnabled) {
-            $miles = $this->parseMoneyFloat($flight['price_miles'] ?? '0');
+            $miles = $this->parseMilesValue($flight['price_miles'] ?? null);
             if ($miles > 0) {
                 $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
 
@@ -280,9 +293,33 @@ class VdpFlightService
         return $this->parseMoneyValue($flight['price_money'] ?? '0');
     }
 
+    /**
+     * Converte price_miles da API para float. Aceita formatos como "10.500", "10500", "10,500", etc.
+     */
+    private function parseMilesValue(mixed $value): float
+    {
+        if ($value === null || $value === '' || $value === '0') {
+            return 0;
+        }
+
+        $str = (string) $value;
+        $clean = preg_replace('/[^\d.,]/', '', $str);
+
+        if ($clean === '' || $clean === '0') {
+            return 0;
+        }
+
+        return $this->parseMoneyFloat($clean);
+    }
+
     private function parseMoneyFloat(string $value): float
     {
-        return (float) str_replace(['.', ','], ['', '.'], trim($value));
+        $value = trim($value);
+        if ($value === '') {
+            return 0;
+        }
+
+        return (float) str_replace(['.', ','], ['', '.'], $value);
     }
 
     private function normalizeCia(string $operator): string
