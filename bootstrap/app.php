@@ -18,6 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             return route('customer.login');
         });
+        $middleware->redirectUsersTo(function (\Illuminate\Http\Request $request) {
+            if ($request->is('admin/*')) {
+                return route('filament.admin.pages.dashboard');
+            }
+            return route('customer.dashboard');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

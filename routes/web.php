@@ -91,13 +91,14 @@ Route::match(['get', 'post'], '/appmax/validate', function (\Illuminate\Http\Req
 
 // ── Auth (customer) ──
 
+Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('customer.google');
+Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('customer.google.callback');
+
 Route::middleware('guest:customer')->group(function () {
     Route::get('/login', [LoginController::class, 'showForm'])->name('customer.login');
     Route::post('/login', [LoginController::class, 'login'])->name('customer.login.submit');
     Route::get('/registro', [RegisterController::class, 'showForm'])->name('customer.register');
     Route::post('/registro', [RegisterController::class, 'register'])->name('customer.register.submit');
-    Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('customer.google');
-    Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('customer.google.callback');
     Route::get('/esqueci-senha', [ForgotPasswordController::class, 'show'])->name('customer.password.request');
     Route::post('/esqueci-senha', [ForgotPasswordController::class, 'send'])->name('customer.password.email');
     Route::get('/redefinir-senha/{token}', [PasswordController::class, 'showReset'])->name('customer.password.reset');
