@@ -475,6 +475,21 @@
         if (isRoundtrip() && !document.getElementById('inbound-date').value) {
             e.preventDefault(); alert('Selecione a data de volta.'); return;
         }
+        try {
+            localStorage.setItem('vdp_last_search', JSON.stringify({
+                departure_iata: document.getElementById('departure-iata').value,
+                departure_label: document.getElementById('departure-input').value,
+                arrival_iata: document.getElementById('arrival-iata').value,
+                arrival_label: document.getElementById('arrival-input').value,
+                outbound_date: document.getElementById('outbound-date').value,
+                inbound_date: document.getElementById('inbound-date').value,
+                adults: parseInt(document.getElementById('input-adults').value) || 1,
+                children: parseInt(document.getElementById('input-children').value) || 0,
+                infants: parseInt(document.getElementById('input-infants').value) || 0,
+                cabin: document.querySelector('#search-form select[name="cabin"]').value,
+                trip_type: document.querySelector('#search-form input[name="trip_type"]:checked').value
+            }));
+        } catch(ex) {}
         showTravelLoading({
             title: 'Buscando os melhores voos...',
             messages: [
@@ -486,5 +501,42 @@
             timeoutMs: 60000
         });
     });
+
+    if (!prefillData) {
+        try {
+            var saved = JSON.parse(localStorage.getItem('vdp_last_search'));
+            if (saved) {
+                if (saved.departure_iata) {
+                    document.getElementById('departure-iata').value = saved.departure_iata;
+                    document.getElementById('departure-input').value = saved.departure_label || saved.departure_iata;
+                }
+                if (saved.arrival_iata) {
+                    document.getElementById('arrival-iata').value = saved.arrival_iata;
+                    document.getElementById('arrival-input').value = saved.arrival_label || saved.arrival_iata;
+                }
+                if (saved.trip_type) {
+                    var radio = document.querySelector('#search-form input[name="trip_type"][value="' + saved.trip_type + '"]');
+                    if (radio) radio.checked = true;
+                }
+                if (saved.outbound_date) {
+                    document.getElementById('outbound-date').value = saved.outbound_date;
+                    dpOutbound = parseDate(saved.outbound_date);
+                    if (dpOutbound) { dpViewMonth = dpOutbound.getMonth(); dpViewYear = dpOutbound.getFullYear(); }
+                }
+                if (saved.inbound_date) {
+                    document.getElementById('inbound-date').value = saved.inbound_date;
+                    dpInbound = parseDate(saved.inbound_date);
+                }
+                dpUpdateLabel();
+                if (saved.adults) { pax.adults = saved.adults; document.getElementById('pax-adults').textContent = saved.adults; document.getElementById('input-adults').value = saved.adults; }
+                if (saved.children) { pax.children = saved.children; document.getElementById('pax-children').textContent = saved.children; document.getElementById('input-children').value = saved.children; }
+                if (saved.infants) { pax.infants = saved.infants; document.getElementById('pax-infants').textContent = saved.infants; document.getElementById('input-infants').value = saved.infants; }
+                updatePaxLabel();
+                if (saved.cabin) {
+                    document.querySelector('#search-form select[name="cabin"]').value = saved.cabin;
+                }
+            }
+        } catch(ex) {}
+    }
 })();
 </script>
