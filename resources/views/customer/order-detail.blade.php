@@ -43,6 +43,52 @@
             </div>
         </div>
 
+        {{-- PIX pendente --}}
+        @php
+            $pixPayment = $order->payments->first(fn($p) => $p->payment_method === 'pix' && $p->status === 'pending');
+            $pixCode = null;
+            $pixQr = null;
+            if ($pixPayment && $pixPayment->gateway_response) {
+                $resp = $pixPayment->gateway_response;
+                $pd = $resp['payment'] ?? $resp;
+                $pixCode = $pd['pix_emv'] ?? $pd['copy_paste'] ?? $resp['pix_copy_paste'] ?? $pixPayment->payment_url ?? null;
+                $pixQr = $pd['pix_qrcode'] ?? null;
+                if ($pixCode && str_starts_with($pixCode, 'http')) $pixCode = null;
+            }
+        @endphp
+
+        @if($pixPayment && $pixCode && in_array($order->status, ['awaiting_payment', 'pending']))
+            <div class="bg-white rounded-xl shadow-sm border border-emerald-200 p-5 mb-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-800">Pagar com PIX</h3>
+                </div>
+
+                {{-- QR Code (desktop only) --}}
+                @if($pixQr)
+                    <div class="hidden sm:flex justify-center mb-4">
+                        <img src="data:image/png;base64,{{ $pixQr }}" alt="QR Code PIX" class="w-48 h-48 rounded-lg border border-gray-200">
+                    </div>
+                    <p class="hidden sm:block text-center text-xs text-gray-400 mb-4">Escaneie o QR Code com o app do seu banco</p>
+                @endif
+
+                <p class="text-sm text-gray-600 mb-2">Código PIX copia e cola:</p>
+                <div class="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+                    <code id="pix-code" class="text-xs text-gray-700 break-all select-all leading-relaxed block">{{ $pixCode }}</code>
+                </div>
+
+                <button type="button" id="btn-copy-pix"
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                    <span id="copy-text">Copiar código PIX</span>
+                </button>
+
+                <p class="text-xs text-gray-400 mt-3 text-center" id="pix-status-msg">Verificando pagamento automaticamente...</p>
+            </div>
+        @endif
+
         @if($order->flights->isNotEmpty())
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
                 <h3 class="font-semibold text-gray-800 mb-3">Voos</h3>
@@ -86,3 +132,56 @@
         </div>
     </div>
 @endsection
+
+@if($pixPayment && $pixCode && in_array($order->status, ['awaiting_payment', 'pending']))
+@push('scripts')
+<script>
+(function() {
+    var btnCopy = document.getElementById('btn-copy-pix');
+    var copyText = document.getElementById('copy-text');
+    if (btnCopy) {
+        btnCopy.addEventListener('click', function() {
+            var code = document.getElementById('pix-code').innerText;
+            navigator.clipboard.writeText(code).then(function() {
+                copyText.textContent = 'Copiado!';
+                btnCopy.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                btnCopy.classList.add('bg-gray-600', 'hover:bg-gray-700');
+                setTimeout(function() {
+                    copyText.textContent = 'Copiar código PIX';
+                    btnCopy.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+                    btnCopy.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                }, 2500);
+            });
+        });
+    }
+
+    var statusMsg = document.getElementById('pix-status-msg');
+    var attempts = 0;
+    var maxAttempts = 120;
+
+    function checkPayment() {
+        if (attempts >= maxAttempts) {
+            if (statusMsg) statusMsg.textContent = 'Tempo de verificação esgotado. Recarregue a página.';
+            return;
+        }
+        attempts++;
+        fetch(window.location.href, { credentials: 'same-origin' })
+            .then(function(resp) { return resp.text(); })
+            .then(function(html) {
+                if (html.includes('Aguardando emissão') || html.includes('Concluído') || !html.includes('pix-code')) {
+                    if (statusMsg) statusMsg.textContent = 'Pagamento confirmado! Recarregando...';
+                    setTimeout(function() { window.location.reload(); }, 1000);
+                    return;
+                }
+                setTimeout(checkPayment, 5000);
+            })
+            .catch(function() {
+                setTimeout(checkPayment, 5000);
+            });
+    }
+
+    setTimeout(checkPayment, 5000);
+})();
+</script>
+@endpush
+@endif
