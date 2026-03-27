@@ -48,8 +48,8 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div class="relative sm:col-span-1" id="datepicker-container">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4" style="overflow:visible;">
+            <div class="relative sm:col-span-1" id="datepicker-container" style="overflow:visible;">
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Datas</label>
                 <button type="button" id="datepicker-toggle"
                         class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-left bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none flex items-center gap-2">
@@ -61,7 +61,7 @@
                 <input type="hidden" name="inbound_date" id="inbound-date"
                        @if($prefill && !empty($prefill['inbound_date'])) value="{{ $prefill['inbound_date'] }}" @endif>
 
-                <div id="datepicker-dropdown" class="hidden absolute z-50 left-0 sm:left-auto mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 sm:p-5"
+                <div id="datepicker-dropdown" class="hidden absolute z-[100] left-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 sm:p-5"
                      style="width: min(calc(100vw - 2rem), 580px);">
                     <div class="flex items-center justify-between mb-4">
                         <button type="button" id="dp-prev" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center">
