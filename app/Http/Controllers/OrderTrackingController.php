@@ -47,10 +47,13 @@ class OrderTrackingController extends Controller
         if ($token) {
             $order = Order::where('tracking_code', $trackingCode)
                 ->where('token', $token)
+                ->with(['flights', 'statusHistories', 'latestPayment'])
                 ->first();
 
             if ($order) {
                 session(["tracking_verified_{$trackingCode}" => true]);
+
+                return view('tracking.show', ['order' => $order]);
             }
         }
 
@@ -59,11 +62,9 @@ class OrderTrackingController extends Controller
                 ->withErrors(['tracking_code' => 'Informe o código do pedido e CPF para acessar.']);
         }
 
-        $order = $order ?? Order::where('tracking_code', $trackingCode)
+        $order = Order::where('tracking_code', $trackingCode)
             ->with(['flights', 'statusHistories', 'latestPayment'])
             ->firstOrFail();
-
-        $order->loadMissing(['flights', 'statusHistories', 'latestPayment']);
 
         return view('tracking.show', ['order' => $order]);
     }
