@@ -113,7 +113,7 @@
 
                                         @if($pixQr)
                                         <div style="margin: 0 auto 16px; width: 200px; height: 200px; background-color: #ffffff; border-radius: 12px; padding: 12px; border: 1px solid #e5e7eb;">
-                                            <img src="data:image/png;base64,{{ $pixQr }}" alt="QR Code PIX" style="width: 100%; height: 100%; display: block;">
+                                            <img src="{{ $message->embedData(base64_decode($pixQr), 'qrcode.png', 'image/png') }}" alt="QR Code PIX" style="width: 100%; height: 100%; display: block;">
                                         </div>
                                         @endif
 

@@ -29,7 +29,7 @@ class OrderStatusMail extends Mailable
         $this->order = $order;
         $this->newStatus = $newStatus;
         $this->statusLabel = OrderStatusHistory::statusLabel($newStatus);
-        $this->trackingUrl = url("/pedido/{$order->tracking_code}");
+        $this->trackingUrl = url("/pedido/{$order->tracking_code}?token={$order->token}");
         $this->payment = $payment;
     }
 

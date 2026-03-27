@@ -39,18 +39,31 @@ class OrderTrackingController extends Controller
         return redirect()->route('tracking.show', $order->tracking_code);
     }
 
-    public function show(string $trackingCode)
+    public function show(Request $request, string $trackingCode)
     {
         $trackingCode = strtoupper($trackingCode);
+
+        $token = $request->query('token');
+        if ($token) {
+            $order = Order::where('tracking_code', $trackingCode)
+                ->where('token', $token)
+                ->first();
+
+            if ($order) {
+                session(["tracking_verified_{$trackingCode}" => true]);
+            }
+        }
 
         if (! session("tracking_verified_{$trackingCode}")) {
             return redirect()->route('tracking.form')
                 ->withErrors(['tracking_code' => 'Informe o código do pedido e CPF para acessar.']);
         }
 
-        $order = Order::where('tracking_code', $trackingCode)
+        $order = $order ?? Order::where('tracking_code', $trackingCode)
             ->with(['flights', 'statusHistories', 'latestPayment'])
             ->firstOrFail();
+
+        $order->loadMissing(['flights', 'statusHistories', 'latestPayment']);
 
         return view('tracking.show', ['order' => $order]);
     }
