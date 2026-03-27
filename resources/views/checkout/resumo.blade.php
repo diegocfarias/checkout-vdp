@@ -18,6 +18,9 @@
                     @if($outbound->flight_number)
                         <span class="text-sm text-gray-400">{{ $outbound->flight_number }}</span>
                     @endif
+                    @if($outbound->departure_label)
+                        <span class="ml-auto text-sm font-medium text-gray-700">{{ $outbound->departure_label }}</span>
+                    @endif
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="shrink-0 text-center min-w-[60px]">
@@ -57,6 +60,9 @@
                     <span class="text-sm text-gray-600 font-medium uppercase">{{ $inbound->cia }}</span>
                     @if($inbound->flight_number)
                         <span class="text-sm text-gray-400">{{ $inbound->flight_number }}</span>
+                    @endif
+                    @if($inbound->departure_label)
+                        <span class="ml-auto text-sm font-medium text-gray-700">{{ $inbound->departure_label }}</span>
                     @endif
                 </div>
                 <div class="flex items-center gap-3">
