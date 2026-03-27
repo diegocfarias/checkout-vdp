@@ -75,15 +75,17 @@ class OrderObserver
 
     private function notifyEmail(Order $order, string $status): void
     {
-        $order->loadMissing('passengers');
+        $order->loadMissing(['passengers', 'flights', 'flightSearch']);
         $passenger = $order->passengers->first();
 
         if (! $passenger || ! $passenger->email) {
             return;
         }
 
+        $payment = $order->latestPayment;
+
         try {
-            Mail::to($passenger->email)->send(new OrderStatusMail($order, $status));
+            Mail::to($passenger->email)->send(new OrderStatusMail($order, $status, $payment));
         } catch (\Throwable $e) {
             Log::warning('OrderObserver: falha ao enviar e-mail', [
                 'order_id' => $order->id,

@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Order;
+use App\Models\OrderPayment;
 use App\Models\OrderStatusHistory;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -21,12 +22,15 @@ class OrderStatusMail extends Mailable
 
     public string $trackingUrl;
 
-    public function __construct(Order $order, string $newStatus)
+    public ?OrderPayment $payment;
+
+    public function __construct(Order $order, string $newStatus, ?OrderPayment $payment = null)
     {
         $this->order = $order;
         $this->newStatus = $newStatus;
         $this->statusLabel = OrderStatusHistory::statusLabel($newStatus);
         $this->trackingUrl = url("/pedido/{$order->tracking_code}");
+        $this->payment = $payment;
     }
 
     public function envelope(): Envelope
