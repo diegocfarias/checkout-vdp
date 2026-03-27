@@ -1,7 +1,15 @@
 @php
     $prefill = $prefill ?? null;
     $compact = $compact ?? false;
-    $tripType = $prefill['trip_type'] ?? ($prefill && !empty($prefill['inbound_date']) ? 'roundtrip' : ($prefill ? 'oneway' : 'roundtrip'));
+    if ($prefill && isset($prefill['trip_type'])) {
+        $tripType = $prefill['trip_type'];
+    } elseif ($prefill && !empty($prefill['inbound_date'])) {
+        $tripType = 'roundtrip';
+    } elseif ($prefill) {
+        $tripType = 'oneway';
+    } else {
+        $tripType = 'roundtrip';
+    }
 @endphp
 
 <form action="{{ route('search.results') }}" method="GET" id="search-form" class="{{ $compact ? 'w-full' : 'max-w-4xl mx-auto' }}">
