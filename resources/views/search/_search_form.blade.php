@@ -118,13 +118,28 @@
                 <input type="hidden" name="children" id="input-children" value="{{ $prefill['children'] ?? 0 }}">
                 <input type="hidden" name="infants" id="input-infants" value="{{ $prefill['infants'] ?? 0 }}">
             </div>
-            <div>
+            <div class="relative">
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Classe</label>
-                <select name="cabin"
-                        class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white">
-                    <option value="EC" {{ ($prefill['cabin'] ?? 'EC') === 'EC' ? 'selected' : '' }}>Econômica</option>
-                    <option value="EX" {{ ($prefill['cabin'] ?? 'EC') === 'EX' ? 'selected' : '' }}>Executiva</option>
-                </select>
+                <button type="button" id="cabin-toggle"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-left bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none flex items-center justify-between">
+                    <span id="cabin-label">{{ ($prefill['cabin'] ?? 'EC') === 'EX' ? 'Executiva' : 'Econômica' }}</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="cabin-dropdown" class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden overflow-hidden">
+                    <div class="cabin-option px-4 py-3 text-sm cursor-pointer hover:bg-emerald-50 transition-colors {{ ($prefill['cabin'] ?? 'EC') === 'EC' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-gray-700' }}" data-value="EC">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Econômica
+                        </span>
+                    </div>
+                    <div class="cabin-option px-4 py-3 text-sm cursor-pointer hover:bg-emerald-50 transition-colors border-t border-gray-100 {{ ($prefill['cabin'] ?? 'EC') === 'EX' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-gray-700' }}" data-value="EX">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                            Executiva
+                        </span>
+                    </div>
+                </div>
+                <input type="hidden" name="cabin" id="input-cabin" value="{{ $prefill['cabin'] ?? 'EC' }}">
             </div>
         </div>
 
@@ -221,6 +236,30 @@
         var toggle = document.getElementById('pax-toggle');
         var dd = document.getElementById('pax-dropdown');
         if (!toggle.contains(e.target) && !dd.contains(e.target)) dd.classList.add('hidden');
+    });
+
+    var cabinLabels = { EC: 'Econômica', EX: 'Executiva' };
+    document.getElementById('cabin-toggle').addEventListener('click', function() {
+        document.getElementById('cabin-dropdown').classList.toggle('hidden');
+    });
+    document.querySelectorAll('.cabin-option').forEach(function(opt) {
+        opt.addEventListener('click', function() {
+            var val = opt.getAttribute('data-value');
+            document.getElementById('input-cabin').value = val;
+            document.getElementById('cabin-label').textContent = cabinLabels[val];
+            document.querySelectorAll('.cabin-option').forEach(function(o) {
+                o.classList.remove('bg-emerald-50', 'text-emerald-700', 'font-semibold');
+                o.classList.add('text-gray-700');
+            });
+            opt.classList.remove('text-gray-700');
+            opt.classList.add('bg-emerald-50', 'text-emerald-700', 'font-semibold');
+            document.getElementById('cabin-dropdown').classList.add('hidden');
+        });
+    });
+    document.addEventListener('click', function(e) {
+        var cToggle = document.getElementById('cabin-toggle');
+        var cDd = document.getElementById('cabin-dropdown');
+        if (!cToggle.contains(e.target) && !cDd.contains(e.target)) cDd.classList.add('hidden');
     });
 
     window.toggleInbound = function() {
@@ -503,7 +542,7 @@
                 adults: parseInt(document.getElementById('input-adults').value) || 1,
                 children: parseInt(document.getElementById('input-children').value) || 0,
                 infants: parseInt(document.getElementById('input-infants').value) || 0,
-                cabin: document.querySelector('#search-form select[name="cabin"]').value,
+                cabin: document.getElementById('input-cabin').value,
                 trip_type: document.querySelector('#search-form input[name="trip_type"]:checked').value
             }));
         } catch(ex) {}
@@ -550,7 +589,17 @@
                 if (saved.infants) { pax.infants = saved.infants; document.getElementById('pax-infants').textContent = saved.infants; document.getElementById('input-infants').value = saved.infants; }
                 updatePaxLabel();
                 if (saved.cabin) {
-                    document.querySelector('#search-form select[name="cabin"]').value = saved.cabin;
+                    document.getElementById('input-cabin').value = saved.cabin;
+                    document.getElementById('cabin-label').textContent = cabinLabels[saved.cabin] || 'Econômica';
+                    document.querySelectorAll('.cabin-option').forEach(function(o) {
+                        if (o.getAttribute('data-value') === saved.cabin) {
+                            o.classList.remove('text-gray-700');
+                            o.classList.add('bg-emerald-50', 'text-emerald-700', 'font-semibold');
+                        } else {
+                            o.classList.remove('bg-emerald-50', 'text-emerald-700', 'font-semibold');
+                            o.classList.add('text-gray-700');
+                        }
+                    });
                 }
             }
         } catch(ex) {}
