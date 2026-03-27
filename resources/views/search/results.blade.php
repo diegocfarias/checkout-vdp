@@ -106,7 +106,9 @@
                 <div class="flex flex-wrap items-center gap-2 mb-4">
                     <div class="flex bg-white rounded-lg border border-gray-200 overflow-hidden text-sm">
                         <button type="button" data-sort="price" class="sort-tab px-4 py-2 font-medium text-white bg-emerald-600">Menor preço</button>
+                        @if($mixEnabled)
                         <button type="button" data-sort="same-cia" class="sort-tab px-4 py-2 font-medium text-gray-600 hover:bg-gray-50">Mesma cia</button>
+                        @endif
                     </div>
                     <span class="text-sm text-gray-400 ml-auto" id="results-count">{{ count($groups) }} resultado{{ count($groups) !== 1 ? 's' : '' }}</span>
 
@@ -349,7 +351,15 @@
     paginate();
 
     document.querySelectorAll('.filter-cia, .filter-stops, .filter-ob-period, .filter-ib-period').forEach(function(el) {
-        el.addEventListener('change', applyFilters);
+        el.addEventListener('change', function() {
+            var cls = this.className.match(/filter-[\w-]+/)[0];
+            var val = this.value;
+            var checked = this.checked;
+            document.querySelectorAll('.' + cls + '[value="' + val + '"]').forEach(function(other) {
+                other.checked = checked;
+            });
+            applyFilters();
+        });
     });
 
     window.clearFilters = function() {

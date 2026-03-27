@@ -67,6 +67,7 @@ class FlightSearchController extends Controller
                 'airlines' => [],
                 'params' => $validated,
                 'isRoundtrip' => $validated['trip_type'] === 'roundtrip',
+                'mixEnabled' => Setting::get('mix_enabled', true),
             ]);
         }
 
@@ -100,6 +101,7 @@ class FlightSearchController extends Controller
             'airlines' => $airlines,
             'params' => $validated,
             'isRoundtrip' => $isRoundtrip,
+            'mixEnabled' => Setting::get('mix_enabled', true),
         ]);
     }
 
