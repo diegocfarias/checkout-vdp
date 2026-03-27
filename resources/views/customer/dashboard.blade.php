@@ -36,34 +36,38 @@
                 <h3 class="font-semibold text-gray-800 mb-4">Pedidos recentes</h3>
                 <div class="space-y-3">
                     @foreach($recentOrders as $order)
-                        <a href="{{ route('customer.order.show', $order) }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs font-mono font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ $order->tracking_code }}</span>
-                                <span class="text-sm text-gray-700">
-                                    {{ strtoupper($order->departure_iata) }} → {{ strtoupper($order->arrival_iata) }}
-                                </span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                @php
-                                    $statusColors = [
-                                        'pending' => 'bg-amber-100 text-amber-700',
-                                        'awaiting_payment' => 'bg-blue-100 text-blue-700',
-                                        'awaiting_emission' => 'bg-purple-100 text-purple-700',
-                                        'completed' => 'bg-emerald-100 text-emerald-700',
-                                        'cancelled' => 'bg-red-100 text-red-700',
-                                    ];
-                                    $statusLabels = [
-                                        'pending' => 'Pendente',
-                                        'awaiting_payment' => 'Aguardando pagamento',
-                                        'awaiting_emission' => 'Aguardando emissão',
-                                        'completed' => 'Concluído',
-                                        'cancelled' => 'Cancelado',
-                                    ];
-                                @endphp
+                        @php
+                            $statusColors = [
+                                'pending' => 'bg-amber-100 text-amber-700',
+                                'awaiting_payment' => 'bg-blue-100 text-blue-700',
+                                'awaiting_emission' => 'bg-purple-100 text-purple-700',
+                                'completed' => 'bg-emerald-100 text-emerald-700',
+                                'cancelled' => 'bg-red-100 text-red-700',
+                            ];
+                            $statusLabels = [
+                                'pending' => 'Pendente',
+                                'awaiting_payment' => 'Aguardando pagamento',
+                                'awaiting_emission' => 'Aguardando emissão',
+                                'completed' => 'Concluído',
+                                'cancelled' => 'Cancelado',
+                            ];
+                            $dashFlight = $order->flights->firstWhere('direction', 'outbound') ?? $order->flights->first();
+                        @endphp
+                        <a href="{{ route('customer.order.show', $order) }}" class="block p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-mono font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ $order->tracking_code }}</span>
+                                    <span class="text-sm text-gray-700">
+                                        {{ strtoupper($order->departure_iata) }} → {{ strtoupper($order->arrival_iata) }}
+                                    </span>
+                                </div>
                                 <span class="text-xs px-2 py-1 rounded-full font-medium {{ $statusColors[$order->status] ?? 'bg-gray-100 text-gray-600' }}">
                                     {{ $statusLabels[$order->status] ?? $order->status }}
                                 </span>
                             </div>
+                            @if($dashFlight && $dashFlight->departure_label)
+                                <p class="text-xs text-gray-500 ml-[calc(theme(spacing.2)+theme(spacing.1))]">{{ $dashFlight->departure_label }}</p>
+                            @endif
                         </a>
                     @endforeach
                 </div>

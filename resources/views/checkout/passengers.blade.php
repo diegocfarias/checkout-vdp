@@ -396,6 +396,9 @@
                                     {{ $obStopsModal > 0 ? $obStopsModal . ' conexão' : 'Direto' }}
                                 </span>
                             </div>
+                            @if($outbound->departure_label)
+                                <p class="text-xs font-medium text-gray-600 mb-1">{{ $outbound->departure_label }}</p>
+                            @endif
                             <div class="flex items-center justify-between text-sm">
                                 <div>
                                     <p class="font-medium text-gray-800">{{ $outbound->departure_location }}</p>
@@ -434,6 +437,9 @@
                                     {{ $ibStopsModal > 0 ? $ibStopsModal . ' conexão' : 'Direto' }}
                                 </span>
                             </div>
+                            @if($inbound->departure_label)
+                                <p class="text-xs font-medium text-gray-600 mb-1">{{ $inbound->departure_label }}</p>
+                            @endif
                             <div class="flex items-center justify-between text-sm">
                                 <div>
                                     <p class="font-medium text-gray-800">{{ $inbound->departure_location }}</p>

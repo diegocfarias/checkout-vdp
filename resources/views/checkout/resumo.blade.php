@@ -20,6 +20,8 @@
                     @endif
                     @if($order->flightSearch && $order->flightSearch->outbound_date)
                         <span class="ml-auto text-sm font-medium text-gray-700">{{ \Carbon\Carbon::parse($order->flightSearch->outbound_date)->format('d/m/Y') }}</span>
+                    @elseif($outbound->departure_label)
+                        <span class="ml-auto text-sm font-medium text-gray-700">{{ $outbound->departure_label }}</span>
                     @endif
                 </div>
                 <div class="flex items-center gap-3">
@@ -63,6 +65,8 @@
                     @endif
                     @if($order->flightSearch && $order->flightSearch->inbound_date)
                         <span class="ml-auto text-sm font-medium text-gray-700">{{ \Carbon\Carbon::parse($order->flightSearch->inbound_date)->format('d/m/Y') }}</span>
+                    @elseif($inbound->departure_label)
+                        <span class="ml-auto text-sm font-medium text-gray-700">{{ $inbound->departure_label }}</span>
                     @endif
                 </div>
                 <div class="flex items-center gap-3">

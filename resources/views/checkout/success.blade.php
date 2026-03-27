@@ -21,25 +21,41 @@
 
             @if($outbound)
                 <div class="text-left bg-gray-50 rounded-lg p-4 mb-3">
-                    <p class="text-xs font-semibold text-blue-600 mb-1">IDA</p>
+                    <div class="flex items-center justify-between mb-1">
+                        <p class="text-xs font-semibold text-blue-600">IDA</p>
+                        @if($outbound->departure_label)
+                            <p class="text-xs font-medium text-gray-500">{{ $outbound->departure_label }}</p>
+                        @endif
+                    </div>
                     <p class="text-sm text-gray-700">
                         {{ $outbound->departure_location }} &rarr; {{ $outbound->arrival_location }}
                         @if($outbound->flight_number)
                             <span class="text-gray-400">({{ $outbound->flight_number }})</span>
                         @endif
                     </p>
+                    @if($outbound->departure_time)
+                        <p class="text-xs text-gray-500 mt-1">{{ $outbound->departure_time }} - {{ $outbound->arrival_time }}</p>
+                    @endif
                 </div>
             @endif
 
             @if($inbound)
                 <div class="text-left bg-gray-50 rounded-lg p-4 mb-3">
-                    <p class="text-xs font-semibold text-green-600 mb-1">VOLTA</p>
+                    <div class="flex items-center justify-between mb-1">
+                        <p class="text-xs font-semibold text-green-600">VOLTA</p>
+                        @if($inbound->departure_label)
+                            <p class="text-xs font-medium text-gray-500">{{ $inbound->departure_label }}</p>
+                        @endif
+                    </div>
                     <p class="text-sm text-gray-700">
                         {{ $inbound->departure_location }} &rarr; {{ $inbound->arrival_location }}
                         @if($inbound->flight_number)
                             <span class="text-gray-400">({{ $inbound->flight_number }})</span>
                         @endif
                     </p>
+                    @if($inbound->departure_time)
+                        <p class="text-xs text-gray-500 mt-1">{{ $inbound->departure_time }} - {{ $inbound->arrival_time }}</p>
+                    @endif
                 </div>
             @endif
 

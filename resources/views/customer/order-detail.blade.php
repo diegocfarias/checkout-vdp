@@ -94,15 +94,33 @@
                 <h3 class="font-semibold text-gray-800 mb-3">Voos</h3>
                 @foreach($order->flights as $flight)
                     <div class="p-3 rounded-lg bg-gray-50 mb-2 last:mb-0">
-                        <div class="flex items-center gap-2 mb-1">
+                        <div class="flex items-center gap-2 mb-2">
                             <span class="text-xs font-semibold px-2 py-0.5 rounded {{ $flight->direction === 'outbound' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700' }}">
                                 {{ $flight->direction === 'outbound' ? 'IDA' : 'VOLTA' }}
                             </span>
                             <span class="text-xs text-gray-500 uppercase">{{ $flight->cia }}</span>
+                            @if($flight->flight_number)
+                                <span class="text-xs text-gray-400">{{ $flight->flight_number }}</span>
+                            @endif
                         </div>
+                        @if($flight->departure_label)
+                            <p class="text-xs font-medium text-gray-600 mb-1">{{ $flight->departure_label }}</p>
+                        @endif
                         <div class="flex items-center justify-between text-sm">
-                            <span>{{ $flight->departure_location }} → {{ $flight->arrival_location }}</span>
-                            <span class="text-gray-500">{{ $flight->departure_time }} - {{ $flight->arrival_time }}</span>
+                            <div>
+                                <p class="font-medium text-gray-800">{{ $flight->departure_location }}</p>
+                                <p class="text-gray-500">{{ $flight->departure_time }}</p>
+                            </div>
+                            <div class="flex-1 mx-3 text-center">
+                                @if($flight->total_flight_duration)
+                                    <span class="text-gray-400 text-xs">{{ $flight->total_flight_duration }}</span>
+                                @endif
+                                <div class="border-t border-gray-300 mt-1"></div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-medium text-gray-800">{{ $flight->arrival_location }}</p>
+                                <p class="text-gray-500">{{ $flight->arrival_time }}</p>
+                            </div>
                         </div>
                     </div>
                 @endforeach
