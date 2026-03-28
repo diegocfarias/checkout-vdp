@@ -3,6 +3,7 @@
 @section('title', 'Pagamento Confirmado')
 
 @section('content')
+    @include('partials._checkout_stepper', ['currentStep' => 3])
     <div class="max-w-lg mx-auto text-center">
         <div class="bg-white rounded-lg shadow border border-gray-200 p-8">
             <div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">

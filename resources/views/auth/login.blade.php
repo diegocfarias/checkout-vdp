@@ -33,7 +33,7 @@
                         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
                         <input type="email" name="email" id="email" value="{{ old('email') }}" required autofocus
                                data-validate="email"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-2.5 border @error('email') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('email') is-invalid @enderror">
                         <span class="error-msg">@error('email'){{ $message }}@enderror</span>
                     </div>
 
@@ -41,7 +41,7 @@
                         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
                         <input type="password" name="password" id="password" required
                                data-validate="password"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-2.5 border">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border">
                         <span class="error-msg"></span>
                     </div>
 

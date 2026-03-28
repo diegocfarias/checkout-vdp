@@ -3,10 +3,17 @@
 @section('title', 'Minha Conta')
 
 @section('content')
-    <div class="max-w-3xl mx-auto">
-        <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">Olá, {{ explode(' ', $customer->name)[0] }}!</h1>
-            <p class="text-sm text-gray-500">Bem-vindo à sua conta.</p>
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-4 mb-8">
+            @if($customer->avatar_url)
+                <img src="{{ $customer->avatar_url }}" alt="" class="w-14 h-14 rounded-full">
+            @else
+                <span class="w-14 h-14 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xl font-bold shrink-0">{{ strtoupper(substr($customer->name, 0, 1)) }}</span>
+            @endif
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Olá, {{ explode(' ', $customer->name)[0] }}!</h1>
+                <p class="text-sm text-gray-500">Bem-vindo à sua conta.</p>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

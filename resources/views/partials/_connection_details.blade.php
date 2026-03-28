@@ -6,8 +6,8 @@
     $dotBg = $accent === 'blue' ? 'bg-blue-500' : 'bg-emerald-500';
     $lineBg = $accent === 'blue' ? 'bg-blue-200' : 'bg-emerald-200';
     $waitBg = $accent === 'blue' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600';
-    $textSm = $compact ? 'text-[9px]' : 'text-[11px]';
-    $textXs = $compact ? 'text-[8px]' : 'text-[10px]';
+    $textSm = $compact ? 'text-xs' : 'text-sm';
+    $textXs = $compact ? 'text-[11px]' : 'text-xs';
     $timeSz = $compact ? 'text-xs font-bold' : 'text-sm font-bold';
     $py = $compact ? 'py-1.5' : 'py-2';
 @endphp

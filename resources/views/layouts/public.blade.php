@@ -4,11 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>@yield('title', 'Checkout') - VDP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
     <style>
         a, button, input, select, textarea, label, [role="button"], .cursor-pointer {
             touch-action: manipulation;
         }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+            border-color: #10b981;
+        }
+
+        details > summary::-webkit-details-marker { display: none; }
+        details > summary { list-style: none; }
+        details[open] .details-open-rotate { transform: rotate(180deg); }
+
+        .bg-white { transition: box-shadow 0.2s ease, border-color 0.2s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse-slow { animation: pulse-slow 2s ease-in-out infinite; }
     </style>
     @stack('styles')
     @stack('head')
@@ -148,13 +186,64 @@
     })();
     </script>
 
-    <main class="flex-1 @yield('container_class', 'max-w-4xl') mx-auto w-full px-4 py-8">
+    <main class="flex-1 @yield('container_class', 'max-w-5xl') mx-auto w-full px-4 sm:px-6 py-8">
         @yield('content')
     </main>
 
     <footer class="bg-gray-900 border-t border-gray-800 mt-auto">
-        <div class="max-w-4xl mx-auto px-4 py-4 text-center text-sm text-gray-400">
-            &copy; {{ date('Y') }} Voe de Primeira
+        <div class="max-w-6xl mx-auto px-6 py-10">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div>
+                    <img src="/images/logo-vdp.png" alt="Voe de Primeira" class="h-7 mb-4 brightness-200">
+                    <p class="text-sm text-gray-400 leading-relaxed">Passagens aéreas com preços exclusivos usando milhas. Emissão rápida e segura.</p>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-3">Navegação</h4>
+                    <ul class="space-y-2">
+                        <li><a href="{{ route('search.home') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Buscar passagens</a></li>
+                        <li><a href="{{ route('tracking.form') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Acompanhar pedido</a></li>
+                        @auth('customer')
+                            <li><a href="{{ route('customer.dashboard') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Minha conta</a></li>
+                        @else
+                            <li><a href="{{ route('customer.login') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Entrar / Criar conta</a></li>
+                        @endauth
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-3">Atendimento</h4>
+                    <ul class="space-y-2">
+                        @php $footerWa = \App\Models\Setting::get('whatsapp_number', ''); @endphp
+                        @if($footerWa)
+                            <li>
+                                <a href="https://wa.me/{{ preg_replace('/\D/', '', $footerWa) }}" target="_blank" rel="noopener"
+                                   class="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.612l4.458-1.495A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.387 0-4.592-.838-6.313-2.236l-.44-.364-3.19 1.07 1.07-3.19-.364-.44A9.956 9.956 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
+                                    WhatsApp
+                                </a>
+                            </li>
+                        @endif
+                        <li class="text-sm text-gray-500">Seg a Sex, 9h às 18h</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-3">Pagamento</h4>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs bg-gray-800 text-gray-400 px-2.5 py-1 rounded">PIX</span>
+                        <span class="text-xs bg-gray-800 text-gray-400 px-2.5 py-1 rounded">Visa</span>
+                        <span class="text-xs bg-gray-800 text-gray-400 px-2.5 py-1 rounded">Master</span>
+                        <span class="text-xs bg-gray-800 text-gray-400 px-2.5 py-1 rounded">Elo</span>
+                        <span class="text-xs bg-gray-800 text-gray-400 px-2.5 py-1 rounded">Amex</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3">Parcele em até 12x no cartão</p>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-800 mt-8 pt-6 text-center">
+                <p class="text-xs text-gray-500">&copy; {{ date('Y') }} Voe de Primeira. Todos os direitos reservados.</p>
+            </div>
         </div>
     </footer>
     @include('partials._travel_loading')

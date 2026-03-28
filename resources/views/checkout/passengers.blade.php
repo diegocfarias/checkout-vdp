@@ -18,14 +18,15 @@
     @endphp
 
     <div class="pb-32">
+        @include('partials._checkout_stepper', ['currentStep' => 2])
         <a href="{{ route('checkout.show', $order->token) }}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
             Voltar à viagem
         </a>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-1">Dados dos passageiros</h2>
-            <p class="text-sm text-gray-500 mb-6">Preencha os dados de {{ $order->passengers_count }} passageiro(s).</p>
+            <p class="text-sm text-gray-500 mb-8">Preencha os dados de {{ $order->passengers_count }} passageiro(s).</p>
 
             @if($errors->any())
                 <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -43,7 +44,7 @@
                 <input type="hidden" name="card_token" id="card_token" value="">
 
                 @for($i = 0; $i < $order->passengers_count; $i++)
-                    <details class="passenger-accordion mb-4 border border-gray-200 rounded-lg overflow-hidden" data-passenger-index="{{ $i }}" {{ $i === 0 ? 'open' : '' }}>
+                    <details class="passenger-accordion mb-6 border border-gray-200 rounded-lg overflow-hidden" data-passenger-index="{{ $i }}" {{ $i === 0 ? 'open' : '' }}>
                         <summary class="cursor-pointer select-none bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
                             <span>Passageiro {{ $i + 1 }}</span>
                             <svg class="w-4 h-4 text-gray-400 transition-transform details-open-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,11 +52,11 @@
                             </svg>
                         </summary>
 
-                        <div class="p-4">
+                        <div class="p-5 sm:p-6">
                             @if(($savedPassengers ?? collect())->isNotEmpty())
-                                <div class="mb-4 pb-4 border-b border-gray-100">
+                                <div class="mb-5 pb-5 border-b border-gray-100">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Usar passageiro salvo</label>
-                                    <select class="saved-passenger-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border" data-index="{{ $i }}">
+                                    <select class="saved-passenger-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border" data-index="{{ $i }}">
                                         <option value="">Preencher manualmente</option>
                                         @foreach($savedPassengers as $sp)
                                             @php
@@ -83,7 +84,7 @@
                                     <input type="text" name="passengers[{{ $i }}][full_name]" id="passengers_{{ $i }}_full_name"
                                            value="{{ old("passengers.{$i}.full_name") }}"
                                            data-validate="name"
-                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                            required>
                                     <span class="error-msg"></span>
                                 </div>
@@ -98,7 +99,7 @@
                                                maxlength="14"
                                                data-mask="cpf"
                                                data-validate="cpf"
-                                               class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                               class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                                required>
                                         <span class="error-msg"></span>
                                     @else
@@ -106,7 +107,7 @@
                                         <input type="text" name="passengers[{{ $i }}][document]" id="passengers_{{ $i }}_document"
                                                value="{{ old("passengers.{$i}.document") }}"
                                                data-validate="required"
-                                               class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                               class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                                required>
                                         <span class="error-msg"></span>
                                     @endif
@@ -121,7 +122,7 @@
                                            maxlength="10"
                                            data-mask="date"
                                            data-validate="date"
-                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                            required>
                                     <span class="error-msg"></span>
                                 </div>
@@ -131,7 +132,7 @@
                                     <input type="email" name="passengers[{{ $i }}][email]" id="passengers_{{ $i }}_email"
                                            value="{{ old("passengers.{$i}.email") }}"
                                            data-validate="email"
-                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                            required>
                                     <span class="error-msg"></span>
                                 </div>
@@ -141,7 +142,7 @@
                                     <input type="tel" name="passengers[{{ $i }}][phone]" id="passengers_{{ $i }}_phone"
                                            value="{{ old("passengers.{$i}.phone") }}"
                                            data-validate="phone"
-                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                            required>
                                     <span class="error-msg"></span>
                                 </div>
@@ -161,14 +162,17 @@
                 @endfor
 
                 {{-- Dados do pagador --}}
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-1">Dados do pagador</h3>
-                    <p class="text-sm text-gray-500 mb-4">Informe os dados de quem está realizando o pagamento.</p>
+                <div class="mt-8 pt-8 border-t border-gray-200">
+                    <div class="flex items-center gap-2 mb-1">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        <h3 class="text-lg font-semibold text-gray-800">Dados do pagador</h3>
+                    </div>
+                    <p class="text-sm text-gray-500 mb-5">Informe os dados de quem está realizando o pagamento.</p>
 
                     @if($order->passengers_count > 0)
                     <div class="mb-4">
                         <label for="payer_copy_from" class="block text-sm font-medium text-gray-700 mb-1">Copiar dados do passageiro</label>
-                        <select id="payer_copy_from" class="w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                        <select id="payer_copy_from" class="w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                             <option value="">Preencher manualmente</option>
                             @for($i = 0; $i < $order->passengers_count; $i++)
                                 <option value="{{ $i }}">Passageiro {{ $i + 1 }}</option>
@@ -183,7 +187,7 @@
                             <input type="text" name="payer_name" id="payer_name"
                                    value="{{ old('payer_name', auth('customer')->user()?->name) }}"
                                    data-validate="name"
-                                   class="payer-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                   class="payer-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                    required>
                             <span class="error-msg"></span>
                         </div>
@@ -192,7 +196,7 @@
                             <input type="email" name="payer_email" id="payer_email"
                                    value="{{ old('payer_email', auth('customer')->user()?->email) }}"
                                    data-validate="email"
-                                   class="payer-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                   class="payer-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                    required>
                             <span class="error-msg"></span>
                         </div>
@@ -211,7 +215,7 @@
                                    maxlength="14"
                                    data-mask="cpf"
                                    data-validate="cpf"
-                                   class="payer-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                   class="payer-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                    required>
                             <span class="error-msg"></span>
                         </div>
@@ -219,11 +223,14 @@
                 </div>
 
                 {{-- Cupom de desconto --}}
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Cupom de desconto</h3>
+                <div class="mt-8 pt-8 border-t border-gray-200">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                        <h3 class="text-lg font-semibold text-gray-800">Cupom de desconto</h3>
+                    </div>
                     <div class="flex gap-2">
                         <input type="text" id="coupon_input" placeholder="Digite o código do cupom"
-                               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border uppercase"
+                               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border uppercase"
                                maxlength="20" autocomplete="off">
                         <button type="button" id="btn-apply-coupon"
                                 class="px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-md hover:bg-gray-700 transition-colors shrink-0">
@@ -250,8 +257,11 @@
                 </div>
 
                 {{-- Forma de pagamento --}}
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Forma de pagamento</h3>
+                <div class="mt-8 pt-8 border-t border-gray-200">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                        <h3 class="text-lg font-semibold text-gray-800">Forma de pagamento</h3>
+                    </div>
                     @php
                         $defaultMethod = ($pixEnabled ?? true) ? 'pix' : (($creditCardEnabled ?? true) ? 'credit_card' : 'pix');
                     @endphp
@@ -282,21 +292,21 @@
                     </div>
 
                     {{-- Campos do cartão --}}
-                    <div id="card-fields" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hidden">
-                        <h4 class="text-sm font-medium text-gray-700 mb-3">Dados do cartão</h4>
+                    <div id="card-fields" class="mt-5 p-5 bg-gray-50 rounded-lg border border-gray-200 hidden">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-4">Dados do cartão</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="md:col-span-2">
                                 <label for="card_number" class="block text-sm font-medium text-gray-700 mb-1">Número do cartão</label>
                                 <input type="text" name="card_number" id="card_number" maxlength="19" placeholder="0000 0000 0000 0000"
                                        inputmode="numeric" data-mask="card" data-validate="card"
-                                       class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                       class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                        value="{{ old('card_number') }}">
                                 <span class="error-msg"></span>
                             </div>
                             <div>
                                 <label for="card_name" class="block text-sm font-medium text-gray-700 mb-1">Nome no cartão</label>
                                 <input type="text" name="card_name" id="card_name" placeholder="Como está no cartão"
-                                       class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border"
+                                       class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                        value="{{ old('card_name') }}">
                                 <span class="error-msg"></span>
                             </div>
@@ -327,7 +337,7 @@
                             </div>
                             <div>
                                 <label for="installments" class="block text-sm font-medium text-gray-700 mb-1">Parcelas</label>
-                                <select name="installments" id="installments" class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                <select name="installments" id="installments" class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                     @for($i = 1; $i <= ($maxInstallments ?? 12); $i++)
                                         @php
                                             $rate = $interestRates[$i] ?? 0;
@@ -342,8 +352,8 @@
                             </div>
                         </div>
 
-                        <div class="mt-4 pt-4 border-t border-gray-200">
-                            <h4 class="text-sm font-medium text-gray-700 mb-3">Endereço de cobrança</h4>
+                        <div class="mt-5 pt-5 border-t border-gray-200">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-4">Endereço de cobrança</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label for="billing_zipcode" class="block text-sm font-medium text-gray-700 mb-1">CEP</label>
@@ -355,7 +365,7 @@
                                                maxlength="9"
                                                data-mask="cep"
                                                data-validate="cep"
-                                               class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                               class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                         <span id="cep-loading" class="hidden absolute right-3 top-1/2 -translate-y-1/2">
                                             <svg class="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
                                         </span>
@@ -368,7 +378,7 @@
                                     <input type="text" name="billing_street" id="billing_street"
                                            value="{{ old('billing_street') }}"
                                            data-validate="required"
-                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                     <span class="error-msg"></span>
                                 </div>
                                 <div>
@@ -376,21 +386,21 @@
                                     <input type="text" name="billing_number" id="billing_number"
                                            value="{{ old('billing_number') }}"
                                            data-validate="required"
-                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                     <span class="error-msg"></span>
                                 </div>
                                 <div>
                                     <label for="billing_complement" class="block text-sm font-medium text-gray-700 mb-1">Complemento <span class="text-gray-400 font-normal">(opcional)</span></label>
                                     <input type="text" name="billing_complement" id="billing_complement"
                                            value="{{ old('billing_complement') }}"
-                                           class="billing-input card-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                           class="billing-input card-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                 </div>
                                 <div>
                                     <label for="billing_neighborhood" class="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
                                     <input type="text" name="billing_neighborhood" id="billing_neighborhood"
                                            value="{{ old('billing_neighborhood') }}"
                                            data-validate="required"
-                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                     <span class="error-msg"></span>
                                 </div>
                                 <div>
@@ -398,14 +408,14 @@
                                     <input type="text" name="billing_city" id="billing_city"
                                            value="{{ old('billing_city') }}"
                                            data-validate="required"
-                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                           class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                     <span class="error-msg"></span>
                                 </div>
                                 <div>
                                     <label for="billing_state" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                                     <select name="billing_state" id="billing_state"
                                             data-validate="required"
-                                            class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                                            class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                         <option value="">Selecione</option>
                                         @foreach(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] as $uf)
                                             <option value="{{ $uf }}" {{ old('billing_state') === $uf ? 'selected' : '' }}>{{ $uf }}</option>
@@ -423,7 +433,7 @@
 
     {{-- Rodapé fixo --}}
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-10">
-        <div class="max-w-4xl mx-auto px-4 py-4 space-y-3">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-4 space-y-3">
             <div class="flex items-center justify-between">
                 <div>
                     <div class="flex items-baseline gap-2">
@@ -472,7 +482,7 @@
                                 @if($outbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
                                 @endif
-                                <span class="text-[10px] px-1.5 py-0.5 rounded font-medium {{ $obStopsModal > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600' }}">
+                                <span class="text-xs px-1.5 py-0.5 rounded font-medium {{ $obStopsModal > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600' }}">
                                     {{ $obStopsModal > 0 ? $obStopsModal . ' conexão' : 'Direto' }}
                                 </span>
                             </div>
@@ -513,7 +523,7 @@
                                 @if($inbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
                                 @endif
-                                <span class="text-[10px] px-1.5 py-0.5 rounded font-medium {{ $ibStopsModal > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600' }}">
+                                <span class="text-xs px-1.5 py-0.5 rounded font-medium {{ $ibStopsModal > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600' }}">
                                     {{ $ibStopsModal > 0 ? $ibStopsModal . ' conexão' : 'Direto' }}
                                 </span>
                             </div>

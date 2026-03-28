@@ -5,7 +5,7 @@
 @section('container_class', 'max-w-6xl')
 
 @section('content')
-<div class="space-y-4 pb-8">
+<div class="space-y-6 pb-8">
     {{-- Resumo da busca --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div class="flex flex-wrap items-center gap-3 text-sm text-gray-600">
@@ -47,12 +47,12 @@
         <div class="flex flex-col lg:flex-row gap-5">
             {{-- Sidebar Filtros (desktop) --}}
             <aside class="hidden lg:block w-64 shrink-0">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-4 overflow-hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-[72px] overflow-hidden">
                     <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50/50">
                         <div class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                             <h3 class="font-semibold text-gray-800 text-sm">Filtros</h3>
-                            <span id="active-filter-count" class="hidden text-[10px] font-bold text-white bg-emerald-500 rounded-full w-4.5 h-4.5 flex items-center justify-center leading-none px-1.5 py-0.5">0</span>
+                            <span id="active-filter-count" class="hidden text-xs font-bold text-white bg-emerald-500 rounded-full w-4.5 h-4.5 flex items-center justify-center leading-none px-1.5 py-0.5">0</span>
                         </div>
                         <button type="button" onclick="clearFilters()" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium transition-colors">Limpar</button>
                     </div>
@@ -61,7 +61,7 @@
                     <div class="px-5 py-4 border-b border-gray-100">
                         <div class="flex items-center gap-1.5 mb-3">
                             <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Companhia</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Companhia</p>
                         </div>
                         <div class="flex flex-wrap gap-1.5">
                             @foreach($airlines as $cia)
@@ -77,7 +77,7 @@
                     <div class="px-5 py-4 border-b border-gray-100">
                         <div class="flex items-center gap-1.5 mb-3">
                             <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Paradas</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paradas</p>
                         </div>
                         <div class="flex flex-wrap gap-1.5">
                             <label class="filter-pill cursor-pointer">
@@ -100,13 +100,13 @@
                     <div class="px-5 py-4 {{ $isRoundtrip ? 'border-b border-gray-100' : '' }}">
                         <div class="flex items-center gap-1.5 mb-3">
                             <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Horário ida</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Horário ida</p>
                         </div>
                         <div class="grid grid-cols-2 gap-1.5">
                             @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
                             <label class="filter-pill cursor-pointer">
                                 <input type="checkbox" class="filter-ob-period sr-only" value="{{ $key }}" checked>
-                                <span class="filter-pill-label inline-flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-[10px] font-medium border transition-all w-full text-center">
+                                <span class="filter-pill-label inline-flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-xs font-medium border transition-all w-full text-center">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
                                     {{ $info[0] }}
                                 </span>
@@ -119,13 +119,13 @@
                     <div class="px-5 py-4">
                         <div class="flex items-center gap-1.5 mb-3">
                             <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Horário volta</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Horário volta</p>
                         </div>
                         <div class="grid grid-cols-2 gap-1.5">
                             @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
                             <label class="filter-pill cursor-pointer">
                                 <input type="checkbox" class="filter-ib-period sr-only" value="{{ $key }}" checked>
-                                <span class="filter-pill-label inline-flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-[10px] font-medium border transition-all w-full text-center">
+                                <span class="filter-pill-label inline-flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-xs font-medium border transition-all w-full text-center">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
                                     {{ $info[0] }}
                                 </span>
@@ -139,23 +139,23 @@
 
             {{-- Conteudo principal --}}
             <div class="flex-1 min-w-0">
-                <div class="flex flex-wrap items-center gap-2 mb-4">
-                    <div class="flex bg-white rounded-lg border border-gray-200 overflow-hidden text-sm">
-                        <button type="button" data-sort="price" class="sort-tab sort-tab-active px-4 py-2 font-medium text-white bg-emerald-600">Menor preço</button>
+                <div class="flex flex-wrap items-center gap-3 mb-5 sticky top-[72px] lg:static bg-gray-50 lg:bg-transparent -mx-4 px-4 py-3 lg:py-0 lg:mx-0 lg:px-0 z-10 border-b lg:border-0 border-gray-200">
+                    <div class="flex bg-white rounded-lg border border-gray-200 overflow-hidden text-sm shadow-sm">
+                        <button type="button" data-sort="price" class="sort-tab sort-tab-active px-5 py-2.5 font-medium text-white bg-emerald-600">Menor preço</button>
                         @if($mixEnabled)
-                        <button type="button" data-sort="same-cia" class="sort-tab px-4 py-2 font-medium text-gray-600 hover:bg-gray-50">Mesma cia</button>
+                        <button type="button" data-sort="same-cia" class="sort-tab px-5 py-2.5 font-medium text-gray-600 hover:bg-gray-50">Mesma cia</button>
                         @endif
                     </div>
-                    <span class="text-sm text-gray-400 ml-auto" id="results-count">{{ count($groups) }} resultado{{ count($groups) !== 1 ? 's' : '' }}</span>
+                    <span class="text-sm text-gray-500 ml-auto font-medium" id="results-count">{{ count($groups) }} resultado{{ count($groups) !== 1 ? 's' : '' }}</span>
 
-                    <button type="button" onclick="toggleMobileFilters()" class="lg:hidden flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 hover:border-gray-300 transition-colors relative">
+                    <button type="button" onclick="toggleMobileFilters()" class="lg:hidden flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 shadow-sm transition-colors relative">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                         Filtros
-                        <span id="mobile-btn-filter-count" class="hidden absolute -top-1.5 -right-1.5 text-[10px] font-bold text-white bg-emerald-500 rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
+                        <span id="mobile-btn-filter-count" class="hidden absolute -top-1.5 -right-1.5 text-xs font-bold text-white bg-emerald-500 rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
                     </button>
                 </div>
 
-                <div class="space-y-3" id="combinations-list">
+                <div class="space-y-5" id="combinations-list">
                     @foreach($groups as $groupIdx => $group)
                         @include('search._combination_card', ['group' => $group, 'groupIdx' => $groupIdx, 'searchId' => $search->id])
                     @endforeach
@@ -182,7 +182,7 @@
                     <div class="flex items-center gap-2">
                         <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                         <h3 class="font-bold text-gray-800 text-base">Filtros</h3>
-                        <span id="mobile-active-filter-count" class="hidden text-[10px] font-bold text-white bg-emerald-500 rounded-full px-1.5 py-0.5 leading-none">0</span>
+                        <span id="mobile-active-filter-count" class="hidden text-xs font-bold text-white bg-emerald-500 rounded-full px-1.5 py-0.5 leading-none">0</span>
                     </div>
                     <button type="button" onclick="toggleMobileFilters()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -194,7 +194,7 @@
                     <div>
                         <div class="flex items-center gap-1.5 mb-3">
                             <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Companhia</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Companhia</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             @foreach($airlines as $cia)
@@ -210,7 +210,7 @@
                     <div>
                         <div class="flex items-center gap-1.5 mb-3">
                             <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Paradas</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paradas</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <label class="filter-pill cursor-pointer">
@@ -233,7 +233,7 @@
                     <div>
                         <div class="flex items-center gap-1.5 mb-3">
                             <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Horário ida</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Horário ida</p>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
@@ -252,7 +252,7 @@
                     <div>
                         <div class="flex items-center gap-1.5 mb-3">
                             <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Horário volta</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Horário volta</p>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
@@ -346,25 +346,50 @@
         if (input) input.value = JSON.stringify(flight);
     }
 
+    function toggleConnDetails(connBtn) {
+        var connDiv = document.getElementById(connBtn.dataset.target);
+        if (!connDiv) return;
+        var wasHidden = connDiv.classList.contains('hidden');
+        connDiv.classList.toggle('hidden');
+        var txt = connBtn.textContent.trim();
+        connBtn.textContent = wasHidden ? txt.replace('▾', '▴') : txt.replace('▴', '▾');
+    }
+
     document.querySelectorAll('.flight-option').forEach(function(label) {
-        label.addEventListener('click', function() {
+        label.addEventListener('click', function(e) {
+            if (e.target.closest('.conn-toggle-btn')) return;
+            if (e.target.tagName === 'INPUT') return;
+
             var groupIdx = parseInt(label.dataset.group);
             var dir = label.dataset.dir;
             var radio = label.querySelector('input[type="radio"]');
             if (!radio) return;
             updateFlightSelection(groupIdx, dir, parseInt(radio.value));
 
-            var activeClasses = dir === 'ob' ? ['border-emerald-400', 'bg-emerald-50'] : ['border-blue-400', 'bg-blue-50'];
+            var activeClasses = dir === 'ob'
+                ? ['border-emerald-400', 'bg-emerald-50/60', 'shadow-sm']
+                : ['border-blue-400', 'bg-blue-50/60', 'shadow-sm'];
             var dotBorder = dir === 'ob' ? 'border-emerald-600' : 'border-blue-600';
             var dotBg = dir === 'ob' ? 'bg-emerald-600' : 'bg-blue-600';
 
-            label.closest('.space-y-1').querySelectorAll('.flight-option[data-dir="' + dir + '"]').forEach(function(opt) {
-                opt.classList.remove('border-emerald-400', 'bg-emerald-50', 'border-blue-400', 'bg-blue-50');
+            label.closest('.space-y-2').querySelectorAll('.flight-option[data-dir="' + dir + '"]').forEach(function(opt) {
+                opt.classList.remove('border-emerald-400', 'bg-emerald-50/60', 'border-blue-400', 'bg-blue-50/60', 'shadow-sm');
                 opt.classList.add('border-gray-200');
                 var d = opt.querySelector('.radio-dot');
                 if (d) { d.classList.remove('border-emerald-600', 'border-blue-600'); d.classList.add('border-gray-300'); }
                 var inner = opt.querySelector('.radio-dot-inner');
                 if (inner) { inner.classList.remove('bg-emerald-600', 'bg-blue-600'); }
+
+                if (opt !== label) {
+                    var otherConnBtn = opt.querySelector('.conn-toggle-btn');
+                    if (otherConnBtn) {
+                        var otherConn = document.getElementById(otherConnBtn.dataset.target);
+                        if (otherConn && !otherConn.classList.contains('hidden')) {
+                            otherConn.classList.add('hidden');
+                            otherConnBtn.textContent = otherConnBtn.textContent.trim().replace('▴', '▾');
+                        }
+                    }
+                }
             });
 
             label.classList.remove('border-gray-200');
@@ -373,6 +398,11 @@
             if (d) { d.classList.remove('border-gray-300'); d.classList.add(dotBorder); }
             var inner = label.querySelector('.radio-dot-inner');
             if (inner) { inner.classList.add(dotBg); }
+
+            var connBtn = label.querySelector('.conn-toggle-btn');
+            if (connBtn) {
+                toggleConnDetails(connBtn);
+            }
         });
     });
 

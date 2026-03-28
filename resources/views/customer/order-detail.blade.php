@@ -3,7 +3,7 @@
 @section('title', 'Pedido ' . $order->tracking_code)
 
 @section('content')
-    <div class="max-w-3xl mx-auto">
+    <div class="max-w-4xl mx-auto">
         <a href="{{ route('customer.orders') }}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             Voltar aos pedidos

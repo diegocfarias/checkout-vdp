@@ -3,7 +3,7 @@
 @section('title', 'Meus Pedidos')
 
 @section('content')
-    <div class="max-w-3xl mx-auto">
+    <div class="max-w-4xl mx-auto">
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Meus pedidos</h1>
@@ -13,7 +13,7 @@
         </div>
 
         @if($orders->isNotEmpty())
-            <div class="space-y-3">
+            <div class="space-y-4">
                 @foreach($orders as $order)
                     @php
                         $statusColors = [
@@ -32,7 +32,7 @@
                         ];
                         $total = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0)) - (float)($order->discount_amount ?? 0);
                     @endphp
-                    <a href="{{ route('customer.order.show', $order) }}" class="block bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-emerald-300 transition-colors">
+                    <a href="{{ route('customer.order.show', $order) }}" class="block bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-emerald-300 hover:shadow-md transition-all">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-mono font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ $order->tracking_code }}</span>
                             <span class="text-xs px-2 py-1 rounded-full font-medium {{ $statusColors[$order->status] ?? 'bg-gray-100 text-gray-600' }}">

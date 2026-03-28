@@ -4,6 +4,7 @@
 
 @section('content')
     <div class="space-y-6">
+        @include('partials._checkout_stepper', ['currentStep' => 1])
         <h2 class="text-2xl font-bold text-gray-800">Sua viagem</h2>
 
         @if($outbound)
@@ -29,9 +30,9 @@
                     </div>
                     <div class="flex-1 px-2">
                         <div class="border-t-2 border-dashed border-gray-300 relative">
-                            <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-2 text-[11px] text-gray-400 whitespace-nowrap">{{ $outbound->total_flight_duration ?? '' }}</span>
+                            <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-gray-400 whitespace-nowrap">{{ $outbound->total_flight_duration ?? '' }}</span>
                         </div>
-                        <p class="text-center text-[11px] mt-1 {{ $obStops > 0 ? 'text-amber-600' : 'text-emerald-600' }}">
+                        <p class="text-center text-xs mt-1 {{ $obStops > 0 ? 'text-amber-600' : 'text-emerald-600' }}">
                             {{ $obStops > 0 ? $obStops . ' conexão' : 'Direto' }}
                         </p>
                     </div>
@@ -42,7 +43,7 @@
                 </div>
                 @if($obStops > 0)
                     <div class="mt-3 pt-3 border-t border-gray-100">
-                        <p class="text-[10px] font-semibold text-gray-500 uppercase mb-1">Trechos do voo</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Trechos do voo</p>
                         @include('partials._connection_details', ['segments' => $obConns, 'accentColor' => 'emerald', 'compact' => false])
                     </div>
                 @endif
@@ -72,9 +73,9 @@
                     </div>
                     <div class="flex-1 px-2">
                         <div class="border-t-2 border-dashed border-gray-300 relative">
-                            <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-2 text-[11px] text-gray-400 whitespace-nowrap">{{ $inbound->total_flight_duration ?? '' }}</span>
+                            <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-2 text-xs text-gray-400 whitespace-nowrap">{{ $inbound->total_flight_duration ?? '' }}</span>
                         </div>
-                        <p class="text-center text-[11px] mt-1 {{ $ibStops > 0 ? 'text-amber-600' : 'text-emerald-600' }}">
+                        <p class="text-center text-xs mt-1 {{ $ibStops > 0 ? 'text-amber-600' : 'text-emerald-600' }}">
                             {{ $ibStops > 0 ? $ibStops . ' conexão' : 'Direto' }}
                         </p>
                     </div>
@@ -85,7 +86,7 @@
                 </div>
                 @if($ibStops > 0)
                     <div class="mt-3 pt-3 border-t border-gray-100">
-                        <p class="text-[10px] font-semibold text-gray-500 uppercase mb-1">Trechos do voo</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Trechos do voo</p>
                         @include('partials._connection_details', ['segments' => $ibConns, 'accentColor' => 'blue', 'compact' => false])
                     </div>
                 @endif

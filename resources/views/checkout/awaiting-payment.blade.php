@@ -3,6 +3,7 @@
 @section('title', 'Aguardando Pagamento')
 
 @section('content')
+    @include('partials._checkout_stepper', ['currentStep' => 3])
     <div class="max-w-lg mx-auto text-center">
         <div class="bg-white rounded-lg shadow border border-gray-200 p-8">
             @php
