@@ -83,6 +83,8 @@ class AbacatePayService implements PaymentGatewayInterface
         $brCode = $data['brCode'] ?? '';
         $brCodeBase64 = $data['brCodeBase64'] ?? null;
 
+        $pixExpirationMinutes = (int) \App\Models\Setting::get('pix_expiration_minutes', 30);
+
         return $order->payments()->create([
             'gateway' => 'abacatepay',
             'external_checkout_id' => $pixId,
@@ -91,6 +93,7 @@ class AbacatePayService implements PaymentGatewayInterface
             'payment_method' => 'pix',
             'amount' => $amountCents / 100,
             'currency' => 'BRL',
+            'expires_at' => now()->addMinutes($pixExpirationMinutes),
             'gateway_response' => [
                 'pix_emv' => $brCode,
                 'pix_qrcode' => $brCodeBase64 ? $this->extractBase64Data($brCodeBase64) : null,

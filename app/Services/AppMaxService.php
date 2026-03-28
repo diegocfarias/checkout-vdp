@@ -423,7 +423,7 @@ class AppMaxService implements PaymentGatewayInterface
 
         $paymentUrl = $this->extractPaymentUrl($paymentResponse, $paymentMethod);
 
-        return OrderPayment::create([
+        $paymentData = [
             'order_id' => $order->id,
             'gateway' => 'appmax',
             'external_checkout_id' => (string) $appMaxOrderId,
@@ -433,7 +433,14 @@ class AppMaxService implements PaymentGatewayInterface
             'currency' => 'BRL',
             'payment_method' => $paymentMethod,
             'gateway_response' => $paymentResponse,
-        ]);
+        ];
+
+        if ($paymentMethod === 'pix') {
+            $pixExpirationMinutes = (int) \App\Models\Setting::get('pix_expiration_minutes', 30);
+            $paymentData['expires_at'] = now()->addMinutes($pixExpirationMinutes);
+        }
+
+        return OrderPayment::create($paymentData);
     }
 
     private function payWithCreditCard(int $orderId, int $customerId, string $document, $passenger, array $cardData): array

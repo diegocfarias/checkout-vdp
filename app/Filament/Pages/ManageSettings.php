@@ -69,6 +69,7 @@ class ManageSettings extends Page
             'max_installments_c6bank' => Setting::get('max_installments_c6bank', Setting::get('max_installments', 12)),
             'interest_rates_appmax' => $this->formatRates(Setting::get('interest_rates_appmax', Setting::get('interest_rates', []))),
             'interest_rates_c6bank' => $this->formatRates(Setting::get('interest_rates_c6bank', Setting::get('interest_rates', []))),
+            'pix_expiration_minutes' => Setting::get('pix_expiration_minutes', 30),
             'order_expiration_minutes' => Setting::get('order_expiration_minutes', 30),
             'whatsapp_number' => Setting::get('whatsapp_number', ''),
         ]);
@@ -174,6 +175,15 @@ class ManageSettings extends Page
                             ->maxValue(100)
                             ->step(0.01)
                             ->suffix('%')
+                            ->visible(fn ($get) => ! empty($get('gateway_pix'))),
+
+                        TextInput::make('pix_expiration_minutes')
+                            ->label('Expiração do PIX (minutos)')
+                            ->helperText('Tempo em minutos até o código PIX expirar. Após isso, o cliente não poderá mais pagar.')
+                            ->numeric()
+                            ->minValue(5)
+                            ->maxValue(1440)
+                            ->suffix('min')
                             ->visible(fn ($get) => ! empty($get('gateway_pix'))),
                     ]),
 
@@ -285,6 +295,7 @@ class ManageSettings extends Page
             Setting::set('interest_rates', Setting::get("interest_rates_{$ccGateway}", []), 'json');
         }
 
+        Setting::set('pix_expiration_minutes', (int) ($data['pix_expiration_minutes'] ?? 30), 'integer');
         Setting::set('order_expiration_minutes', (int) $data['order_expiration_minutes'], 'integer');
         Setting::set('whatsapp_number', $data['whatsapp_number'] ?? '', 'string');
 

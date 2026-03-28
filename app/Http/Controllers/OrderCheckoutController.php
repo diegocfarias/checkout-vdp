@@ -249,6 +249,13 @@ class OrderCheckoutController extends Controller
             return view('checkout.awaiting-payment', ['order' => $order, 'payment' => null]);
         }
 
+        if ($payment->isExpired() && $payment->status === 'pending') {
+            $payment->update(['status' => 'expired']);
+            $order->update(['status' => 'cancelled']);
+
+            return view('checkout.awaiting-payment', ['order' => $order, 'payment' => $payment]);
+        }
+
         try {
             $status = $this->paymentResolver->resolveForPayment($payment)->getCheckoutStatus($payment);
         } catch (\Throwable $e) {

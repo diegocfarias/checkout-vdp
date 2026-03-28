@@ -18,14 +18,21 @@ class OrderPayment extends Model
         'amount',
         'currency',
         'paid_at',
+        'expires_at',
         'gateway_response',
     ];
 
     protected $casts = [
         'paid_at' => 'datetime',
+        'expires_at' => 'datetime',
         'gateway_response' => 'array',
         'amount' => 'decimal:2',
     ];
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at && $this->expires_at->isPast();
+    }
 
     public function order(): BelongsTo
     {

@@ -65,7 +65,7 @@ class C6BankService implements PaymentGatewayInterface
 
         $data = $response->json();
 
-        return OrderPayment::create([
+        $paymentData = [
             'order_id' => $order->id,
             'gateway' => 'c6bank',
             'external_checkout_id' => $data['id'] ?? $data['checkout_id'] ?? null,
@@ -74,7 +74,14 @@ class C6BankService implements PaymentGatewayInterface
             'amount' => $amount,
             'currency' => 'BRL',
             'gateway_response' => $data,
-        ]);
+        ];
+
+        if ($paymentMethod === 'pix') {
+            $pixExpirationMinutes = (int) \App\Models\Setting::get('pix_expiration_minutes', 30);
+            $paymentData['expires_at'] = now()->addMinutes($pixExpirationMinutes);
+        }
+
+        return OrderPayment::create($paymentData);
     }
 
     /**
