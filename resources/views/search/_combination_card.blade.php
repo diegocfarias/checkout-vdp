@@ -177,7 +177,16 @@
 
     <div class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
         <div>
-            <p class="text-xl font-bold text-gray-900">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
+            @if(($pixEnabled ?? false) && ($pixDiscount ?? 0) > 0)
+                @php $pixPrice = round($totalPrice * (1 - ($pixDiscount / 100)), 2); @endphp
+                <p class="text-xs text-gray-400 line-through">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
+                <div class="flex items-center gap-2">
+                    <p class="text-xl font-bold text-emerald-600">R$ {{ number_format($pixPrice, 2, ',', '.') }}</p>
+                    <span class="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full whitespace-nowrap">PIX</span>
+                </div>
+            @else
+                <p class="text-xl font-bold text-gray-900">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
+            @endif
             <p class="text-[10px] text-gray-400">{{ $hasInbound ? 'ida + volta' : 'por adulto' }}</p>
         </div>
         <form action="{{ route('search.select') }}" method="POST" class="group-form" data-group="{{ $groupIdx }}">

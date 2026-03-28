@@ -68,6 +68,8 @@ class FlightSearchController extends Controller
                 'params' => $validated,
                 'isRoundtrip' => $validated['trip_type'] === 'roundtrip',
                 'mixEnabled' => Setting::get('mix_enabled', true),
+                'pixDiscount' => (float) Setting::get('pix_discount', 0),
+                'pixEnabled' => ! empty(Setting::get('gateway_pix', config('services.payment.gateway'))),
             ]);
         }
 
@@ -93,6 +95,8 @@ class FlightSearchController extends Controller
                 'params' => $validated,
                 'isRoundtrip' => true,
                 'mixEnabled' => Setting::get('mix_enabled', true),
+                'pixDiscount' => (float) Setting::get('pix_discount', 0),
+                'pixEnabled' => ! empty(Setting::get('gateway_pix', config('services.payment.gateway'))),
             ]);
         }
 
@@ -116,6 +120,8 @@ class FlightSearchController extends Controller
             'params' => $validated,
             'isRoundtrip' => $isRoundtrip,
             'mixEnabled' => Setting::get('mix_enabled', true),
+            'pixDiscount' => (float) Setting::get('pix_discount', 0),
+            'pixEnabled' => ! empty(Setting::get('gateway_pix', config('services.payment.gateway'))),
         ]);
     }
 

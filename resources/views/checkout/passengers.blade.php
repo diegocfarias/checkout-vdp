@@ -222,11 +222,19 @@
                     @endphp
                     <div class="space-y-3">
                         @if($pixEnabled ?? true)
-                            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
-                                <input type="radio" name="payment_method" value="pix" {{ old('payment_method', $defaultMethod) === 'pix' ? 'checked' : '' }} class="payment-method-radio">
-                                <span class="font-medium">PIX</span>
+                            <label class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition
+                                {{ ($pixDiscount ?? 0) > 0
+                                    ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50'
+                                    : 'border-gray-200 hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50' }}">
+                                <input type="radio" name="payment_method" value="pix" {{ old('payment_method', $defaultMethod) === 'pix' ? 'checked' : '' }} class="payment-method-radio text-emerald-600">
+                                <div class="flex-1">
+                                    <span class="font-medium">PIX</span>
+                                    @if(($pixDiscount ?? 0) > 0)
+                                        <p class="text-xs text-emerald-600 mt-0.5">Pagamento instantâneo com desconto</p>
+                                    @endif
+                                </div>
                                 @if(($pixDiscount ?? 0) > 0)
-                                    <span class="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{{ number_format($pixDiscount, 0) }}% de desconto</span>
+                                    <span class="text-xs font-bold bg-emerald-600 text-white px-2.5 py-1 rounded-full">-{{ number_format($pixDiscount, 0) }}%</span>
                                 @endif
                             </label>
                         @endif
@@ -382,9 +390,12 @@
     <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-10">
         <div class="max-w-4xl mx-auto px-4 py-4 space-y-3">
             <div class="flex items-center justify-between">
-                <div class="flex items-baseline gap-2">
-                    <span class="text-sm text-gray-500">Total</span>
-                    <span id="footer-total" class="text-2xl font-bold text-gray-900" data-base="{{ $orderTotal }}">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
+                <div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-sm text-gray-500">Total</span>
+                        <span id="footer-total" class="text-2xl font-bold text-gray-900" data-base="{{ $orderTotal }}">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
+                    </div>
+                    <p id="footer-discount-info" class="text-xs text-emerald-600 font-medium hidden"></p>
                 </div>
                 <button type="button" id="btn-detalhes-compra" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 shrink-0">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -505,17 +516,23 @@
                             <span>Taxas</span>
                             <span>R$ {{ number_format($subtotalTaxas, 2, ',', '.') }}</span>
                         </div>
-                        <div id="modal-desconto-row" class="hidden flex justify-between text-emerald-600">
-                            <span>Desconto (cupom)</span>
-                            <span id="modal-desconto-valor"></span>
+                        <div id="modal-desconto-row" class="hidden flex justify-between items-center text-emerald-600 bg-emerald-50 -mx-2 px-2 py-1.5 rounded-lg">
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                Cupom de desconto
+                            </span>
+                            <span id="modal-desconto-valor" class="font-semibold"></span>
                         </div>
-                        <div id="modal-pix-discount-row" class="hidden flex justify-between text-emerald-600">
-                            <span>Desconto PIX ({{ number_format($pixDiscount ?? 0, 0) }}%)</span>
-                            <span id="modal-pix-discount-valor"></span>
+                        <div id="modal-pix-discount-row" class="hidden flex justify-between items-center text-emerald-600 bg-emerald-50 -mx-2 px-2 py-1.5 rounded-lg">
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Desconto PIX ({{ number_format($pixDiscount ?? 0, 0) }}%)
+                            </span>
+                            <span id="modal-pix-discount-valor" class="font-semibold"></span>
                         </div>
-                        <div id="modal-juros-row" class="hidden flex justify-between text-gray-600">
+                        <div id="modal-juros-row" class="hidden flex justify-between text-amber-600">
                             <span>Juros do parcelamento</span>
-                            <span id="modal-juros-valor"></span>
+                            <span id="modal-juros-valor" class="font-medium"></span>
                         </div>
                         <div class="flex justify-between items-center pt-2 border-t border-gray-100">
                             <span class="font-medium text-gray-700">Total</span>
@@ -610,11 +627,25 @@
                 if (modalPixDiscRow) modalPixDiscRow.classList.add('hidden');
             }
 
+            const footerDiscountInfo = document.getElementById('footer-discount-info');
+            const discountParts = [];
+            if (appliedDiscount > 0) discountParts.push('Cupom - ' + fmt(appliedDiscount));
+            if (isPix && pixDiscountVal > 0) discountParts.push('PIX -' + pixDiscountPct + '%');
+
             if (!isCreditCard) {
                 const totalPix = totalComDesconto - pixDiscountVal;
                 footerTotal.textContent = fmt(totalPix);
                 if (modalTotal) modalTotal.textContent = fmt(totalPix);
                 if (modalJurosRow) modalJurosRow.classList.add('hidden');
+
+                if (footerDiscountInfo) {
+                    if (discountParts.length > 0) {
+                        footerDiscountInfo.textContent = discountParts.join(' | ') + ' aplicado(s)';
+                        footerDiscountInfo.classList.remove('hidden');
+                    } else {
+                        footerDiscountInfo.classList.add('hidden');
+                    }
+                }
                 return;
             }
 
@@ -632,6 +663,15 @@
                 if (modalJurosValor) modalJurosValor.textContent = fmt(juros);
             } else {
                 if (modalJurosRow) modalJurosRow.classList.add('hidden');
+            }
+
+            if (footerDiscountInfo) {
+                if (appliedDiscount > 0) {
+                    footerDiscountInfo.textContent = 'Cupom - ' + fmt(appliedDiscount) + ' aplicado';
+                    footerDiscountInfo.classList.remove('hidden');
+                } else {
+                    footerDiscountInfo.classList.add('hidden');
+                }
             }
         }
 
