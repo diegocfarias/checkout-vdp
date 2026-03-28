@@ -126,6 +126,7 @@ Route::middleware(['auth:customer', EnsureCustomerIsActive::class])->group(funct
 Route::middleware('throttle:60,1')->group(function () {
     Route::get('/r/{token}', [OrderCheckoutController::class, 'show'])->name('checkout.show');
     Route::get('/r/{token}/passageiros', [OrderCheckoutController::class, 'showPassengers'])->name('checkout.passengers');
+    Route::post('/r/{token}/apply-coupon', [OrderCheckoutController::class, 'applyCoupon'])->name('checkout.apply-coupon');
     Route::post('/r/{order:token}', [OrderCheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/r/{order:token}/payment-callback', [OrderCheckoutController::class, 'paymentCallback'])->name('checkout.payment-callback');
 

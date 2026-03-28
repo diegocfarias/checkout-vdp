@@ -111,6 +111,13 @@
                 <span>Taxas</span>
                 <span>R$ {{ number_format($subtotalTaxas, 2, ',', '.') }}</span>
             </div>
+            @if($order->discount_amount > 0 && $order->coupon)
+                <div class="flex justify-between text-emerald-600">
+                    <span>Desconto ({{ $order->coupon->code }})</span>
+                    <span>- R$ {{ number_format($order->discount_amount, 2, ',', '.') }}</span>
+                </div>
+                @php $orderTotal -= (float) $order->discount_amount; @endphp
+            @endif
             <div class="flex justify-between items-center pt-2 border-t border-gray-100">
                 <span class="font-medium text-gray-700">Valor total</span>
                 <span class="text-2xl font-bold text-gray-900">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>

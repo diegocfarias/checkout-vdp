@@ -183,6 +183,37 @@
                     </div>
                 </div>
 
+                {{-- Cupom de desconto --}}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Cupom de desconto</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="coupon_input" placeholder="Digite o código do cupom"
+                               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border uppercase"
+                               maxlength="20" autocomplete="off">
+                        <button type="button" id="btn-apply-coupon"
+                                class="px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-md hover:bg-gray-700 transition-colors shrink-0">
+                            Aplicar
+                        </button>
+                    </div>
+                    <div id="coupon-feedback" class="mt-2 hidden">
+                        <div id="coupon-success" class="hidden flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="text-sm text-emerald-700">
+                                    Cupom <strong id="coupon-applied-code"></strong> aplicado: <strong id="coupon-applied-discount"></strong>
+                                </span>
+                            </div>
+                            <button type="button" id="btn-remove-coupon" class="text-sm text-red-600 hover:text-red-800 font-medium">Remover</button>
+                        </div>
+                        <div id="coupon-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p class="text-sm text-red-700" id="coupon-error-msg"></p>
+                        </div>
+                    </div>
+                    <input type="hidden" name="coupon_code" id="coupon_code" value="">
+                </div>
+
                 {{-- Forma de pagamento --}}
                 <div class="mt-6 pt-6 border-t border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-800 mb-3">Forma de pagamento</h3>
@@ -471,6 +502,10 @@
                             <span>Taxas</span>
                             <span>R$ {{ number_format($subtotalTaxas, 2, ',', '.') }}</span>
                         </div>
+                        <div id="modal-desconto-row" class="hidden flex justify-between text-emerald-600">
+                            <span>Desconto (cupom)</span>
+                            <span id="modal-desconto-valor"></span>
+                        </div>
                         <div id="modal-juros-row" class="hidden flex justify-between text-gray-600">
                             <span>Juros do parcelamento</span>
                             <span id="modal-juros-valor"></span>
@@ -534,26 +569,40 @@
             atualizarTotalFooter();
         }
 
+        let appliedDiscount = 0;
+
         function atualizarTotalFooter() {
             const footerTotal = document.getElementById('footer-total');
             const modalTotal = document.getElementById('modal-total');
             const modalJurosRow = document.getElementById('modal-juros-row');
             const modalJurosValor = document.getElementById('modal-juros-valor');
+            const modalDescontoRow = document.getElementById('modal-desconto-row');
+            const modalDescontoValor = document.getElementById('modal-desconto-valor');
             const baseTotal = parseFloat(footerTotal.dataset.base || 0);
+            const totalComDesconto = baseTotal - appliedDiscount;
             const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';
             const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+            if (appliedDiscount > 0) {
+                if (modalDescontoRow) modalDescontoRow.classList.remove('hidden');
+                if (modalDescontoValor) modalDescontoValor.textContent = '- ' + fmt(appliedDiscount);
+            } else {
+                if (modalDescontoRow) modalDescontoRow.classList.add('hidden');
+            }
+
             if (!isCreditCard) {
-                footerTotal.textContent = fmt(baseTotal);
-                if (modalTotal) modalTotal.textContent = fmt(baseTotal);
+                footerTotal.textContent = fmt(totalComDesconto);
+                if (modalTotal) modalTotal.textContent = fmt(totalComDesconto);
                 if (modalJurosRow) modalJurosRow.classList.add('hidden');
                 return;
             }
 
             const installmentsSelect = document.getElementById('installments');
             const selectedOption = installmentsSelect?.options[installmentsSelect.selectedIndex];
-            const totalComJuros = selectedOption?.dataset.total ? parseFloat(selectedOption.dataset.total) : baseTotal;
-            const juros = totalComJuros - baseTotal;
+            const rateDataTotal = selectedOption?.dataset.total ? parseFloat(selectedOption.dataset.total) : baseTotal;
+            const rate = baseTotal > 0 ? (rateDataTotal / baseTotal) : 1;
+            const totalComJuros = totalComDesconto * rate;
+            const juros = totalComJuros - totalComDesconto;
 
             footerTotal.textContent = fmt(totalComJuros);
             if (modalTotal) modalTotal.textContent = fmt(totalComJuros);
@@ -569,6 +618,77 @@
         toggleCardFields();
 
         document.getElementById('installments')?.addEventListener('change', atualizarTotalFooter);
+
+        (function setupCoupon() {
+            const btnApply = document.getElementById('btn-apply-coupon');
+            const btnRemove = document.getElementById('btn-remove-coupon');
+            const couponInput = document.getElementById('coupon_input');
+            const couponHidden = document.getElementById('coupon_code');
+            const feedback = document.getElementById('coupon-feedback');
+            const successBox = document.getElementById('coupon-success');
+            const errorBox = document.getElementById('coupon-error');
+            const errorMsg = document.getElementById('coupon-error-msg');
+            const appliedCode = document.getElementById('coupon-applied-code');
+            const appliedDisc = document.getElementById('coupon-applied-discount');
+            const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            btnApply.addEventListener('click', async function () {
+                const code = couponInput.value.trim();
+                if (!code) return;
+
+                btnApply.disabled = true;
+                btnApply.textContent = '...';
+
+                try {
+                    const payerDoc = document.getElementById('payer_document')?.value || '';
+                    const res = await fetch('{{ route("checkout.apply-coupon", $order->token) }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ coupon_code: code, payer_document: payerDoc }),
+                    });
+
+                    const data = await res.json();
+                    feedback.classList.remove('hidden');
+
+                    if (data.success) {
+                        successBox.classList.remove('hidden');
+                        errorBox.classList.add('hidden');
+                        appliedCode.textContent = data.coupon_code;
+                        appliedDisc.textContent = '- ' + fmt(data.discount_amount);
+                        couponHidden.value = data.coupon_code;
+                        couponInput.disabled = true;
+                        appliedDiscount = data.discount_amount;
+                        atualizarTotalFooter();
+                    } else {
+                        errorBox.classList.remove('hidden');
+                        successBox.classList.add('hidden');
+                        errorMsg.textContent = data.message;
+                    }
+                } catch (e) {
+                    errorBox.classList.remove('hidden');
+                    successBox.classList.add('hidden');
+                    errorMsg.textContent = 'Erro ao verificar cupom.';
+                }
+
+                btnApply.disabled = false;
+                btnApply.textContent = 'Aplicar';
+            });
+
+            btnRemove.addEventListener('click', function () {
+                couponHidden.value = '';
+                couponInput.value = '';
+                couponInput.disabled = false;
+                feedback.classList.add('hidden');
+                successBox.classList.add('hidden');
+                errorBox.classList.add('hidden');
+                appliedDiscount = 0;
+                atualizarTotalFooter();
+            });
+        })();
 
         document.querySelectorAll('[data-mask="card"]').forEach(input => {
             input.addEventListener('input', function () {

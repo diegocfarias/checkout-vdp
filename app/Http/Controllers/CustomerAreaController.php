@@ -38,7 +38,7 @@ class CustomerAreaController extends Controller
             abort(404);
         }
 
-        $order->load(['flights', 'passengers', 'payments', 'flightSearch']);
+        $order->load(['flights', 'passengers', 'payments', 'flightSearch', 'coupon']);
 
         return view('customer.order-detail', compact('customer', 'order'));
     }

@@ -30,7 +30,9 @@ class C6BankService implements PaymentGatewayInterface
      */
     public function createCheckout(Order $order, ?string $paymentMethod = null, ?array $cardData = null): OrderPayment
     {
-        $amount = $this->calculateOrderAmount($order);
+        $amount = isset($cardData['total_with_interest'])
+            ? (float) $cardData['total_with_interest']
+            : $this->calculateOrderAmount($order);
 
         $payload = [
             'amount' => $amount,

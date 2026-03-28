@@ -151,11 +151,22 @@
 
         @php
             $total = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0));
+            $finalTotal = $total - (float)($order->discount_amount ?? 0);
         @endphp
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <div class="flex justify-between items-center">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-2">
+            @if($order->discount_amount > 0 && $order->coupon)
+                <div class="flex justify-between text-sm text-gray-600">
+                    <span>Subtotal</span>
+                    <span>R$ {{ number_format($total, 2, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between text-sm text-emerald-600">
+                    <span>Desconto ({{ $order->coupon->code }})</span>
+                    <span>- R$ {{ number_format($order->discount_amount, 2, ',', '.') }}</span>
+                </div>
+            @endif
+            <div class="flex justify-between items-center {{ $order->discount_amount > 0 ? 'pt-2 border-t border-gray-100' : '' }}">
                 <span class="font-semibold text-gray-800">Total</span>
-                <span class="text-xl font-bold text-gray-900">R$ {{ number_format($total, 2, ',', '.') }}</span>
+                <span class="text-xl font-bold text-gray-900">R$ {{ number_format($finalTotal, 2, ',', '.') }}</span>
             </div>
         </div>
     </div>

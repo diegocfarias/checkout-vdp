@@ -20,6 +20,8 @@ class Order extends Model
         'user_id',
         'conversation_id',
         'customer_id',
+        'coupon_id',
+        'discount_amount',
         'cabin',
         'departure_iata',
         'arrival_iata',
@@ -77,6 +79,11 @@ class Order extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     public function flightSearch(): BelongsTo

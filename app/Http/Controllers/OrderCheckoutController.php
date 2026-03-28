@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderPassengersRequest;
+use App\Models\Coupon;
 use App\Models\FlightSearch;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Services\CustomerService;
 use App\Services\PaymentGatewayResolver;
 use App\Services\VdpFlightService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class OrderCheckoutController extends Controller
@@ -21,7 +23,7 @@ class OrderCheckoutController extends Controller
 
     public function show(string $token)
     {
-        $order = Order::with(['flights', 'flightSearch'])
+        $order = Order::with(['flights', 'flightSearch', 'coupon'])
             ->where('token', $token)
             ->pending()
             ->notExpired()
@@ -145,19 +147,41 @@ class OrderCheckoutController extends Controller
             }
         }
 
-        if ($paymentMethod === 'credit_card' && config('services.payment.gateway') === 'appmax') {
-            $installments = (int) ($cardData['installments'] ?? 1);
-            if ($installments > 1) {
-                $order->load('flights');
-                $baseTotal = 0;
-                foreach ($order->flights as $flight) {
-                    $baseTotal += (float) ($flight->money_price ?? 0);
-                    $baseTotal += (float) ($flight->tax ?? 0);
+        $couponCode = strtoupper(trim($request->input('coupon_code', '')));
+        $discountAmount = 0;
+
+        if ($couponCode) {
+            $coupon = Coupon::where('code', $couponCode)->first();
+
+            if ($coupon && $coupon->isValid()) {
+                $payerDoc = $request->input('payer_document');
+                $customerDoc = auth('customer')->user()?->document;
+                $docValid = $coupon->isAvailableForDocument($payerDoc) || $coupon->isAvailableForDocument($customerDoc);
+
+                if ($docValid) {
+                    $baseTotal = $this->calculateBaseTotal($order);
+                    $discountAmount = $coupon->calculateDiscount($baseTotal);
+
+                    $order->update([
+                        'coupon_id' => $coupon->id,
+                        'discount_amount' => $discountAmount,
+                    ]);
+
+                    $coupon->incrementUsage();
                 }
-                $allRates = Setting::get('interest_rates', []);
-                $rate = $allRates[$installments] ?? 0;
-                $cardData['total_with_interest'] = round($baseTotal * (1 + $rate / 100), 2);
             }
+        }
+
+        $baseTotal = $this->calculateBaseTotal($order);
+        $totalAfterDiscount = $baseTotal - $discountAmount;
+
+        if ($paymentMethod === 'credit_card') {
+            $installments = (int) ($cardData['installments'] ?? 1);
+            $allRates = Setting::get('interest_rates', []);
+            $rate = $allRates[$installments] ?? 0;
+            $cardData['total_with_interest'] = round($totalAfterDiscount * (1 + $rate / 100), 2);
+        } else {
+            $cardData['total_with_interest'] = round($totalAfterDiscount, 2);
         }
 
         try {
@@ -253,6 +277,61 @@ class OrderCheckoutController extends Controller
         }
 
         return view('checkout.awaiting-payment', ['order' => $order, 'payment' => $payment]);
+    }
+
+    public function applyCoupon(Request $request, string $token)
+    {
+        $order = Order::with('flights')
+            ->where('token', $token)
+            ->pending()
+            ->notExpired()
+            ->first();
+
+        if (! $order) {
+            return response()->json(['success' => false, 'message' => 'Pedido não encontrado.'], 404);
+        }
+
+        $code = strtoupper(trim($request->input('coupon_code', '')));
+
+        if (empty($code)) {
+            return response()->json(['success' => false, 'message' => 'Informe o código do cupom.']);
+        }
+
+        $coupon = Coupon::where('code', $code)->first();
+
+        if (! $coupon || ! $coupon->isValid()) {
+            return response()->json(['success' => false, 'message' => 'Cupom inválido ou expirado.']);
+        }
+
+        $document = $request->input('payer_document');
+        if (! $coupon->isAvailableForDocument($document)) {
+            $customerDoc = auth('customer')->user()?->document;
+            if (! $coupon->isAvailableForDocument($customerDoc)) {
+                return response()->json(['success' => false, 'message' => 'Este cupom não está disponível para você.']);
+            }
+        }
+
+        $baseTotal = $this->calculateBaseTotal($order);
+        $discount = $coupon->calculateDiscount($baseTotal);
+
+        return response()->json([
+            'success' => true,
+            'coupon_code' => $coupon->code,
+            'discount_amount' => round($discount, 2),
+            'new_total' => round($baseTotal - $discount, 2),
+            'message' => 'Cupom aplicado!',
+        ]);
+    }
+
+    private function calculateBaseTotal(Order $order): float
+    {
+        $total = 0;
+        foreach ($order->flights as $flight) {
+            $total += (float) ($flight->money_price ?? 0);
+            $total += (float) ($flight->tax ?? 0);
+        }
+
+        return round($total, 2);
     }
 
     private function checkPriceChange(Order $order): ?array
