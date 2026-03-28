@@ -93,19 +93,29 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
                 <h3 class="font-semibold text-gray-800 mb-3">Voos</h3>
                 @foreach($order->flights as $flight)
+                    @php
+                        $flightDate = null;
+                        if ($order->flightSearch) {
+                            $flightDate = $flight->direction === 'outbound'
+                                ? $order->flightSearch->outbound_date
+                                : $order->flightSearch->inbound_date;
+                        }
+                    @endphp
                     <div class="p-3 rounded-lg bg-gray-50 mb-2 last:mb-0">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded {{ $flight->direction === 'outbound' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700' }}">
-                                {{ $flight->direction === 'outbound' ? 'IDA' : 'VOLTA' }}
-                            </span>
-                            <span class="text-xs text-gray-500 uppercase">{{ $flight->cia }}</span>
-                            @if($flight->flight_number)
-                                <span class="text-xs text-gray-400">{{ $flight->flight_number }}</span>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded {{ $flight->direction === 'outbound' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700' }}">
+                                    {{ $flight->direction === 'outbound' ? 'IDA' : 'VOLTA' }}
+                                </span>
+                                <span class="text-xs text-gray-500 uppercase">{{ $flight->cia }}</span>
+                                @if($flight->flight_number)
+                                    <span class="text-xs text-gray-400">{{ $flight->flight_number }}</span>
+                                @endif
+                            </div>
+                            @if($flightDate)
+                                <span class="text-xs font-medium text-gray-600">{{ $flightDate->format('d/m/Y') }}</span>
                             @endif
                         </div>
-                        @if($flight->departure_label)
-                            <p class="text-xs font-medium text-gray-600 mb-1">{{ $flight->departure_label }}</p>
-                        @endif
                         <div class="flex items-center justify-between text-sm">
                             <div>
                                 <p class="font-medium text-gray-800">{{ $flight->departure_location }}</p>

@@ -23,8 +23,8 @@
                 <div class="text-left bg-gray-50 rounded-lg p-4 mb-3">
                     <div class="flex items-center justify-between mb-1">
                         <p class="text-xs font-semibold text-blue-600">IDA</p>
-                        @if($outbound->departure_label)
-                            <p class="text-xs font-medium text-gray-500">{{ $outbound->departure_label }}</p>
+                        @if($order->flightSearch && $order->flightSearch->outbound_date)
+                            <p class="text-xs font-medium text-gray-500">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}</p>
                         @endif
                     </div>
                     <p class="text-sm text-gray-700">
@@ -43,8 +43,8 @@
                 <div class="text-left bg-gray-50 rounded-lg p-4 mb-3">
                     <div class="flex items-center justify-between mb-1">
                         <p class="text-xs font-semibold text-green-600">VOLTA</p>
-                        @if($inbound->departure_label)
-                            <p class="text-xs font-medium text-gray-500">{{ $inbound->departure_label }}</p>
+                        @if($order->flightSearch && $order->flightSearch->inbound_date)
+                            <p class="text-xs font-medium text-gray-500">{{ $order->flightSearch->inbound_date->format('d/m/Y') }}</p>
                         @endif
                     </div>
                     <p class="text-sm text-gray-700">

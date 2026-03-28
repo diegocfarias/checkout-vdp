@@ -11,7 +11,7 @@ class CustomerAreaController extends Controller
     {
         $customer = auth('customer')->user();
         $recentOrders = Order::where('customer_id', $customer->id)
-            ->with('flights')
+            ->with(['flights', 'flightSearch'])
             ->orderByDesc('created_at')
             ->limit(5)
             ->get();
@@ -23,7 +23,7 @@ class CustomerAreaController extends Controller
     {
         $customer = auth('customer')->user();
         $orders = Order::where('customer_id', $customer->id)
-            ->with('flights')
+            ->with(['flights', 'flightSearch'])
             ->orderByDesc('created_at')
             ->paginate(10);
 
@@ -38,7 +38,7 @@ class CustomerAreaController extends Controller
             abort(404);
         }
 
-        $order->load(['flights', 'passengers', 'payments']);
+        $order->load(['flights', 'passengers', 'payments', 'flightSearch']);
 
         return view('customer.order-detail', compact('customer', 'order'));
     }

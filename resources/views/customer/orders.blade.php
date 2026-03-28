@@ -43,12 +43,9 @@
                             <span class="text-sm font-medium text-gray-700">{{ strtoupper($order->departure_iata) }} → {{ strtoupper($order->arrival_iata) }}</span>
                             <span class="text-sm text-gray-500">R$ {{ number_format($total, 2, ',', '.') }}</span>
                         </div>
-                        @php
-                            $firstFlight = $order->flights->firstWhere('direction', 'outbound') ?? $order->flights->first();
-                        @endphp
                         <div class="flex items-center justify-between mt-1">
-                            @if($firstFlight && $firstFlight->departure_label)
-                                <p class="text-xs text-gray-500">{{ $firstFlight->departure_label }}</p>
+                            @if($order->flightSearch && $order->flightSearch->outbound_date)
+                                <p class="text-xs text-gray-500">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}@if($order->flightSearch->inbound_date) — {{ $order->flightSearch->inbound_date->format('d/m/Y') }}@endif</p>
                             @else
                                 <p class="text-xs text-gray-400">{{ $order->created_at->format('d/m/Y') }}</p>
                             @endif

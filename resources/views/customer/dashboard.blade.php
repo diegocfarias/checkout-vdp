@@ -51,7 +51,6 @@
                                 'completed' => 'Concluído',
                                 'cancelled' => 'Cancelado',
                             ];
-                            $dashFlight = $order->flights->firstWhere('direction', 'outbound') ?? $order->flights->first();
                         @endphp
                         <a href="{{ route('customer.order.show', $order) }}" class="block p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100">
                             <div class="flex items-center justify-between mb-1">
@@ -65,8 +64,8 @@
                                     {{ $statusLabels[$order->status] ?? $order->status }}
                                 </span>
                             </div>
-                            @if($dashFlight && $dashFlight->departure_label)
-                                <p class="text-xs text-gray-500 ml-[calc(theme(spacing.2)+theme(spacing.1))]">{{ $dashFlight->departure_label }}</p>
+                            @if($order->flightSearch && $order->flightSearch->outbound_date)
+                                <p class="text-xs text-gray-500 pl-2">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}@if($order->flightSearch->inbound_date) — {{ $order->flightSearch->inbound_date->format('d/m/Y') }}@endif</p>
                             @endif
                         </a>
                     @endforeach

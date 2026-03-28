@@ -192,15 +192,11 @@
                                                 <td>
                                                     <span style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Ida</span>
                                                 </td>
+                                                @if($flightSearch && $flightSearch->outbound_date)
                                                 <td align="right">
-                                                    <span style="font-size: 13px; font-weight: 600; color: #374151;">
-                                                        @if($flightSearch && $flightSearch->outbound_date)
-                                                            {{ \Carbon\Carbon::parse($flightSearch->outbound_date)->format('d/m/Y') }}
-                                                        @elseif($outbound->departure_label)
-                                                            {{ $outbound->departure_label }}
-                                                        @endif
-                                                    </span>
+                                                    <span style="font-size: 13px; font-weight: 600; color: #374151;">{{ \Carbon\Carbon::parse($flightSearch->outbound_date)->format('d/m/Y') }}</span>
                                                 </td>
+                                                @endif
                                             </tr>
                                         </table>
                                         <p style="margin: 10px 0 2px; font-size: 16px; font-weight: 700; color: #111827;">
@@ -233,15 +229,11 @@
                                                 <td>
                                                     <span style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Volta</span>
                                                 </td>
+                                                @if($flightSearch && $flightSearch->inbound_date)
                                                 <td align="right">
-                                                    <span style="font-size: 13px; font-weight: 600; color: #374151;">
-                                                        @if($flightSearch && $flightSearch->inbound_date)
-                                                            {{ \Carbon\Carbon::parse($flightSearch->inbound_date)->format('d/m/Y') }}
-                                                        @elseif($inbound->departure_label)
-                                                            {{ $inbound->departure_label }}
-                                                        @endif
-                                                    </span>
+                                                    <span style="font-size: 13px; font-weight: 600; color: #374151;">{{ \Carbon\Carbon::parse($flightSearch->inbound_date)->format('d/m/Y') }}</span>
                                                 </td>
+                                                @endif
                                             </tr>
                                         </table>
                                         <p style="margin: 10px 0 2px; font-size: 16px; font-weight: 700; color: #111827;">

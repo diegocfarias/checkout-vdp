@@ -85,20 +85,22 @@
 
                 @if($outbound)
                     <div class="bg-gray-50 rounded-lg p-4 mb-3">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">IDA</span>
-                            <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
-                            @if($outbound->flight_number)
-                                <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">IDA</span>
+                                <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
+                                @if($outbound->flight_number)
+                                    <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
+                                @endif
+                            </div>
+                            @if($order->flightSearch && $order->flightSearch->outbound_date)
+                                <span class="text-xs font-medium text-gray-600">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}</span>
                             @endif
                         </div>
                         <div class="flex items-center justify-between text-sm">
                             <div>
                                 <p class="font-medium text-gray-800">{{ $outbound->departure_location }}</p>
                                 <p class="text-gray-500">{{ $outbound->departure_time }}</p>
-                                @if($outbound->departure_label)
-                                    <p class="text-xs text-gray-400">{{ $outbound->departure_label }}</p>
-                                @endif
                             </div>
                             <div class="flex-1 mx-3 text-center">
                                 @if($outbound->total_flight_duration)
@@ -116,20 +118,22 @@
 
                 @if($inbound)
                     <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">VOLTA</span>
-                            <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
-                            @if($inbound->flight_number)
-                                <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">VOLTA</span>
+                                <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
+                                @if($inbound->flight_number)
+                                    <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
+                                @endif
+                            </div>
+                            @if($order->flightSearch && $order->flightSearch->inbound_date)
+                                <span class="text-xs font-medium text-gray-600">{{ $order->flightSearch->inbound_date->format('d/m/Y') }}</span>
                             @endif
                         </div>
                         <div class="flex items-center justify-between text-sm">
                             <div>
                                 <p class="font-medium text-gray-800">{{ $inbound->departure_location }}</p>
                                 <p class="text-gray-500">{{ $inbound->departure_time }}</p>
-                                @if($inbound->departure_label)
-                                    <p class="text-xs text-gray-400">{{ $inbound->departure_label }}</p>
-                                @endif
                             </div>
                             <div class="flex-1 mx-3 text-center">
                                 @if($inbound->total_flight_duration)

@@ -396,8 +396,8 @@
                                     {{ $obStopsModal > 0 ? $obStopsModal . ' conexão' : 'Direto' }}
                                 </span>
                             </div>
-                            @if($outbound->departure_label)
-                                <p class="text-xs font-medium text-gray-600 mb-1">{{ $outbound->departure_label }}</p>
+                            @if($order->flightSearch && $order->flightSearch->outbound_date)
+                                <p class="text-xs font-medium text-gray-600 mb-1">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}</p>
                             @endif
                             <div class="flex items-center justify-between text-sm">
                                 <div>
@@ -437,8 +437,8 @@
                                     {{ $ibStopsModal > 0 ? $ibStopsModal . ' conexão' : 'Direto' }}
                                 </span>
                             </div>
-                            @if($inbound->departure_label)
-                                <p class="text-xs font-medium text-gray-600 mb-1">{{ $inbound->departure_label }}</p>
+                            @if($order->flightSearch && $order->flightSearch->inbound_date)
+                                <p class="text-xs font-medium text-gray-600 mb-1">{{ $order->flightSearch->inbound_date->format('d/m/Y') }}</p>
                             @endif
                             <div class="flex items-center justify-between text-sm">
                                 <div>
