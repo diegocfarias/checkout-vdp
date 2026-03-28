@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>@yield('title', 'Checkout') - VDP</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        a, button, input, select, textarea, label, [role="button"], .cursor-pointer {
+            touch-action: manipulation;
+        }
+    </style>
     @stack('styles')
     @stack('head')
 </head>

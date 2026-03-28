@@ -141,7 +141,7 @@
             <div class="flex-1 min-w-0">
                 <div class="flex flex-wrap items-center gap-2 mb-4">
                     <div class="flex bg-white rounded-lg border border-gray-200 overflow-hidden text-sm">
-                        <button type="button" data-sort="price" class="sort-tab px-4 py-2 font-medium text-white bg-emerald-600">Menor preço</button>
+                        <button type="button" data-sort="price" class="sort-tab sort-tab-active px-4 py-2 font-medium text-white bg-emerald-600">Menor preço</button>
                         @if($mixEnabled)
                         <button type="button" data-sort="same-cia" class="sort-tab px-4 py-2 font-medium text-gray-600 hover:bg-gray-50">Mesma cia</button>
                         @endif
@@ -300,6 +300,13 @@
     }
     .filter-pill input:not(:checked) + .filter-pill-label svg {
         color: #9ca3af;
+    }
+    .sort-tab-active {
+        background-color: #059669 !important;
+        color: #fff !important;
+    }
+    .sort-tab-active:hover {
+        background-color: #059669 !important;
     }
 </style>
 @endpush
@@ -496,11 +503,11 @@
     document.querySelectorAll('.sort-tab').forEach(function(tab) {
         tab.addEventListener('click', function() {
             document.querySelectorAll('.sort-tab').forEach(function(t) {
-                t.classList.remove('text-white', 'bg-emerald-600');
+                t.classList.remove('text-white', 'bg-emerald-600', 'sort-tab-active');
                 t.classList.add('text-gray-600');
             });
             tab.classList.remove('text-gray-600');
-            tab.classList.add('text-white', 'bg-emerald-600');
+            tab.classList.add('text-white', 'bg-emerald-600', 'sort-tab-active');
 
             var sortBy = tab.dataset.sort;
             var list = document.getElementById('combinations-list');
