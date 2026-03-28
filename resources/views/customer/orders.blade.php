@@ -30,7 +30,7 @@
                             'completed' => 'Concluído',
                             'cancelled' => 'Cancelado',
                         ];
-                        $total = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0));
+                        $total = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0)) - (float)($order->discount_amount ?? 0);
                     @endphp
                     <a href="{{ route('customer.order.show', $order) }}" class="block bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:border-emerald-300 transition-colors">
                         <div class="flex items-center justify-between mb-2">

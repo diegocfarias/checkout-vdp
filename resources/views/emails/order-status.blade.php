@@ -1,5 +1,5 @@
 @php
-    $order->loadMissing(['flights', 'passengers', 'statusHistories', 'flightSearch']);
+    $order->loadMissing(['flights', 'passengers', 'statusHistories', 'flightSearch', 'coupon']);
     $outbound = $order->flights->firstWhere('direction', 'outbound');
     $inbound = $order->flights->firstWhere('direction', 'inbound');
     $passenger = $order->passengers->first();
@@ -277,6 +277,24 @@
                                     </td>
                                 </tr>
                                 @if($totalPrice > 0)
+                                    @if($order->discount_amount > 0 && $order->coupon)
+                                    <tr>
+                                        <td style="font-size: 13px; color: #6b7280; padding: 4px 0; border-top: 1px solid #f3f4f6;">Subtotal</td>
+                                        <td align="right" style="font-size: 13px; color: #374151; font-weight: 600; padding: 4px 0; border-top: 1px solid #f3f4f6;">
+                                            R$ {{ number_format($totalPrice, 2, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 13px; color: #059669; padding: 4px 0;">
+                                            Cupom <strong>{{ $order->coupon->code }}</strong>
+                                            <span style="font-size: 11px; color: #6ee7b7;">({{ $order->coupon->type === 'percent' ? $order->coupon->value . '%' : 'R$ ' . number_format($order->coupon->value, 2, ',', '.') }})</span>
+                                        </td>
+                                        <td align="right" style="font-size: 13px; color: #059669; font-weight: 600; padding: 4px 0;">
+                                            - R$ {{ number_format($order->discount_amount, 2, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                    @php $totalPrice -= (float) $order->discount_amount; @endphp
+                                    @endif
                                 <tr>
                                     <td style="font-size: 13px; color: #6b7280; padding: 8px 0 4px; border-top: 1px solid #f3f4f6;">Total</td>
                                     <td align="right" style="font-size: 18px; color: #059669; font-weight: 800; padding: 8px 0 4px; border-top: 1px solid #f3f4f6;">

@@ -160,8 +160,14 @@
                     <span>R$ {{ number_format($total, 2, ',', '.') }}</span>
                 </div>
                 <div class="flex justify-between text-sm text-emerald-600">
-                    <span>Desconto ({{ $order->coupon->code }})</span>
-                    <span>- R$ {{ number_format($order->discount_amount, 2, ',', '.') }}</span>
+                    <span class="flex items-center gap-1.5">
+                        Cupom
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-700">{{ $order->coupon->code }}</span>
+                        <span class="text-emerald-500 text-xs">
+                            ({{ $order->coupon->type === 'percent' ? $order->coupon->value . '%' : 'R$ ' . number_format($order->coupon->value, 2, ',', '.') }})
+                        </span>
+                    </span>
+                    <span class="font-medium">- R$ {{ number_format($order->discount_amount, 2, ',', '.') }}</span>
                 </div>
             @endif
             <div class="flex justify-between items-center {{ $order->discount_amount > 0 ? 'pt-2 border-t border-gray-100' : '' }}">

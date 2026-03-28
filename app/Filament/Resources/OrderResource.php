@@ -71,6 +71,7 @@ class OrderResource extends Resource
                     ->getStateUsing(function (Order $record) {
                         $record->loadMissing('flights');
                         $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0));
+                        $total -= (float) ($record->discount_amount ?? 0);
 
                         return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';
                     }),
@@ -274,6 +275,7 @@ class OrderResource extends Resource
                             ->getStateUsing(function (Order $record) {
                                 $record->loadMissing('flights');
                                 $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0));
+                                $total -= (float) ($record->discount_amount ?? 0);
 
                                 return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';
                             }),
@@ -311,6 +313,34 @@ class OrderResource extends Resource
                         Infolists\Components\TextEntry::make('created_at')
                             ->label('Criado em')
                             ->dateTime('d/m/Y H:i'),
+                    ]),
+
+                Section::make('Cupom de Desconto')
+                    ->icon('heroicon-o-receipt-percent')
+                    ->columns(3)
+                    ->visible(fn (Order $record) => $record->coupon_id !== null && $record->discount_amount > 0)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('coupon.code')
+                            ->label('Código')
+                            ->badge()
+                            ->color('success')
+                            ->copyable(),
+                        Infolists\Components\TextEntry::make('coupon_type_display')
+                            ->label('Tipo')
+                            ->getStateUsing(function (Order $record) {
+                                $record->loadMissing('coupon');
+                                if (! $record->coupon) {
+                                    return '-';
+                                }
+
+                                return $record->coupon->type === 'percent'
+                                    ? $record->coupon->value . '% de desconto'
+                                    : 'R$ ' . number_format($record->coupon->value, 2, ',', '.') . ' de desconto';
+                            }),
+                        Infolists\Components\TextEntry::make('discount_amount')
+                            ->label('Valor descontado')
+                            ->money('BRL')
+                            ->color('success'),
                     ]),
 
                 Section::make('Voos')
