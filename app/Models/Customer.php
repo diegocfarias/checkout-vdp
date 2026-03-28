@@ -51,6 +51,11 @@ class Customer extends Authenticatable
         return $this->hasMany(CustomerChangeRequest::class)->orderByDesc('created_at');
     }
 
+    public function savedPassengers(): HasMany
+    {
+        return $this->hasMany(SavedPassenger::class)->orderBy('full_name');
+    }
+
     public function isPending(): bool
     {
         return $this->status === 'pending';

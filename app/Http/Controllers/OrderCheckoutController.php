@@ -6,6 +6,7 @@ use App\Http\Requests\StoreOrderPassengersRequest;
 use App\Models\Coupon;
 use App\Models\FlightSearch;
 use App\Models\Order;
+use App\Models\SavedPassenger;
 use App\Models\Setting;
 use App\Services\CustomerService;
 use App\Services\PaymentGatewayResolver;
@@ -68,6 +69,11 @@ class OrderCheckoutController extends Controller
         $maxInstallments = Setting::get('max_installments_' . $ccGateway, Setting::get('max_installments', 12));
         $interestRates = Setting::get('interest_rates_' . $ccGateway, Setting::get('interest_rates', []));
 
+        $savedPassengers = collect();
+        if (auth('customer')->check()) {
+            $savedPassengers = auth('customer')->user()->savedPassengers;
+        }
+
         return view('checkout.passengers', [
             'order' => $order,
             'outbound' => $order->flights->firstWhere('direction', 'outbound'),
@@ -77,6 +83,7 @@ class OrderCheckoutController extends Controller
             'pixEnabled' => $pixEnabled,
             'creditCardEnabled' => $creditCardEnabled,
             'pixDiscount' => $pixDiscount,
+            'savedPassengers' => $savedPassengers,
         ]);
     }
 
@@ -104,10 +111,33 @@ class OrderCheckoutController extends Controller
         }
 
         $passengers = $request->validated()['passengers'];
+        $rawPassengers = $request->input('passengers', []);
 
         if ($order->passengers()->count() === 0) {
             foreach ($passengers as $passenger) {
                 $order->passengers()->create($passenger);
+            }
+        }
+
+        if (auth('customer')->check()) {
+            /** @var \App\Models\Customer $customer */
+            $authCustomer = auth('customer')->user();
+            foreach ($rawPassengers as $i => $raw) {
+                if (! empty($raw['save_passenger']) && isset($passengers[$i])) {
+                    $p = $passengers[$i];
+                    $doc = preg_replace('/\D/', '', $p['document'] ?? '');
+                    if ($doc) {
+                        SavedPassenger::updateOrCreate(
+                            ['customer_id' => $authCustomer->id, 'document' => $doc],
+                            [
+                                'full_name' => $p['full_name'],
+                                'birth_date' => $p['birth_date'],
+                                'email' => $p['email'],
+                                'phone' => $p['phone'],
+                            ]
+                        );
+                    }
+                }
             }
         }
 

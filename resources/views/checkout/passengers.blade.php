@@ -43,7 +43,7 @@
                 <input type="hidden" name="card_token" id="card_token" value="">
 
                 @for($i = 0; $i < $order->passengers_count; $i++)
-                    <details class="passenger-accordion mb-4 border border-gray-200 rounded-lg overflow-hidden" {{ $i === 0 ? 'open' : '' }}>
+                    <details class="passenger-accordion mb-4 border border-gray-200 rounded-lg overflow-hidden" data-passenger-index="{{ $i }}" {{ $i === 0 ? 'open' : '' }}>
                         <summary class="cursor-pointer select-none bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-between">
                             <span>Passageiro {{ $i + 1 }}</span>
                             <svg class="w-4 h-4 text-gray-400 transition-transform details-open-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,6 +52,31 @@
                         </summary>
 
                         <div class="p-4">
+                            @if(($savedPassengers ?? collect())->isNotEmpty())
+                                <div class="mb-4 pb-4 border-b border-gray-100">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Usar passageiro salvo</label>
+                                    <select class="saved-passenger-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border" data-index="{{ $i }}">
+                                        <option value="">Preencher manualmente</option>
+                                        @foreach($savedPassengers as $sp)
+                                            @php
+                                                $spDoc = $sp->document;
+                                                $spDocMasked = strlen($spDoc) === 11
+                                                    ? '***.' . substr($spDoc, 3, 3) . '.' . substr($spDoc, 6, 3) . '-' . substr($spDoc, 9, 2)
+                                                    : $spDoc;
+                                            @endphp
+                                            <option value="{{ $sp->id }}"
+                                                    data-name="{{ $sp->full_name }}"
+                                                    data-document="{{ strlen($spDoc) === 11 ? substr($spDoc, 0, 3) . '.' . substr($spDoc, 3, 3) . '.' . substr($spDoc, 6, 3) . '-' . substr($spDoc, 9, 2) : $spDoc }}"
+                                                    data-birth="{{ $sp->birth_date->format('d/m/Y') }}"
+                                                    data-email="{{ $sp->email }}"
+                                                    data-phone="{{ $sp->phone }}">
+                                                {{ $sp->full_name }} ({{ $spDocMasked }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label for="passengers_{{ $i }}_full_name" class="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
@@ -121,6 +146,16 @@
                                     <span class="error-msg"></span>
                                 </div>
                             </div>
+
+                            @if(auth('customer')->check())
+                                <div class="mt-4 pt-3 border-t border-gray-100">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" name="passengers[{{ $i }}][save_passenger]" value="1"
+                                               class="rounded border-gray-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
+                                        <span class="text-sm text-gray-600">Salvar para futuras compras</span>
+                                    </label>
+                                </div>
+                            @endif
                         </div>
                     </details>
                 @endfor
@@ -788,6 +823,67 @@
                 }
             });
         });
+
+        (function setupSavedPassengers() {
+            const selects = document.querySelectorAll('.saved-passenger-select');
+            if (!selects.length) return;
+
+            const usedIds = {};
+
+            selects.forEach(function (select) {
+                Array.from(select.options).forEach(function (opt) {
+                    if (opt.value) opt.dataset.label = opt.textContent;
+                });
+            });
+
+            function fillPassengerFields(index, option) {
+                const prefix = 'passengers_' + index + '_';
+                document.getElementById(prefix + 'full_name').value = option.dataset.name || '';
+                document.getElementById(prefix + 'document').value = option.dataset.document || '';
+                document.getElementById(prefix + 'birth_date').value = option.dataset.birth || '';
+                document.getElementById(prefix + 'email').value = option.dataset.email || '';
+                document.getElementById(prefix + 'phone').value = option.dataset.phone || '';
+            }
+
+            function clearPassengerFields(index) {
+                const prefix = 'passengers_' + index + '_';
+                ['full_name', 'document', 'birth_date', 'email', 'phone'].forEach(function (field) {
+                    document.getElementById(prefix + field).value = '';
+                });
+            }
+
+            function syncDisabledOptions() {
+                const allUsed = Object.values(usedIds);
+                selects.forEach(function (select) {
+                    const currentIdx = select.dataset.index;
+                    Array.from(select.options).forEach(function (opt) {
+                        if (!opt.value) return;
+                        const isUsedElsewhere = allUsed.includes(opt.value) && usedIds[currentIdx] !== opt.value;
+                        opt.disabled = isUsedElsewhere;
+                        opt.textContent = isUsedElsewhere
+                            ? opt.dataset.label + ' - já selecionado'
+                            : opt.dataset.label;
+                    });
+                });
+            }
+
+            selects.forEach(function (select) {
+                select.addEventListener('change', function () {
+                    const idx = this.dataset.index;
+                    const selectedOption = this.options[this.selectedIndex];
+
+                    if (this.value) {
+                        usedIds[idx] = this.value;
+                        fillPassengerFields(idx, selectedOption);
+                    } else {
+                        delete usedIds[idx];
+                        clearPassengerFields(idx);
+                    }
+
+                    syncDisabledOptions();
+                });
+            });
+        })();
 
         document.querySelectorAll('[data-mask="date"]').forEach(input => {
             input.addEventListener('input', function () {

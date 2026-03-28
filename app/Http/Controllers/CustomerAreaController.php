@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\SavedPassenger;
 use Illuminate\Http\Request;
 
 class CustomerAreaController extends Controller
@@ -62,5 +63,28 @@ class CustomerAreaController extends Controller
         $customer->update($request->only('name', 'phone'));
 
         return back()->with('status', 'Perfil atualizado com sucesso.');
+    }
+
+    public function passengers()
+    {
+        /** @var \App\Models\Customer $customer */
+        $customer = auth('customer')->user();
+        $savedPassengers = $customer->savedPassengers;
+
+        return view('customer.passengers', compact('customer', 'savedPassengers'));
+    }
+
+    public function destroyPassenger(SavedPassenger $savedPassenger)
+    {
+        /** @var \App\Models\Customer $customer */
+        $customer = auth('customer')->user();
+
+        if ($savedPassenger->customer_id !== $customer->id) {
+            abort(404);
+        }
+
+        $savedPassenger->delete();
+
+        return back()->with('status', 'Passageiro removido com sucesso.');
     }
 }

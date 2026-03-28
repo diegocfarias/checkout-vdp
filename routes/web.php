@@ -118,6 +118,8 @@ Route::middleware(['auth:customer', EnsureCustomerIsActive::class])->group(funct
     Route::get('/minha-conta/pedidos/{order}', [CustomerAreaController::class, 'orderDetail'])->name('customer.order.show');
     Route::get('/minha-conta/perfil', [CustomerAreaController::class, 'profile'])->name('customer.profile');
     Route::put('/minha-conta/perfil', [CustomerAreaController::class, 'updateProfile'])->name('customer.profile.update');
+    Route::get('/minha-conta/passageiros', [CustomerAreaController::class, 'passengers'])->name('customer.passengers');
+    Route::delete('/minha-conta/passageiros/{savedPassenger}', [CustomerAreaController::class, 'destroyPassenger'])->name('customer.passenger.destroy');
     Route::post('/minha-conta/solicitar-alteracao', [ChangeRequestController::class, 'store'])->name('customer.change-request');
 });
 

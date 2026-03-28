@@ -103,6 +103,7 @@ class StoreOrderPassengersRequest extends FormRequest
             'passengers.*.birth_date' => 'required|date',
             'passengers.*.email' => 'required|email|max:255',
             'passengers.*.phone' => 'required|string|max:30',
+            'passengers.*.save_passenger' => 'nullable|boolean',
             'payment_method' => ['required', 'string', Rule::in($this->allowedPaymentMethods())],
         ], $payerRules, $billingRules, $isCreditCard ? [
             'card_number' => ['required', 'string', 'min:13'],
@@ -188,6 +189,20 @@ class StoreOrderPassengersRequest extends FormRequest
                         'passengers',
                         "Esperado exatamente {$expected} passageiro(s), mas {$received} enviado(s)."
                     );
+                }
+
+                $documents = [];
+                foreach ($this->input('passengers', []) as $i => $passenger) {
+                    $doc = preg_replace('/\D/', '', $passenger['document'] ?? '');
+                    if ($doc && in_array($doc, $documents, true)) {
+                        $validator->errors()->add(
+                            "passengers.{$i}.document",
+                            'Este documento já foi utilizado em outro passageiro.'
+                        );
+                    }
+                    if ($doc) {
+                        $documents[] = $doc;
+                    }
                 }
             },
         ];
