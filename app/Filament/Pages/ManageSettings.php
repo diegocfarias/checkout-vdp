@@ -260,6 +260,18 @@ class ManageSettings extends Page
         $data = $this->form->getState();
 
         Setting::set('mix_enabled', (bool) $data['mix_enabled'], 'boolean');
+        $pricingFields = [
+            'pricing_miles_enabled', 'pricing_pct_enabled',
+            'pricing_miles_azul', 'pricing_miles_gol', 'pricing_miles_latam',
+            'pricing_pct_azul', 'pricing_pct_gol', 'pricing_pct_latam',
+            'pix_discount',
+        ];
+
+        $oldPricing = [];
+        foreach ($pricingFields as $field) {
+            $oldPricing[$field] = Setting::get($field);
+        }
+
         Setting::set('pricing_miles_enabled', (bool) $data['pricing_miles_enabled'], 'boolean');
         Setting::set('pricing_pct_enabled', (bool) $data['pricing_pct_enabled'], 'boolean');
         Setting::set('pricing_miles_azul', $data['pricing_miles_azul'] ?? '30.00', 'string');
@@ -298,6 +310,15 @@ class ManageSettings extends Page
         Setting::set('pix_expiration_minutes', (int) ($data['pix_expiration_minutes'] ?? 30), 'integer');
         Setting::set('order_expiration_minutes', (int) $data['order_expiration_minutes'], 'integer');
         Setting::set('whatsapp_number', $data['whatsapp_number'] ?? '', 'string');
+
+        $newPricing = [];
+        foreach ($pricingFields as $field) {
+            $newPricing[$field] = Setting::get($field);
+        }
+
+        if ($oldPricing !== $newPricing) {
+            Setting::set('pricing_version', (string) now()->timestamp, 'string');
+        }
 
         Notification::make()
             ->title('Configurações salvas com sucesso!')

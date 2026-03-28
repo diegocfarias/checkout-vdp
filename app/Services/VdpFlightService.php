@@ -80,10 +80,12 @@ class VdpFlightService
 
     /**
      * Busca voos com cache de 30 minutos.
+     * A chave inclui a versão de pricing para invalidação automática ao alterar preços.
      */
     public function searchFlights(array $params): array
     {
-        $cacheKey = 'vdp_search:' . md5(json_encode($params));
+        $pricingVersion = Setting::get('pricing_version', '0');
+        $cacheKey = 'vdp_search:' . $pricingVersion . ':' . md5(json_encode($params));
 
         return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($params) {
             return $this->callApi($params);
