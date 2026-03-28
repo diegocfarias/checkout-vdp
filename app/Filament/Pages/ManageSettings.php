@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Setting;
 use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
@@ -25,15 +26,30 @@ class ManageSettings extends Page
 
     public ?array $data = [];
 
+    private function formatRates(array|string|null $rates): array
+    {
+        if (! is_array($rates)) {
+            return [];
+        }
+
+        $formatted = [];
+        foreach ($rates as $installment => $rate) {
+            $formatted[(string) $installment] = (string) $rate;
+        }
+
+        return $formatted;
+    }
+
     public function mount(): void
     {
-        $interestRates = Setting::get('interest_rates', []);
+        $gatewayPix = Setting::get('gateway_pix');
+        $gatewayCc = Setting::get('gateway_credit_card');
 
-        $formattedRates = [];
-        if (is_array($interestRates)) {
-            foreach ($interestRates as $installment => $rate) {
-                $formattedRates[(string) $installment] = (string) $rate;
-            }
+        if ($gatewayPix === null) {
+            $gatewayPix = Setting::get('pix_enabled', true) ? config('services.payment.gateway', 'abacatepay') : '';
+        }
+        if ($gatewayCc === null) {
+            $gatewayCc = Setting::get('credit_card_enabled', true) ? config('services.payment.gateway', 'appmax') : '';
         }
 
         $this->form->fill([
@@ -46,10 +62,13 @@ class ManageSettings extends Page
             'pricing_pct_azul' => Setting::get('pricing_pct_azul', '80'),
             'pricing_pct_gol' => Setting::get('pricing_pct_gol', '80'),
             'pricing_pct_latam' => Setting::get('pricing_pct_latam', '80'),
-            'pix_enabled' => Setting::get('pix_enabled', true),
-            'credit_card_enabled' => Setting::get('credit_card_enabled', true),
-            'max_installments' => Setting::get('max_installments', 12),
-            'interest_rates' => $formattedRates,
+            'gateway_pix' => $gatewayPix,
+            'pix_discount' => Setting::get('pix_discount', '0'),
+            'gateway_credit_card' => $gatewayCc,
+            'max_installments_appmax' => Setting::get('max_installments_appmax', Setting::get('max_installments', 12)),
+            'max_installments_c6bank' => Setting::get('max_installments_c6bank', Setting::get('max_installments', 12)),
+            'interest_rates_appmax' => $this->formatRates(Setting::get('interest_rates_appmax', Setting::get('interest_rates', []))),
+            'interest_rates_c6bank' => $this->formatRates(Setting::get('interest_rates_c6bank', Setting::get('interest_rates', []))),
             'order_expiration_minutes' => Setting::get('order_expiration_minutes', 30),
             'whatsapp_number' => Setting::get('whatsapp_number', ''),
         ]);
@@ -133,33 +152,73 @@ class ManageSettings extends Page
                             ->visible(fn ($get) => $get('pricing_pct_enabled')),
                     ]),
 
-                Section::make('Pagamento')
+                Section::make('PIX')
+                    ->icon('heroicon-o-qr-code')
+                    ->schema([
+                        Select::make('gateway_pix')
+                            ->label('Gateway para PIX')
+                            ->options([
+                                '' => 'Desabilitado',
+                                'abacatepay' => 'AbacatePay',
+                                'appmax' => 'AppMax',
+                                'c6bank' => 'C6 Bank',
+                            ])
+                            ->helperText('Selecione o gateway de pagamento para PIX ou desabilite.')
+                            ->live(),
+
+                        TextInput::make('pix_discount')
+                            ->label('Desconto PIX (%)')
+                            ->helperText('Percentual de desconto para pagamentos via PIX. Ex: 5 = 5% de desconto.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%')
+                            ->visible(fn ($get) => ! empty($get('gateway_pix'))),
+                    ]),
+
+                Section::make('Cartão de crédito')
                     ->icon('heroicon-o-credit-card')
                     ->schema([
-                        Toggle::make('pix_enabled')
-                            ->label('PIX habilitado')
-                            ->helperText('Habilita o pagamento via PIX.')
-                            ->default(true),
+                        Select::make('gateway_credit_card')
+                            ->label('Gateway para cartão')
+                            ->options([
+                                '' => 'Desabilitado',
+                                'appmax' => 'AppMax',
+                                'c6bank' => 'C6 Bank',
+                            ])
+                            ->helperText('Selecione o gateway de pagamento para cartão de crédito ou desabilite.')
+                            ->live(),
 
-                        Toggle::make('credit_card_enabled')
-                            ->label('Cartão de crédito habilitado')
-                            ->helperText('Habilita o pagamento via cartão de crédito.')
-                            ->default(true),
-
-                        TextInput::make('max_installments')
-                            ->label('Parcelas máximas')
-                            ->helperText('Número máximo de parcelas no cartão de crédito.')
+                        TextInput::make('max_installments_appmax')
+                            ->label('Parcelas máximas (AppMax)')
                             ->numeric()
                             ->minValue(1)
                             ->maxValue(24)
-                            ->required(),
+                            ->visible(fn ($get) => $get('gateway_credit_card') === 'appmax'),
 
-                        KeyValue::make('interest_rates')
-                            ->label('Taxas de juros por parcela (%)')
+                        KeyValue::make('interest_rates_appmax')
+                            ->label('Taxas de juros por parcela — AppMax (%)')
                             ->helperText('Chave = número da parcela, Valor = taxa de juros em %.')
                             ->keyLabel('Parcela')
                             ->valueLabel('Taxa (%)')
-                            ->reorderable(false),
+                            ->reorderable(false)
+                            ->visible(fn ($get) => $get('gateway_credit_card') === 'appmax'),
+
+                        TextInput::make('max_installments_c6bank')
+                            ->label('Parcelas máximas (C6 Bank)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(24)
+                            ->visible(fn ($get) => $get('gateway_credit_card') === 'c6bank'),
+
+                        KeyValue::make('interest_rates_c6bank')
+                            ->label('Taxas de juros por parcela — C6 Bank (%)')
+                            ->helperText('Chave = número da parcela, Valor = taxa de juros em %.')
+                            ->keyLabel('Parcela')
+                            ->valueLabel('Taxa (%)')
+                            ->reorderable(false)
+                            ->visible(fn ($get) => $get('gateway_credit_card') === 'c6bank'),
                     ]),
 
                 Section::make('Pedido')
@@ -199,19 +258,35 @@ class ManageSettings extends Page
         Setting::set('pricing_pct_azul', $data['pricing_pct_azul'] ?? '80', 'string');
         Setting::set('pricing_pct_gol', $data['pricing_pct_gol'] ?? '80', 'string');
         Setting::set('pricing_pct_latam', $data['pricing_pct_latam'] ?? '80', 'string');
-        Setting::set('pix_enabled', (bool) $data['pix_enabled'], 'boolean');
-        Setting::set('credit_card_enabled', (bool) $data['credit_card_enabled'], 'boolean');
-        Setting::set('max_installments', (int) $data['max_installments'], 'integer');
+        Setting::set('gateway_pix', $data['gateway_pix'] ?? '', 'string');
+        Setting::set('pix_discount', $data['pix_discount'] ?? '0', 'string');
+        Setting::set('gateway_credit_card', $data['gateway_credit_card'] ?? '', 'string');
+
+        Setting::set('pix_enabled', ! empty($data['gateway_pix']), 'boolean');
+        Setting::set('credit_card_enabled', ! empty($data['gateway_credit_card']), 'boolean');
+
+        foreach (['appmax', 'c6bank'] as $gw) {
+            $maxKey = "max_installments_{$gw}";
+            Setting::set($maxKey, (int) ($data[$maxKey] ?? 12), 'integer');
+
+            $ratesKey = "interest_rates_{$gw}";
+            $rates = $data[$ratesKey] ?? [];
+            $clean = [];
+            foreach ($rates as $k => $v) {
+                $clean[(int) $k] = (float) $v;
+            }
+            ksort($clean);
+            Setting::set($ratesKey, $clean, 'json');
+        }
+
+        $ccGateway = $data['gateway_credit_card'] ?? '';
+        if ($ccGateway) {
+            Setting::set('max_installments', (int) ($data["max_installments_{$ccGateway}"] ?? 12), 'integer');
+            Setting::set('interest_rates', Setting::get("interest_rates_{$ccGateway}", []), 'json');
+        }
+
         Setting::set('order_expiration_minutes', (int) $data['order_expiration_minutes'], 'integer');
         Setting::set('whatsapp_number', $data['whatsapp_number'] ?? '', 'string');
-
-        $rates = $data['interest_rates'] ?? [];
-        $cleanRates = [];
-        foreach ($rates as $k => $v) {
-            $cleanRates[(int) $k] = (float) $v;
-        }
-        ksort($cleanRates);
-        Setting::set('interest_rates', $cleanRates, 'json');
 
         Notification::make()
             ->title('Configurações salvas com sucesso!')

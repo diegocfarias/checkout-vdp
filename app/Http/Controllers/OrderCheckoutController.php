@@ -52,10 +52,16 @@ class OrderCheckoutController extends Controller
             return response()->view('checkout.not-found', [], 404);
         }
 
-        $maxInstallments = Setting::get('max_installments', 12);
-        $interestRates = Setting::get('interest_rates', []);
-        $pixEnabled = Setting::get('pix_enabled', true);
-        $creditCardEnabled = Setting::get('credit_card_enabled', true);
+        $gatewayPix = Setting::get('gateway_pix');
+        $gatewayCc = Setting::get('gateway_credit_card');
+
+        $pixEnabled = $gatewayPix !== null ? ! empty($gatewayPix) : Setting::get('pix_enabled', true);
+        $creditCardEnabled = $gatewayCc !== null ? ! empty($gatewayCc) : Setting::get('credit_card_enabled', true);
+        $pixDiscount = (float) Setting::get('pix_discount', 0);
+
+        $ccGateway = $gatewayCc ?: config('services.payment.gateway', 'appmax');
+        $maxInstallments = Setting::get('max_installments_' . $ccGateway, Setting::get('max_installments', 12));
+        $interestRates = Setting::get('interest_rates_' . $ccGateway, Setting::get('interest_rates', []));
 
         return view('checkout.passengers', [
             'order' => $order,
@@ -65,6 +71,7 @@ class OrderCheckoutController extends Controller
             'interestRates' => $interestRates,
             'pixEnabled' => $pixEnabled,
             'creditCardEnabled' => $creditCardEnabled,
+            'pixDiscount' => $pixDiscount,
         ]);
     }
 
@@ -175,17 +182,22 @@ class OrderCheckoutController extends Controller
         $baseTotal = $this->calculateBaseTotal($order);
         $totalAfterDiscount = $baseTotal - $discountAmount;
 
-        if ($paymentMethod === 'credit_card') {
+        if ($paymentMethod === 'pix') {
+            $pixDiscountPct = (float) Setting::get('pix_discount', 0);
+            if ($pixDiscountPct > 0) {
+                $totalAfterDiscount = round($totalAfterDiscount * (1 - $pixDiscountPct / 100), 2);
+            }
+            $cardData['total_with_interest'] = round($totalAfterDiscount, 2);
+        } else {
+            $ccGateway = Setting::get('gateway_credit_card') ?: config('services.payment.gateway', 'appmax');
             $installments = (int) ($cardData['installments'] ?? 1);
-            $allRates = Setting::get('interest_rates', []);
+            $allRates = Setting::get('interest_rates_' . $ccGateway, Setting::get('interest_rates', []));
             $rate = $allRates[$installments] ?? 0;
             $cardData['total_with_interest'] = round($totalAfterDiscount * (1 + $rate / 100), 2);
-        } else {
-            $cardData['total_with_interest'] = round($totalAfterDiscount, 2);
         }
 
         try {
-            $gateway = $this->paymentResolver->resolve();
+            $gateway = $this->paymentResolver->resolveForMethod($paymentMethod);
             $payment = $gateway->createCheckout($order->load('flights'), $paymentMethod, $cardData);
 
             $order->update(['status' => 'awaiting_payment']);

@@ -103,14 +103,14 @@ class StoreOrderPassengersRequest extends FormRequest
             'passengers.*.birth_date' => 'required|date',
             'passengers.*.email' => 'required|email|max:255',
             'passengers.*.phone' => 'required|string|max:30',
-            'payment_method' => ['required', 'string', Rule::in(['credit_card', 'pix'])],
+            'payment_method' => ['required', 'string', Rule::in($this->allowedPaymentMethods())],
         ], $payerRules, $billingRules, $isCreditCard ? [
             'card_number' => ['required', 'string', 'min:13'],
             'card_cvv' => ['required', 'string', 'min:2', 'max:4'],
             'card_month' => ['required', 'integer', 'min:1', 'max:12'],
             'card_year' => ['required', 'integer', 'min:' . (int) date('y'), 'max:' . ((int) date('y') + 15)],
             'card_name' => ['required', 'string', 'min:2', 'max:255'],
-            'installments' => ['required', 'integer', 'min:1', 'max:' . Setting::get('max_installments', 12)],
+            'installments' => ['required', 'integer', 'min:1', 'max:' . $this->resolveMaxInstallments()],
         ] : []);
     }
 
@@ -136,6 +136,38 @@ class StoreOrderPassengersRequest extends FormRequest
             'billing_city.required' => 'Informe a cidade.',
             'billing_state.required' => 'Selecione o estado.',
         ];
+    }
+
+    private function allowedPaymentMethods(): array
+    {
+        $methods = [];
+
+        $gatewayPix = Setting::get('gateway_pix');
+        if ($gatewayPix !== null) {
+            if (! empty($gatewayPix)) {
+                $methods[] = 'pix';
+            }
+        } elseif (Setting::get('pix_enabled', true)) {
+            $methods[] = 'pix';
+        }
+
+        $gatewayCc = Setting::get('gateway_credit_card');
+        if ($gatewayCc !== null) {
+            if (! empty($gatewayCc)) {
+                $methods[] = 'credit_card';
+            }
+        } elseif (Setting::get('credit_card_enabled', true)) {
+            $methods[] = 'credit_card';
+        }
+
+        return $methods ?: ['pix', 'credit_card'];
+    }
+
+    private function resolveMaxInstallments(): int
+    {
+        $ccGateway = Setting::get('gateway_credit_card') ?: config('services.payment.gateway', 'appmax');
+
+        return (int) Setting::get('max_installments_' . $ccGateway, Setting::get('max_installments', 12));
     }
 
     public function after(): array

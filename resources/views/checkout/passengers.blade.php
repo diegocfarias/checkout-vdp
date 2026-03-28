@@ -225,6 +225,9 @@
                             <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50 transition">
                                 <input type="radio" name="payment_method" value="pix" {{ old('payment_method', $defaultMethod) === 'pix' ? 'checked' : '' }} class="payment-method-radio">
                                 <span class="font-medium">PIX</span>
+                                @if(($pixDiscount ?? 0) > 0)
+                                    <span class="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{{ number_format($pixDiscount, 0) }}% de desconto</span>
+                                @endif
                             </label>
                         @endif
                         @if($creditCardEnabled ?? true)
@@ -506,6 +509,10 @@
                             <span>Desconto (cupom)</span>
                             <span id="modal-desconto-valor"></span>
                         </div>
+                        <div id="modal-pix-discount-row" class="hidden flex justify-between text-emerald-600">
+                            <span>Desconto PIX ({{ number_format($pixDiscount ?? 0, 0) }}%)</span>
+                            <span id="modal-pix-discount-valor"></span>
+                        </div>
                         <div id="modal-juros-row" class="hidden flex justify-between text-gray-600">
                             <span>Juros do parcelamento</span>
                             <span id="modal-juros-valor"></span>
@@ -570,6 +577,7 @@
         }
 
         let appliedDiscount = 0;
+        const pixDiscountPct = {{ $pixDiscount ?? 0 }};
 
         function atualizarTotalFooter() {
             const footerTotal = document.getElementById('footer-total');
@@ -578,9 +586,12 @@
             const modalJurosValor = document.getElementById('modal-juros-valor');
             const modalDescontoRow = document.getElementById('modal-desconto-row');
             const modalDescontoValor = document.getElementById('modal-desconto-valor');
+            const modalPixDiscRow = document.getElementById('modal-pix-discount-row');
+            const modalPixDiscValor = document.getElementById('modal-pix-discount-valor');
             const baseTotal = parseFloat(footerTotal.dataset.base || 0);
             const totalComDesconto = baseTotal - appliedDiscount;
             const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';
+            const isPix = document.querySelector('input[name="payment_method"]:checked')?.value === 'pix';
             const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             if (appliedDiscount > 0) {
@@ -590,9 +601,19 @@
                 if (modalDescontoRow) modalDescontoRow.classList.add('hidden');
             }
 
+            let pixDiscountVal = 0;
+            if (isPix && pixDiscountPct > 0) {
+                pixDiscountVal = totalComDesconto * (pixDiscountPct / 100);
+                if (modalPixDiscRow) modalPixDiscRow.classList.remove('hidden');
+                if (modalPixDiscValor) modalPixDiscValor.textContent = '- ' + fmt(pixDiscountVal);
+            } else {
+                if (modalPixDiscRow) modalPixDiscRow.classList.add('hidden');
+            }
+
             if (!isCreditCard) {
-                footerTotal.textContent = fmt(totalComDesconto);
-                if (modalTotal) modalTotal.textContent = fmt(totalComDesconto);
+                const totalPix = totalComDesconto - pixDiscountVal;
+                footerTotal.textContent = fmt(totalPix);
+                if (modalTotal) modalTotal.textContent = fmt(totalPix);
                 if (modalJurosRow) modalJurosRow.classList.add('hidden');
                 return;
             }
