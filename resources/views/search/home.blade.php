@@ -7,7 +7,7 @@
 <div class="-mx-4 sm:-mx-6 -mt-8">
 
     {{-- Hero --}}
-    <section class="relative bg-gradient-to-br from-blue-600 via-teal-500 to-cyan-600 overflow-hidden">
+    <section class="relative bg-gradient-to-br from-blue-600 via-teal-500 to-cyan-600 overflow-x-clip">
         <div class="absolute inset-0">
             <div class="absolute -top-20 -left-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
             <div class="absolute -bottom-20 -right-20 w-96 h-96 bg-cyan-400/15 rounded-full blur-3xl"></div>
@@ -197,4 +197,28 @@
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+document.querySelectorAll('.showcase-link').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        var url = this.href;
+        if (typeof showTravelLoading === 'function') {
+            showTravelLoading({
+                title: 'Buscando os melhores voos...',
+                messages: [
+                    'Consultando companhias aéreas',
+                    'Comparando preços e rotas',
+                    'Encontrando as melhores opções',
+                    'Quase lá...'
+                ],
+                timeoutMs: 60000
+            });
+        }
+        window.location.href = url;
+    });
+});
+</script>
 @endpush

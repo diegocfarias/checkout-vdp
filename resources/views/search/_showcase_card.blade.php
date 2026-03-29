@@ -33,7 +33,7 @@
     $monthLabel = $route->cached_date ? $route->cached_date->translatedFormat('M/Y') : '';
 @endphp
 
-<a href="{{ $searchUrl }}" class="group block rounded-xl overflow-hidden border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 h-full bg-white">
+<a href="{{ $searchUrl }}" class="showcase-link group block rounded-xl overflow-hidden border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 h-full bg-white">
     {{-- Imagem --}}
     <div class="relative h-36 sm:h-32 lg:h-40 overflow-hidden">
         @if($hasImage)
