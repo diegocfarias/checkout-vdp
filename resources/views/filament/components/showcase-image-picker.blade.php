@@ -62,60 +62,58 @@
             $wire.set('data.image_zoom', this.zoom);
         }
     }"
-    class="space-y-4"
+    style="display: flex; flex-direction: column; gap: 16px;"
 >
     {{-- Busca --}}
-    <div class="flex gap-2">
+    <div style="display: flex; gap: 8px; align-items: center;">
         <input
             type="text"
             x-model="query"
             @keydown.enter.prevent="searchImages()"
             placeholder="Buscar imagens no Unsplash..."
-            class="fi-input block w-full rounded-lg border-gray-300 bg-white px-3 py-2 text-sm shadow-sm transition duration-75 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            style="flex: 1; padding: 8px 12px; border: 1px solid var(--gray-300, #d1d5db); border-radius: 8px; font-size: 14px; background: var(--white, #fff); color: var(--gray-900, #111827); outline: none;"
         >
         <button
             type="button"
             @click="searchImages()"
             :disabled="loading"
-            class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 whitespace-nowrap"
+            style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--primary-600, #2563eb); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; opacity: 1;"
+            :style="loading ? 'opacity: 0.5; cursor: not-allowed;' : ''"
         >
-            <svg x-show="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            <svg x-show="!loading" style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <svg x-show="loading" style="width: 16px; height: 16px; animation: spin 1s linear infinite;" fill="none" viewBox="0 0 24 24"><circle style="opacity: 0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path style="opacity: 0.75;" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             Buscar
         </button>
     </div>
 
     {{-- Erro --}}
-    <div x-show="error" x-cloak class="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-3 text-sm text-yellow-700 dark:text-yellow-300">
+    <div x-show="error" x-cloak style="padding: 12px; background: #fef9c3; border-radius: 8px; font-size: 14px; color: #854d0e;">
         <span x-text="error"></span>
     </div>
 
     {{-- Grid de resultados --}}
-    <div x-show="photos.length > 0" x-cloak class="grid grid-cols-3 gap-2">
+    <div x-show="photos.length > 0" x-cloak style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
         <template x-for="(photo, index) in photos" :key="index">
             <button
                 type="button"
                 @click="selectPhoto(photo)"
-                class="relative rounded-lg overflow-hidden border-2 transition-all duration-200 aspect-video group"
-                :class="selectedUrl === photo.url ? 'border-primary-500 ring-2 ring-primary-500/30' : 'border-gray-200 dark:border-gray-600 hover:border-primary-300'"
+                style="position: relative; border-radius: 8px; overflow: hidden; border: 2px solid transparent; aspect-ratio: 16/9; cursor: pointer; padding: 0; background: none;"
+                :style="selectedUrl === photo.url ? 'border-color: var(--primary-500, #3b82f6); box-shadow: 0 0 0 3px rgba(59,130,246,0.2);' : 'border-color: var(--gray-200, #e5e7eb);'"
             >
-                <img :src="photo.thumb || photo.url" :alt="'Foto ' + (index + 1)" class="w-full h-full object-cover">
-                <div x-show="selectedUrl === photo.url" class="absolute inset-0 bg-primary-500/20 flex items-center justify-center">
-                    <svg class="w-6 h-6 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                </div>
-                <div class="absolute bottom-0 left-0 right-0 bg-black/50 px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <p class="text-[10px] text-white truncate" x-text="photo.credit"></p>
+                <img :src="photo.thumb || photo.url" :alt="'Foto ' + (index + 1)" style="width: 100%; height: 100%; object-fit: cover;">
+                <div x-show="selectedUrl === photo.url" style="position: absolute; inset: 0; background: rgba(59,130,246,0.2); display: flex; align-items: center; justify-content: center;">
+                    <svg style="width: 24px; height: 24px; color: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                 </div>
             </button>
         </template>
     </div>
 
     {{-- Preview do card + zoom --}}
-    <div x-show="selectedUrl" x-cloak class="space-y-3">
-        <div class="flex items-center justify-between">
-            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Preview do card</h4>
-            <div class="flex items-center gap-2">
-                <label class="text-xs text-gray-500 dark:text-gray-400">Zoom:</label>
+    <div x-show="selectedUrl" x-cloak style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 14px; font-weight: 500; color: var(--gray-700, #374151);">Preview do card</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 12px; color: var(--gray-500, #6b7280);">Zoom:</label>
                 <input
                     type="range"
                     min="100"
@@ -123,39 +121,46 @@
                     step="5"
                     :value="zoom"
                     @input="updateZoom($event.target.value)"
-                    class="w-24 h-1.5 accent-primary-600"
+                    style="width: 96px; height: 6px; accent-color: var(--primary-600, #2563eb);"
                 >
-                <span class="text-xs text-gray-500 dark:text-gray-400 w-8 text-right" x-text="zoom + '%'"></span>
+                <span style="font-size: 12px; color: var(--gray-500, #6b7280); width: 32px; text-align: right;" x-text="zoom + '%'"></span>
             </div>
         </div>
 
         {{-- Card preview --}}
-        <div class="max-w-xs rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm">
-            <div class="relative h-36 overflow-hidden">
+        <div style="max-width: 280px; border-radius: 12px; overflow: hidden; border: 1px solid var(--gray-200, #e5e7eb); background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="position: relative; height: 144px; overflow: hidden;">
                 <img
                     :src="selectedUrl"
                     alt="Preview"
-                    class="w-full h-full object-cover transition-transform duration-300"
+                    style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;"
                     :style="'transform: scale(' + (zoom / 100) + '); transform-origin: center center;'"
                 >
             </div>
-            <div class="p-3">
-                <h3 class="text-sm font-bold text-gray-900 dark:text-white" x-text="arrivalCity || 'Cidade de destino'"></h3>
-                <p class="text-xs text-gray-400 mt-1">
+            <div style="padding: 12px;">
+                <h3 style="font-size: 14px; font-weight: 700; color: #111827; margin: 0;" x-text="arrivalCity || 'Cidade de destino'"></h3>
+                <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;">
                     <span x-text="($wire.get('data.departure_iata') || 'XXX').toUpperCase()"></span>
                     →
                     <span x-text="($wire.get('data.arrival_iata') || 'XXX').toUpperCase()"></span>
                     · Ida e volta
                 </p>
-                <div class="mt-2">
-                    <p class="text-[10px] text-gray-400 uppercase tracking-wide">a partir de</p>
-                    <p class="text-base font-bold text-gray-900 dark:text-white">R$ --,--</p>
+                <div style="margin-top: 8px;">
+                    <p style="font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">a partir de</p>
+                    <p style="font-size: 16px; font-weight: 700; color: #111827; margin: 2px 0 0;">R$ --,--</p>
                 </div>
             </div>
         </div>
 
-        <p class="text-[11px] text-gray-400 dark:text-gray-500">
+        <p style="font-size: 11px; color: var(--gray-400, #9ca3af);">
             Crédito: <span x-text="selectedCredit"></span>
         </p>
     </div>
 </div>
+
+<style>
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
