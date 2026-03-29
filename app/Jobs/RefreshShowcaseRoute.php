@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Setting;
 use App\Models\ShowcaseRoute;
 use App\Services\VdpFlightService;
 use Illuminate\Bus\Queueable;
@@ -9,7 +10,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class RefreshShowcaseRoute implements ShouldQueue
@@ -18,7 +18,7 @@ class RefreshShowcaseRoute implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 120;
+    public int $timeout = 600;
 
     public function __construct(
         public ShowcaseRoute $showcaseRoute,
@@ -28,48 +28,14 @@ class RefreshShowcaseRoute implements ShouldQueue
     {
         $route = $this->showcaseRoute;
         $dates = $route->sampleDates();
-        $apiUrl = rtrim(config('services.vdp.url'), '/') . '/api/search/flights';
+        $waitSeconds = max(1, (int) Setting::get('showcase_wait_seconds', 10));
 
-        $requestMap = [];
-        foreach ($dates as $outboundDate) {
-            $params = [
-                'cia' => 'all',
-                'departure' => strtoupper($route->departure_iata),
-                'arrival' => strtoupper($route->arrival_iata),
-                'outbound_date' => $outboundDate,
-                'inbound_date' => null,
-                'adults' => 1,
-                'children' => 0,
-                'infants' => 0,
-                'cabin' => $route->cabin,
-            ];
-
-            $returnDate = null;
-            if ($route->trip_type === 'roundtrip' && $route->return_stay_days) {
-                $returnDate = date('Y-m-d', strtotime($outboundDate . ' + ' . $route->return_stay_days . ' days'));
-                $params['inbound_date'] = $returnDate;
-            }
-
-            $requestMap[] = [
-                'params' => $params,
-                'outbound_date' => $outboundDate,
-                'return_date' => $returnDate,
-            ];
-        }
-
-        Log::info('ShowcaseRoute: disparando ' . count($requestMap) . ' buscas em paralelo', [
+        Log::info('ShowcaseRoute: iniciando refresh sequencial', [
             'route_id' => $route->id,
             'route' => $route->routeLabel(),
+            'dates_count' => count($dates),
+            'wait_seconds' => $waitSeconds,
         ]);
-
-        $responses = Http::pool(function ($pool) use ($requestMap, $apiUrl) {
-            foreach ($requestMap as $i => $req) {
-                $pool->as("date_{$i}")
-                    ->acceptJson()
-                    ->timeout(60)
-                    ->post($apiUrl, $req['params']);
-            }
-        });
 
         $bestPrice = null;
         $bestDate = null;
@@ -77,22 +43,37 @@ class RefreshShowcaseRoute implements ShouldQueue
         $bestAirline = null;
         $bestFlightData = null;
 
-        foreach ($requestMap as $i => $req) {
-            $key = "date_{$i}";
-            $response = $responses[$key] ?? null;
-
-            if (! $response || $response->failed()) {
-                Log::warning('ShowcaseRoute: falha na busca paralela', [
-                    'route_id' => $route->id,
-                    'date' => $req['outbound_date'],
-                    'status' => $response?->status(),
-                ]);
-
-                continue;
+        foreach ($dates as $index => $outboundDate) {
+            $returnDate = null;
+            if ($route->trip_type === 'roundtrip' && $route->return_stay_days) {
+                $returnDate = date('Y-m-d', strtotime($outboundDate . ' + ' . $route->return_stay_days . ' days'));
             }
 
+            $params = [
+                'cia' => 'all',
+                'departure' => strtoupper($route->departure_iata),
+                'arrival' => strtoupper($route->arrival_iata),
+                'outbound_date' => $outboundDate,
+                'inbound_date' => $returnDate,
+                'adults' => 1,
+                'children' => 0,
+                'infants' => 0,
+                'cabin' => $route->cabin,
+            ];
+
             try {
-                $results = $response->json();
+                $result = $vdpService->searchFlightsWithCacheInfo($params);
+                $fromCache = $result['from_cache'];
+                $results = $result['data'];
+
+                Log::info('ShowcaseRoute: busca concluída', [
+                    'route_id' => $route->id,
+                    'date' => $outboundDate,
+                    'from_cache' => $fromCache,
+                    'index' => $index + 1,
+                    'total' => count($dates),
+                ]);
+
                 $outboundFlights = $results['outbound'] ?? [];
 
                 foreach ($outboundFlights as $flight) {
@@ -123,8 +104,8 @@ class RefreshShowcaseRoute implements ShouldQueue
 
                     if ($bestPrice === null || $totalPrice < $bestPrice) {
                         $bestPrice = $totalPrice;
-                        $bestDate = $req['outbound_date'];
-                        $bestReturnDate = $req['return_date'];
+                        $bestDate = $outboundDate;
+                        $bestReturnDate = $returnDate;
                         $bestAirline = $flight['operator'] ?? null;
                         $bestFlightData = [
                             'departure_time' => $flight['departure_time'] ?? null,
@@ -134,12 +115,18 @@ class RefreshShowcaseRoute implements ShouldQueue
                         ];
                     }
                 }
+
+                if (! $fromCache) {
+                    sleep($waitSeconds);
+                }
             } catch (\Throwable $e) {
-                Log::warning('ShowcaseRoute: falha ao processar resultado', [
+                Log::warning('ShowcaseRoute: falha na busca', [
                     'route_id' => $route->id,
-                    'date' => $req['outbound_date'],
+                    'date' => $outboundDate,
                     'error' => $e->getMessage(),
                 ]);
+
+                sleep($waitSeconds);
             }
         }
 

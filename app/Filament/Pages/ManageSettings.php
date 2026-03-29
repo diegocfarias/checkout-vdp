@@ -65,6 +65,9 @@ class ManageSettings extends Page
             'referral_credit_release_hours' => Setting::get('referral_credit_release_hours', 24),
             'referral_cookie_days' => Setting::get('referral_cookie_days', 30),
             'referral_cumulative_with_pix' => Setting::get('referral_cumulative_with_pix', true),
+            'showcase_refresh_minutes' => Setting::get('showcase_refresh_minutes', 60),
+            'showcase_max_searches_per_minute' => Setting::get('showcase_max_searches_per_minute', 6),
+            'showcase_wait_seconds' => Setting::get('showcase_wait_seconds', 10),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -330,6 +333,37 @@ class ManageSettings extends Page
                             ->visible(fn ($get) => $get('referral_enabled')),
                     ]),
 
+                Section::make('Vitrine')
+                    ->icon('heroicon-o-sparkles')
+                    ->description('Controle de atualização e rate limiting das pesquisas da vitrine.')
+                    ->schema([
+                        TextInput::make('showcase_refresh_minutes')
+                            ->label('Intervalo de atualização (minutos)')
+                            ->helperText('De quanto em quanto tempo as rotas da vitrine serão atualizadas automaticamente.')
+                            ->numeric()
+                            ->minValue(5)
+                            ->maxValue(1440)
+                            ->suffix('min')
+                            ->required(),
+
+                        TextInput::make('showcase_max_searches_per_minute')
+                            ->label('Máximo de pesquisas por minuto')
+                            ->helperText('Limite global de chamadas ao fornecedor por minuto, aplicado a todas as rotas da vitrine.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(60)
+                            ->required(),
+
+                        TextInput::make('showcase_wait_seconds')
+                            ->label('Espera entre pesquisas (segundos)')
+                            ->helperText('Tempo mínimo de espera entre cada chamada ao fornecedor. Só se aplica quando não há cache.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(120)
+                            ->suffix('s')
+                            ->required(),
+                    ]),
+
                 Section::make('Emissão')
                     ->icon('heroicon-o-paper-airplane')
                     ->description('Configurações de emissão de passagens e notificações Pushover.')
@@ -420,6 +454,10 @@ class ManageSettings extends Page
         Setting::set('referral_credit_release_hours', (int) ($data['referral_credit_release_hours'] ?? 24), 'integer');
         Setting::set('referral_cookie_days', (int) ($data['referral_cookie_days'] ?? 30), 'integer');
         Setting::set('referral_cumulative_with_pix', (bool) ($data['referral_cumulative_with_pix'] ?? true), 'boolean');
+
+        Setting::set('showcase_refresh_minutes', (int) ($data['showcase_refresh_minutes'] ?? 60), 'integer');
+        Setting::set('showcase_max_searches_per_minute', (int) ($data['showcase_max_searches_per_minute'] ?? 6), 'integer');
+        Setting::set('showcase_wait_seconds', (int) ($data['showcase_wait_seconds'] ?? 10), 'integer');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {

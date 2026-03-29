@@ -93,6 +93,21 @@ class VdpFlightService
     }
 
     /**
+     * Busca voos retornando se o resultado veio do cache.
+     * @return array{data: array, from_cache: bool}
+     */
+    public function searchFlightsWithCacheInfo(array $params): array
+    {
+        $pricingVersion = Setting::get('pricing_version', '0');
+        $cacheKey = 'vdp_search:' . $pricingVersion . ':' . md5(json_encode($params));
+
+        $fromCache = Cache::has($cacheKey);
+        $data = $this->searchFlights($params);
+
+        return ['data' => $data, 'from_cache' => $fromCache];
+    }
+
+    /**
      * Busca voos direto na API (sem cache) para revalidação de preço.
      */
     public function searchFlightsFresh(array $params): array

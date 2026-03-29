@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AbacatePayWebhookController;
+use App\Http\Controllers\Admin\ShowcaseImageController;
 use App\Http\Controllers\AirportController;
 use App\Http\Controllers\AppMaxWebhookController;
 use App\Http\Controllers\Auth\CompleteRegistrationController;
@@ -137,3 +138,7 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::post('/pedido', [OrderTrackingController::class, 'search'])->name('tracking.search');
     Route::get('/pedido/{trackingCode}', [OrderTrackingController::class, 'show'])->name('tracking.show');
 });
+
+Route::post('/admin/showcase/search-images', [ShowcaseImageController::class, 'search'])
+    ->middleware(['web', 'auth'])
+    ->name('admin.showcase.search-images');

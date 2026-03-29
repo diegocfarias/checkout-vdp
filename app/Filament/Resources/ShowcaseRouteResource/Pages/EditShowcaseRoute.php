@@ -16,7 +16,7 @@ class EditShowcaseRoute extends EditRecord
 
         if (empty($record->image_url)) {
             $unsplash = app(UnsplashService::class);
-            $photo = $unsplash->searchCityPhoto($record->arrival_city);
+            $photo = $unsplash->searchCityPhoto($record->arrival_city, $record->image_search_query);
 
             if ($photo) {
                 $record->update([

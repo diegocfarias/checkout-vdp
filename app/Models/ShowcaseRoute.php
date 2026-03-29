@@ -17,10 +17,14 @@ class ShowcaseRoute extends Model
         'search_window_days',
         'return_stay_days',
         'sample_dates_count',
+        'search_date_from',
+        'search_date_to',
         'is_active',
         'sort_order',
         'image_url',
         'image_credit',
+        'image_search_query',
+        'image_zoom',
         'cached_price',
         'cached_date',
         'cached_return_date',
@@ -40,6 +44,9 @@ class ShowcaseRoute extends Model
         'return_stay_days' => 'integer',
         'sample_dates_count' => 'integer',
         'sort_order' => 'integer',
+        'search_date_from' => 'date',
+        'search_date_to' => 'date',
+        'image_zoom' => 'integer',
     ];
 
     public function scopeActive($query)
@@ -50,15 +57,35 @@ class ShowcaseRoute extends Model
 
     /**
      * Gera datas amostrais distribuidas uniformemente no intervalo.
+     * Usa search_date_from/search_date_to se definidos, senao fallback para search_window_days.
      */
     public function sampleDates(): array
     {
-        $start = Carbon::today()->addDays(3);
-        $end = Carbon::today()->addDays($this->search_window_days);
-        $count = max(1, $this->sample_dates_count);
+        if ($this->search_date_from && $this->search_date_to) {
+            $start = $this->search_date_from->copy();
+            $end = $this->search_date_to->copy();
+        } else {
+            $start = Carbon::today()->addDays(3);
+            $end = Carbon::today()->addDays($this->search_window_days ?? 30);
+        }
 
+        $today = Carbon::today();
+        if ($start->lt($today)) {
+            $start = $today->copy()->addDay();
+        }
+
+        if ($end->lte($start)) {
+            return [$start->format('Y-m-d')];
+        }
+
+        $count = max(1, $this->sample_dates_count ?? 8);
         $totalDays = $start->diffInDays($end);
+
         if ($totalDays <= 0) {
+            return [$start->format('Y-m-d')];
+        }
+
+        if ($count === 1) {
             return [$start->format('Y-m-d')];
         }
 

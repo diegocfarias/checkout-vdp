@@ -5,12 +5,13 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ShowcaseRouteResource\Pages;
 use App\Jobs\RefreshShowcaseRoute;
 use App\Models\ShowcaseRoute;
-use App\Services\UnsplashService;
 use BackedEnum;
 use Filament\Actions;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ViewField;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -88,14 +89,29 @@ class ShowcaseRouteResource extends Resource
                     ->required(),
             ]),
 
-            Section::make('Configuração de busca')->columns(3)->schema([
-                TextInput::make('search_window_days')
-                    ->label('Janela de busca (dias)')
-                    ->helperText('Quantos dias à frente buscar. Ex: 60 = busca nos próximos 60 dias.')
+            Section::make('Configuração de busca')->columns(2)->schema([
+                DatePicker::make('search_date_from')
+                    ->label('Data inicial')
+                    ->helperText('Início do período de busca.')
+                    ->minDate(now()->toDateString())
+                    ->required()
+                    ->displayFormat('d/m/Y'),
+
+                DatePicker::make('search_date_to')
+                    ->label('Data final')
+                    ->helperText('Fim do período de busca.')
+                    ->minDate(now()->toDateString())
+                    ->afterOrEqual('search_date_from')
+                    ->required()
+                    ->displayFormat('d/m/Y'),
+
+                TextInput::make('sample_dates_count')
+                    ->label('Quantos dias pesquisar')
+                    ->helperText('Quantas datas diferentes amostrar dentro do período.')
                     ->numeric()
-                    ->minValue(7)
-                    ->maxValue(330)
-                    ->default(30)
+                    ->minValue(2)
+                    ->maxValue(15)
+                    ->default(8)
                     ->required(),
 
                 TextInput::make('return_stay_days')
@@ -106,15 +122,6 @@ class ShowcaseRouteResource extends Resource
                     ->maxValue(60)
                     ->default(7)
                     ->visible(fn (Get $get) => $get('trip_type') === 'roundtrip'),
-
-                TextInput::make('sample_dates_count')
-                    ->label('Amostras de data')
-                    ->helperText('Quantas datas diferentes buscar no intervalo.')
-                    ->numeric()
-                    ->minValue(2)
-                    ->maxValue(15)
-                    ->default(8)
-                    ->required(),
             ]),
 
             Section::make('Exibição')->columns(2)->schema([
@@ -127,17 +134,39 @@ class ShowcaseRouteResource extends Resource
                 Toggle::make('is_active')
                     ->label('Ativa')
                     ->default(true),
+            ]),
+
+            Section::make('Imagem')->schema([
+                TextInput::make('image_search_query')
+                    ->label('Busca personalizada de imagem')
+                    ->helperText('Texto para buscar no Unsplash. Se vazio, busca pontos turísticos da cidade de destino.')
+                    ->maxLength(255)
+                    ->placeholder('Ex: Cristo Redentor, Praia de Copacabana...')
+                    ->columnSpanFull(),
+
+                ViewField::make('image_picker')
+                    ->view('filament.components.showcase-image-picker')
+                    ->columnSpanFull(),
 
                 TextInput::make('image_url')
                     ->label('URL da imagem')
                     ->maxLength(500)
-                    ->placeholder('Deixe vazio para buscar automaticamente no Unsplash')
+                    ->placeholder('Será preenchido ao selecionar uma imagem acima')
                     ->columnSpanFull(),
 
                 TextInput::make('image_credit')
                     ->label('Crédito da imagem')
                     ->maxLength(255)
                     ->columnSpanFull(),
+
+                TextInput::make('image_zoom')
+                    ->label('Zoom da imagem (%)')
+                    ->helperText('100 = normal, 150 = 1.5x zoom. Mínimo 100, máximo 200.')
+                    ->numeric()
+                    ->minValue(100)
+                    ->maxValue(200)
+                    ->default(100)
+                    ->suffix('%'),
             ]),
         ]);
     }

@@ -37,7 +37,7 @@
     {{-- Imagem --}}
     <div class="relative h-36 sm:h-32 lg:h-40 overflow-hidden">
         @if($hasImage)
-            <img src="{{ $route->image_url }}" alt="{{ $route->arrival_city }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
+            <img src="{{ $route->image_url }}" alt="{{ $route->arrival_city }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" @if(($route->image_zoom ?? 100) !== 100) style="transform: scale({{ ($route->image_zoom ?? 100) / 100 }}); transform-origin: center center;" @endif>
         @else
             <div class="w-full h-full bg-gradient-to-br {{ $gradient }}"></div>
         @endif
