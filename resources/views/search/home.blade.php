@@ -204,7 +204,11 @@
 document.querySelectorAll('.showcase-link').forEach(function(link) {
     link.addEventListener('click', function(e) {
         e.preventDefault();
-        var url = this.href;
+        var el = this;
+        var priceUrl = el.getAttribute('data-price-url');
+        var currentPrice = parseFloat(el.getAttribute('data-current-price'));
+        var routeId = el.getAttribute('data-route-id');
+
         if (typeof showTravelLoading === 'function') {
             showTravelLoading({
                 title: 'Buscando os melhores voos...',
@@ -217,7 +221,36 @@ document.querySelectorAll('.showcase-link').forEach(function(link) {
                 timeoutMs: 60000
             });
         }
-        window.location.href = url;
+
+        if (!priceUrl) {
+            window.location.href = el.href;
+            return;
+        }
+
+        fetch(priceUrl)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.price && Math.abs(data.price - currentPrice) > 0.01) {
+                    var priceEl = document.querySelector('.showcase-price[data-route="' + routeId + '"]');
+                    var origEl = document.querySelector('.showcase-original-price[data-route="' + routeId + '"]');
+                    var pixEl = document.querySelector('.showcase-pix-price[data-route="' + routeId + '"]');
+
+                    if (priceEl) priceEl.textContent = data.formatted_price;
+                    if (origEl) origEl.textContent = data.formatted_price;
+                    if (pixEl && data.formatted_pix_price) pixEl.textContent = data.formatted_pix_price;
+
+                    el.setAttribute('data-current-price', data.price);
+                }
+
+                var url = new URL(el.href, window.location.origin);
+                if (data.date) url.searchParams.set('outbound_date', data.date);
+                if (data.return_date) url.searchParams.set('inbound_date', data.return_date);
+
+                window.location.href = url.toString();
+            })
+            .catch(function() {
+                window.location.href = el.href;
+            });
     });
 });
 </script>

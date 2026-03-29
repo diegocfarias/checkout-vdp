@@ -33,7 +33,12 @@
     $monthLabel = $route->cached_date ? $route->cached_date->translatedFormat('M/Y') : '';
 @endphp
 
-<a href="{{ $searchUrl }}" class="showcase-link group block rounded-xl overflow-hidden border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 h-full bg-white">
+<a href="{{ $searchUrl }}" class="showcase-link group block rounded-xl overflow-hidden border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 h-full bg-white"
+   data-route-id="{{ $route->id }}"
+   data-price-url="{{ route('showcase.price', $route) }}"
+   data-current-price="{{ (float) $route->cached_price }}"
+   data-has-pix="{{ $hasPixDiscount ? '1' : '0' }}"
+   data-pix-discount="{{ $pixDiscount ?? 0 }}">
     {{-- Imagem --}}
     <div class="relative h-36 sm:h-32 lg:h-40 overflow-hidden">
         @if($hasImage)
@@ -69,11 +74,11 @@
             <div>
                 <p class="text-[11px] text-gray-400 uppercase tracking-wide">a partir de</p>
                 @if($hasPixDiscount)
-                    <p class="text-xs text-gray-400 line-through">{{ $route->formattedPrice() }}</p>
-                    <p class="text-lg font-bold text-emerald-600 leading-tight">R$ {{ number_format($pixPrice, 2, ',', '.') }}</p>
+                    <p class="text-xs text-gray-400 line-through showcase-original-price" data-route="{{ $route->id }}">{{ $route->formattedPrice() }}</p>
+                    <p class="text-lg font-bold text-emerald-600 leading-tight showcase-pix-price" data-route="{{ $route->id }}">R$ {{ number_format($pixPrice, 2, ',', '.') }}</p>
                     <p class="text-[11px] text-emerald-500 font-medium">{{ number_format($pixDiscount, 0) }}% off no PIX</p>
                 @else
-                    <p class="text-lg font-bold text-gray-900 leading-tight">{{ $route->formattedPrice() }}</p>
+                    <p class="text-lg font-bold text-gray-900 leading-tight showcase-price" data-route="{{ $route->id }}">{{ $route->formattedPrice() }}</p>
                 @endif
             </div>
             <span class="text-xs text-blue-600 font-medium group-hover:underline flex items-center gap-1">

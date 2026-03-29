@@ -2,6 +2,7 @@
     $ticket->loadMissing(['customer', 'order']);
     $customerName = $ticket->customer ? explode(' ', trim($ticket->customer->name))[0] : 'Cliente';
     $subjectLabel = \App\Models\SupportTicket::SUBJECTS[$ticket->subject] ?? $ticket->subject;
+    $whatsappNumber = \App\Models\Setting::get('whatsapp_number', '');
 @endphp
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -9,65 +10,129 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
-    <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
+<body style="margin: 0; padding: 0; background-color: #f0fdf4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0fdf4; padding: 40px 16px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
 
-        <div style="text-align:center;margin-bottom:24px;">
-            <h1 style="font-size:20px;color:#1f2937;margin:0;">{{ config('app.name') }}</h1>
-        </div>
+                    {{-- Header --}}
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #064e3b 0%, #111827 100%); padding: 32px 24px; text-align: center; border-radius: 16px 16px 0 0;">
+                            <img src="{{ asset('images/logo-vdp.png') }}" alt="Voe de Primeira" style="height: 36px; margin-bottom: 16px;">
+                            <p style="margin: 0; font-size: 13px; color: #a7f3d0; letter-spacing: 0.5px;">ATENDIMENTO</p>
+                        </td>
+                    </tr>
 
-        <div style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <div style="background:#2563eb;padding:24px;text-align:center;">
-                <div style="font-size:32px;margin-bottom:8px;">📩</div>
-                <h2 style="color:#ffffff;font-size:18px;margin:0;">Recebemos sua solicitação</h2>
-            </div>
+                    {{-- Badge --}}
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 32px 32px 0; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center">
+                                        <div style="display: inline-block; background-color: #dbeafe; border: 1px solid #93c5fd; padding: 8px 24px; border-radius: 50px;">
+                                            <span style="font-size: 14px; font-weight: 700; color: #2563eb; letter-spacing: 0.3px;">
+                                                TICKET ABERTO
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-            <div style="padding:24px;">
-                <p style="font-size:15px;color:#374151;line-height:1.6;margin:0 0 16px;">
-                    Olá, <strong>{{ $customerName }}</strong>!
-                </p>
-                <p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 20px;">
-                    Sua solicitação de atendimento foi aberta com sucesso. Nossa equipe responderá em breve.
-                </p>
+                    {{-- Greeting --}}
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 24px 32px 0; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <h1 style="margin: 0 0 6px; font-size: 24px; color: #111827; font-weight: 700;">
+                                Olá, {{ $customerName }}!
+                            </h1>
+                            <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.6;">
+                                Sua solicitação de atendimento foi aberta com sucesso. Nossa equipe responderá em breve.
+                            </p>
+                        </td>
+                    </tr>
 
-                <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:20px;">
-                    <table style="width:100%;font-size:14px;color:#374151;">
-                        <tr>
-                            <td style="padding:4px 0;font-weight:600;width:120px;">Ticket:</td>
-                            <td style="padding:4px 0;">#{{ $ticket->id }}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:4px 0;font-weight:600;">Assunto:</td>
-                            <td style="padding:4px 0;">{{ $subjectLabel }}</td>
-                        </tr>
-                        @if($ticket->order)
-                        <tr>
-                            <td style="padding:4px 0;font-weight:600;">Pedido:</td>
-                            <td style="padding:4px 0;">{{ $ticket->order->tracking_code }}</td>
-                        </tr>
-                        @endif
-                    </table>
-                </div>
+                    {{-- Ticket Info --}}
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 24px 32px 0; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 12px; font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px;">Detalhes do ticket</p>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px;">
+                                <tr>
+                                    <td style="padding: 16px 20px;">
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="font-size: 13px; color: #6b7280; padding: 4px 0;">Ticket</td>
+                                                <td align="right" style="font-size: 13px; color: #374151; font-weight: 600; padding: 4px 0;">#{{ $ticket->id }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="font-size: 13px; color: #6b7280; padding: 4px 0; border-top: 1px solid #f3f4f6;">Assunto</td>
+                                                <td align="right" style="font-size: 13px; color: #374151; font-weight: 600; padding: 4px 0; border-top: 1px solid #f3f4f6;">{{ $subjectLabel }}</td>
+                                            </tr>
+                                            @if($ticket->order)
+                                            <tr>
+                                                <td style="font-size: 13px; color: #6b7280; padding: 4px 0; border-top: 1px solid #f3f4f6;">Pedido</td>
+                                                <td align="right" style="font-size: 13px; color: #374151; font-weight: 600; padding: 4px 0; border-top: 1px solid #f3f4f6;">{{ $ticket->order->tracking_code }}</td>
+                                            </tr>
+                                            @endif
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-                <div style="background:#f0f9ff;border-left:4px solid #2563eb;border-radius:4px;padding:12px 16px;margin-bottom:20px;">
-                    <p style="font-size:13px;color:#1e40af;margin:0;font-style:italic;">
-                        "{{ \Illuminate\Support\Str::limit($ticket->message, 200) }}"
-                    </p>
-                </div>
+                    {{-- Message Quote --}}
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 24px 32px 0; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 12px; font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px;">Sua mensagem</p>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-left: 4px solid #059669; border-radius: 0 10px 10px 0;">
+                                <tr>
+                                    <td style="padding: 16px 20px;">
+                                        <p style="margin: 0; font-size: 13px; color: #374151; line-height: 1.6; font-style: italic;">
+                                            "{{ \Illuminate\Support\Str::limit($ticket->message, 300) }}"
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-                <div style="text-align:center;">
-                    <a href="{{ $ticketUrl }}" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
-                        Acompanhar atendimento
-                    </a>
-                </div>
-            </div>
-        </div>
+                    {{-- CTA --}}
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 28px 32px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{ $ticketUrl }}" style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 15px; font-weight: 700; padding: 14px 40px; border-radius: 10px; text-decoration: none; letter-spacing: 0.3px;">
+                                            Acompanhar atendimento &rarr;
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-        <div style="text-align:center;margin-top:24px;">
-            <p style="font-size:12px;color:#9ca3af;margin:0;">
-                {{ config('app.name') }} &mdash; Este é um email automático, não responda.
-            </p>
-        </div>
-    </div>
+                    {{-- Footer --}}
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #064e3b 0%, #111827 100%); padding: 24px; text-align: center; border-radius: 0 0 16px 16px;">
+                            <p style="margin: 0 0 8px; font-size: 13px; color: #a7f3d0; font-weight: 500;">
+                                Voe de Primeira
+                            </p>
+                            <p style="margin: 0; font-size: 11px; color: #6b7280;">
+                                &copy; {{ date('Y') }} &middot; Todos os direitos reservados
+                            </p>
+                            @if($whatsappNumber)
+                            <p style="margin: 8px 0 0; font-size: 12px;">
+                                <a href="https://wa.me/{{ $whatsappNumber }}" style="color: #6ee7b7; text-decoration: none; font-weight: 500;">Falar no WhatsApp</a>
+                            </p>
+                            @endif
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

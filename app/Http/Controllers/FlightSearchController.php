@@ -40,6 +40,26 @@ class FlightSearchController extends Controller
         ]);
     }
 
+    public function showcasePrice(ShowcaseRoute $showcaseRoute)
+    {
+        $pixDiscount = (float) Setting::get('pix_discount', 0);
+        $pixEnabled = ! empty(Setting::get('gateway_pix'));
+        $price = (float) $showcaseRoute->cached_price;
+        $pixPrice = ($pixEnabled && $pixDiscount > 0)
+            ? round($price * (1 - $pixDiscount / 100), 2)
+            : null;
+
+        return response()->json([
+            'price' => $price,
+            'formatted_price' => $showcaseRoute->formattedPrice(),
+            'pix_price' => $pixPrice,
+            'formatted_pix_price' => $pixPrice ? 'R$ ' . number_format($pixPrice, 2, ',', '.') : null,
+            'date' => $showcaseRoute->cached_date?->format('Y-m-d'),
+            'return_date' => $showcaseRoute->cached_return_date?->format('Y-m-d'),
+            'airline' => $showcaseRoute->cached_airline,
+        ]);
+    }
+
     public function search(FlightSearchRequest $request)
     {
         $validated = $request->validated();
