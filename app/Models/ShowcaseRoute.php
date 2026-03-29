@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ShowcaseRoute extends Model
 {
@@ -119,5 +120,10 @@ class ShowcaseRoute extends Model
     public function routeLabel(): string
     {
         return strtoupper($this->departure_iata) . ' → ' . strtoupper($this->arrival_iata);
+    }
+
+    public function refreshLogs(): HasMany
+    {
+        return $this->hasMany(ShowcaseRefreshLog::class);
     }
 }
