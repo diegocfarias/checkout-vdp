@@ -29,6 +29,11 @@ class OrderResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Pedidos';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected static ?int $navigationSort = 1;
 
     public static function table(Table $table): Table
@@ -158,7 +163,7 @@ class OrderResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Confirmar pagamento manualmente')
                     ->modalDescription('Marcar este pedido como pago? Use quando o pagamento foi confirmado fora do sistema.')
-                    ->visible(fn (Order $record): bool => in_array($record->status, ['pending', 'awaiting_payment']))
+                    ->visible(fn (Order $record): bool => $record->status === 'awaiting_payment')
                     ->action(function (Order $record): void {
                         $now = now();
                         $payment = $record->latestPayment;
@@ -332,6 +337,16 @@ class OrderResource extends Resource
                         Infolists\Components\TextEntry::make('created_at')
                             ->label('Criado em')
                             ->dateTime('d/m/Y H:i'),
+                    ]),
+
+                Section::make('Card para Emissão')
+                    ->icon('heroicon-o-printer')
+                    ->description('Card visual dos voos para enviar ao milheiro (print/screenshot)')
+                    ->collapsed()
+                    ->schema([
+                        Infolists\Components\ViewEntry::make('flight_cards_emission')
+                            ->label('')
+                            ->view('filament.components.flight-card-emission'),
                     ]),
 
                 Section::make('Cliente / Pagador')

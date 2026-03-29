@@ -18,6 +18,11 @@ use Filament\Tables\Table;
 
 class CustomerResource extends Resource
 {
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected static ?string $model = Customer::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';

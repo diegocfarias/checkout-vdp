@@ -22,6 +22,11 @@ class ManageSettings extends Page
 
     protected static ?int $navigationSort = 99;
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected string $view = 'filament.pages.manage-settings';
 
     public ?array $data = [];
@@ -53,6 +58,9 @@ class ManageSettings extends Page
         }
 
         $this->form->fill([
+            'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
+            'pushover_app_token' => Setting::get('pushover_app_token', ''),
+            'pushover_user_key' => Setting::get('pushover_user_key', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
             'pricing_miles_enabled' => Setting::get('pricing_miles_enabled', true),
             'pricing_pct_enabled' => Setting::get('pricing_pct_enabled', false),
@@ -251,6 +259,34 @@ class ManageSettings extends Page
                             ->helperText('Número completo com DDI e DDD (ex: 5511999999999). Deixe vazio para não exibir.')
                             ->placeholder('5511999999999'),
                     ]),
+
+                Section::make('Emissão')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->description('Configurações de emissão de passagens e notificações Pushover.')
+                    ->schema([
+                        TextInput::make('emission_value_per_order')
+                            ->label('Valor por emissão (R$)')
+                            ->helperText('Valor pago ao emissor por cada emissão concluída. Será congelado no registro ao concluir.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.01)
+                            ->prefix('R$')
+                            ->placeholder('0.00'),
+
+                        TextInput::make('pushover_app_token')
+                            ->label('Pushover App Token')
+                            ->helperText('Token do aplicativo Pushover para notificações de novas emissões.')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Token do app'),
+
+                        TextInput::make('pushover_user_key')
+                            ->label('Pushover User Key')
+                            ->helperText('Chave de usuário/grupo do Pushover.')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Chave do usuário'),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -310,6 +346,10 @@ class ManageSettings extends Page
         Setting::set('pix_expiration_minutes', (int) ($data['pix_expiration_minutes'] ?? 30), 'integer');
         Setting::set('order_expiration_minutes', (int) $data['order_expiration_minutes'], 'integer');
         Setting::set('whatsapp_number', $data['whatsapp_number'] ?? '', 'string');
+
+        Setting::set('emission_value_per_order', $data['emission_value_per_order'] ?? '0', 'string');
+        Setting::set('pushover_app_token', $data['pushover_app_token'] ?? '', 'string');
+        Setting::set('pushover_user_key', $data['pushover_user_key'] ?? '', 'string');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {

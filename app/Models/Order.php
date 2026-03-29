@@ -96,6 +96,11 @@ class Order extends Model
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at');
     }
 
+    public function emission(): HasOne
+    {
+        return $this->hasOne(OrderEmission::class);
+    }
+
     protected function passengersCount(): Attribute
     {
         return Attribute::get(fn () => $this->total_adults + $this->total_children + $this->total_babies);

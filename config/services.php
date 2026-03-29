@@ -82,4 +82,9 @@ return [
         'access_key' => env('UNSPLASH_ACCESS_KEY'),
     ],
 
+    'pushover' => [
+        'token' => env('PUSHOVER_APP_TOKEN'),
+        'user_key' => env('PUSHOVER_USER_KEY'),
+    ],
+
 ];

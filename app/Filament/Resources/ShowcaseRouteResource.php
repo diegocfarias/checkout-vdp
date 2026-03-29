@@ -21,6 +21,11 @@ use Filament\Tables\Table;
 
 class ShowcaseRouteResource extends Resource
 {
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected static ?string $model = ShowcaseRoute::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-sparkles';

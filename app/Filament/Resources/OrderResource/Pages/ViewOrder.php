@@ -9,6 +9,7 @@ use Filament\Actions;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\HtmlString;
 
 class ViewOrder extends ViewRecord
 {
@@ -17,6 +18,53 @@ class ViewOrder extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('copy_passengers')
+                ->label('Copiar Passageiros')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('gray')
+                ->visible(fn (): bool => $this->record->passengers->isNotEmpty())
+                ->modalHeading('Dados dos Passageiros')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Fechar')
+                ->modalContent(function (): HtmlString {
+                    $this->record->loadMissing('passengers');
+                    $lines = [];
+                    foreach ($this->record->passengers as $i => $p) {
+                        $num = $i + 1;
+                        $lines[] = "Passageiro {$num}:";
+                        $lines[] = "Nome: " . strtoupper($p->full_name ?? '-');
+                        $doc = $p->document ? preg_replace('/\D/', '', $p->document) : null;
+                        if ($doc && strlen($doc) === 11) {
+                            $doc = substr($doc, 0, 3) . '.' . substr($doc, 3, 3) . '.' . substr($doc, 6, 3) . '-' . substr($doc, 9, 2);
+                        }
+                        $lines[] = "CPF: " . ($doc ?? '-');
+                        $lines[] = "Nascimento: " . ($p->birth_date ? $p->birth_date->format('d/m/Y') : '-');
+                        $lines[] = "E-mail: " . ($p->email ?? '-');
+                        $lines[] = "Telefone: " . ($p->phone ?? '-');
+                        $lines[] = "";
+                    }
+                    $text = implode("\n", $lines);
+                    $escaped = e($text);
+                    $html = <<<HTML
+                    <div>
+                        <pre id="passengers-text" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;font-size:13px;line-height:1.6;white-space:pre-wrap;font-family:'Inter',monospace;color:#374151;max-height:400px;overflow-y:auto;">{$escaped}</pre>
+                        <button type="button" onclick="
+                            var text = document.getElementById('passengers-text').innerText;
+                            navigator.clipboard.writeText(text).then(function() {
+                                var btn = event.target;
+                                btn.innerText = 'Copiado!';
+                                btn.style.background = '#059669';
+                                setTimeout(function() { btn.innerText = 'Copiar dados'; btn.style.background = '#2563eb'; }, 2000);
+                            });
+                        " style="margin-top:12px;background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;width:100%;">
+                            Copiar dados
+                        </button>
+                    </div>
+                    HTML;
+
+                    return new HtmlString($html);
+                }),
+
             Actions\Action::make('mark_completed')
                 ->label('Marcar como Emitido')
                 ->icon('heroicon-o-check-circle')
@@ -64,7 +112,7 @@ class ViewOrder extends ViewRecord
                 ->requiresConfirmation()
                 ->modalHeading('Confirmar pagamento manualmente')
                 ->modalDescription('Marcar este pedido como pago? Use quando o pagamento foi confirmado fora do sistema.')
-                ->visible(fn (): bool => in_array($this->record->status, ['pending', 'awaiting_payment']))
+                ->visible(fn (): bool => $this->record->status === 'awaiting_payment')
                 ->action(function (): void {
                     $now = now();
                     $payment = $this->record->latestPayment;

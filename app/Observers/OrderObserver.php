@@ -2,8 +2,11 @@
 
 namespace App\Observers;
 
+use App\Jobs\NotifyIssuersNewEmission;
 use App\Mail\OrderStatusMail;
 use App\Models\Order;
+use App\Models\OrderEmission;
+use App\Models\OrderEmissionLog;
 use App\Models\OrderStatusHistory;
 use App\Services\BotpressNotifier;
 use Illuminate\Support\Facades\Log;
@@ -36,6 +39,7 @@ class OrderObserver
 
         $this->notifyWhatsApp($order, $newStatus);
         $this->notifyEmail($order, $newStatus);
+        $this->handleEmission($order, $newStatus);
     }
 
     private function notifyWhatsApp(Order $order, string $status): void
@@ -71,6 +75,37 @@ class OrderObserver
             'cancelled' => "Seu pedido {$code} foi cancelado.",
             default => null,
         };
+    }
+
+    private function handleEmission(Order $order, string $status): void
+    {
+        if ($status !== 'awaiting_emission') {
+            return;
+        }
+
+        if ($order->emission()->exists()) {
+            return;
+        }
+
+        try {
+            $emission = OrderEmission::create([
+                'order_id' => $order->id,
+                'status' => 'pending',
+            ]);
+
+            OrderEmissionLog::create([
+                'order_emission_id' => $emission->id,
+                'action' => 'created',
+                'notes' => 'Emissão criada automaticamente ao confirmar pagamento.',
+            ]);
+
+            NotifyIssuersNewEmission::dispatch($order);
+        } catch (\Throwable $e) {
+            Log::error('OrderObserver: falha ao criar emissão', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function notifyEmail(Order $order, string $status): void

@@ -14,6 +14,11 @@ class LatestPendingEmissions extends TableWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    public static function canView(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public function table(Table $table): Table
     {
         return $table

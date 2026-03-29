@@ -1113,14 +1113,13 @@
                 if (cardFieldsEl) cardFieldsEl.classList.remove('hidden');
                 firstInvalid.focus();
             } else {
+                var selectedMethod = document.querySelector('input[name="payment_method"]:checked');
+                var isPix = selectedMethod && selectedMethod.value === 'pix';
                 showTravelLoading({
-                    title: 'Processando seu pagamento...',
-                    messages: [
-                        'Validando dados do cartão...',
-                        'Confirmando com a operadora...',
-                        'Finalizando sua compra...',
-                        'Quase pronto!'
-                    ],
+                    title: isPix ? 'Gerando seu PIX...' : 'Processando seu pagamento...',
+                    messages: isPix
+                        ? ['Gerando código de pagamento...', 'Preparando o QR Code...', 'Finalizando sua compra...', 'Quase pronto!']
+                        : ['Validando dados do cartão...', 'Confirmando com a operadora...', 'Finalizando sua compra...', 'Quase pronto!'],
                     timeoutMs: 90000
                 });
             }
