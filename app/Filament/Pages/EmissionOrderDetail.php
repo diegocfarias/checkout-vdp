@@ -39,7 +39,15 @@ class EmissionOrderDetail extends Page
 
     public function getTitle(): string
     {
-        return 'Emissão — ' . ($this->getOrder()->tracking_code ?? '');
+        if (! $this->orderId) {
+            return 'Detalhes da Emissão';
+        }
+
+        try {
+            return 'Emissão — ' . $this->getOrder()->tracking_code;
+        } catch (\Throwable) {
+            return 'Detalhes da Emissão';
+        }
     }
 
     public static function getRoutePath(Panel $panel): string

@@ -1,6 +1,20 @@
 <x-filament-panels::page>
     @php
-        $order = $this->getOrder();
+        try {
+            $order = $this->getOrder();
+        } catch (\Throwable $e) {
+            $order = null;
+        }
+    @endphp
+
+    @if(!$order)
+        <div class="text-center py-12">
+            <p class="text-gray-500 text-lg">Pedido não encontrado.</p>
+            <a href="{{ route('filament.admin.pages.emission-queue') }}" class="mt-4 inline-flex items-center text-sm text-blue-600 hover:text-blue-700">Voltar para a fila</a>
+        </div>
+    @else
+
+    @php
         $flights = $order->flights;
         $cabin = match($order->cabin) {
             'EC' => 'Econômica',
@@ -252,4 +266,6 @@ Telefone: {{ $p->phone ?? '-' }}
             });
         }
     </script>
+
+    @endif
 </x-filament-panels::page>
