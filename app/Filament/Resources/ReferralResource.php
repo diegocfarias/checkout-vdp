@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ReferralResource\Pages;
 use App\Models\Referral;
 use BackedEnum;
+use Filament\Actions;
 use Filament\Infolists;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -122,7 +123,7 @@ class ReferralResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make()->label('Ver'),
+                Actions\ViewAction::make()->label('Ver'),
             ]);
     }
 
