@@ -3,17 +3,20 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CustomerResource\Pages;
+use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\CustomerAuditLog;
 use App\Services\ReferralService;
 use BackedEnum;
 use Filament\Actions;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -132,7 +135,35 @@ class CustomerResource extends Resource
                     ->form([
                         Toggle::make('is_affiliate')
                             ->label('Habilitar como afiliado')
-                            ->default(true),
+                            ->default(true)
+                            ->live(),
+                        Select::make('code_mode')
+                            ->label('Código de indicação')
+                            ->options([
+                                'auto' => 'Gerar automaticamente',
+                                'manual' => 'Definir manualmente',
+                            ])
+                            ->default('auto')
+                            ->live()
+                            ->visible(fn (Get $get, Customer $record) => $get('is_affiliate') && ! $record->referral_code),
+                        TextInput::make('custom_referral_code')
+                            ->label('Código personalizado')
+                            ->helperText('Deve ser único e não pode coincidir com cupons existentes.')
+                            ->maxLength(20)
+                            ->dehydrateStateUsing(fn (?string $state) => $state ? strtoupper(trim($state)) : null)
+                            ->extraInputAttributes(['style' => 'text-transform: uppercase'])
+                            ->visible(fn (Get $get, Customer $record) => $get('is_affiliate') && ! $record->referral_code && $get('code_mode') === 'manual')
+                            ->required(fn (Get $get, Customer $record) => $get('is_affiliate') && ! $record->referral_code && $get('code_mode') === 'manual')
+                            ->rules([
+                                fn (Customer $record) => function (string $attribute, $value, \Closure $fail) use ($record) {
+                                    if (! $value) {
+                                        return;
+                                    }
+                                    if (Customer::isReferralCodeTaken(strtoupper(trim($value)), $record->id)) {
+                                        $fail('Este código já está em uso por outro afiliado ou cupom.');
+                                    }
+                                },
+                            ]),
                         TextInput::make('affiliate_discount_pct')
                             ->label('Desconto para indicados (%)')
                             ->helperText('Deixe vazio para usar o valor padrão das configurações.')
@@ -152,6 +183,7 @@ class CustomerResource extends Resource
                     ])
                     ->fillForm(fn (Customer $record) => [
                         'is_affiliate' => $record->is_affiliate,
+                        'code_mode' => 'auto',
                         'affiliate_discount_pct' => $record->affiliate_discount_pct,
                         'affiliate_credit_pct' => $record->affiliate_credit_pct,
                     ])
@@ -165,7 +197,11 @@ class CustomerResource extends Resource
                         ];
 
                         if ($isAffiliate && ! $record->referral_code) {
-                            $updateData['referral_code'] = $record->generateReferralCode();
+                            if (($data['code_mode'] ?? 'auto') === 'manual' && ! empty($data['custom_referral_code'])) {
+                                $updateData['referral_code'] = strtoupper(trim($data['custom_referral_code']));
+                            } else {
+                                $updateData['referral_code'] = $record->generateReferralCode();
+                            }
                         }
 
                         $record->update($updateData);

@@ -64,6 +64,7 @@ class ManageSettings extends Page
             'referral_credit_release_mode' => Setting::get('referral_credit_release_mode', 'after_purchase'),
             'referral_credit_release_hours' => Setting::get('referral_credit_release_hours', 24),
             'referral_cookie_days' => Setting::get('referral_cookie_days', 30),
+            'referral_cumulative_with_pix' => Setting::get('referral_cumulative_with_pix', true),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -321,6 +322,12 @@ class ManageSettings extends Page
                             ->maxValue(365)
                             ->suffix('dias')
                             ->visible(fn ($get) => $get('referral_enabled')),
+
+                        Toggle::make('referral_cumulative_with_pix')
+                            ->label('Cumulativo com desconto PIX')
+                            ->helperText('Se ativado, o desconto de indicação pode ser combinado com o desconto PIX.')
+                            ->default(true)
+                            ->visible(fn ($get) => $get('referral_enabled')),
                     ]),
 
                 Section::make('Emissão')
@@ -412,6 +419,7 @@ class ManageSettings extends Page
         Setting::set('referral_credit_release_mode', $data['referral_credit_release_mode'] ?? 'after_purchase', 'string');
         Setting::set('referral_credit_release_hours', (int) ($data['referral_credit_release_hours'] ?? 24), 'integer');
         Setting::set('referral_cookie_days', (int) ($data['referral_cookie_days'] ?? 30), 'integer');
+        Setting::set('referral_cumulative_with_pix', (bool) ($data['referral_cumulative_with_pix'] ?? true), 'boolean');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {

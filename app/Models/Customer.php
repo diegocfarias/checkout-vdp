@@ -98,9 +98,25 @@ class Customer extends Authenticatable
     {
         do {
             $code = 'IND-' . strtoupper(Str::random(6));
-        } while (static::where('referral_code', $code)->exists());
+        } while (static::isReferralCodeTaken($code, $this->id));
 
         return $code;
+    }
+
+    public static function isReferralCodeTaken(string $code, ?int $ignoreCustomerId = null): bool
+    {
+        $code = strtoupper(trim($code));
+
+        $query = static::where('referral_code', $code);
+        if ($ignoreCustomerId) {
+            $query->where('id', '!=', $ignoreCustomerId);
+        }
+
+        if ($query->exists()) {
+            return true;
+        }
+
+        return Coupon::where('code', $code)->exists();
     }
 
     public function getCleanDocument(): ?string

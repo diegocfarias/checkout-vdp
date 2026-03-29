@@ -5,10 +5,12 @@ namespace App\Filament\Resources\CustomerResource\Pages;
 use App\Filament\Resources\CustomerResource;
 use App\Models\Customer;
 use Filament\Actions;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Utilities\Get;
 
 class ViewCustomer extends ViewRecord
 {
@@ -53,7 +55,35 @@ class ViewCustomer extends ViewRecord
                 ->form([
                     Toggle::make('is_affiliate')
                         ->label('Habilitar como afiliado')
-                        ->default(true),
+                        ->default(true)
+                        ->live(),
+                    Select::make('code_mode')
+                        ->label('Código de indicação')
+                        ->options([
+                            'auto' => 'Gerar automaticamente',
+                            'manual' => 'Definir manualmente',
+                        ])
+                        ->default('auto')
+                        ->live()
+                        ->visible(fn (Get $get) => $get('is_affiliate') && ! $this->record->referral_code),
+                    TextInput::make('custom_referral_code')
+                        ->label('Código personalizado')
+                        ->helperText('Deve ser único e não pode coincidir com cupons existentes.')
+                        ->maxLength(20)
+                        ->dehydrateStateUsing(fn (?string $state) => $state ? strtoupper(trim($state)) : null)
+                        ->extraInputAttributes(['style' => 'text-transform: uppercase'])
+                        ->visible(fn (Get $get) => $get('is_affiliate') && ! $this->record->referral_code && $get('code_mode') === 'manual')
+                        ->required(fn (Get $get) => $get('is_affiliate') && ! $this->record->referral_code && $get('code_mode') === 'manual')
+                        ->rules([
+                            fn () => function (string $attribute, $value, \Closure $fail) {
+                                if (! $value) {
+                                    return;
+                                }
+                                if (Customer::isReferralCodeTaken(strtoupper(trim($value)), $this->record->id)) {
+                                    $fail('Este código já está em uso por outro afiliado ou cupom.');
+                                }
+                            },
+                        ]),
                     TextInput::make('affiliate_discount_pct')
                         ->label('Desconto para indicados (%)')
                         ->helperText('Deixe vazio para usar o valor padrão das configurações.')
@@ -73,6 +103,7 @@ class ViewCustomer extends ViewRecord
                 ])
                 ->fillForm(fn () => [
                     'is_affiliate' => $this->record->is_affiliate,
+                    'code_mode' => 'auto',
                     'affiliate_discount_pct' => $this->record->affiliate_discount_pct,
                     'affiliate_credit_pct' => $this->record->affiliate_credit_pct,
                 ])
@@ -86,7 +117,11 @@ class ViewCustomer extends ViewRecord
                     ];
 
                     if ($isAffiliate && ! $this->record->referral_code) {
-                        $updateData['referral_code'] = $this->record->generateReferralCode();
+                        if (($data['code_mode'] ?? 'auto') === 'manual' && ! empty($data['custom_referral_code'])) {
+                            $updateData['referral_code'] = strtoupper(trim($data['custom_referral_code']));
+                        } else {
+                            $updateData['referral_code'] = $this->record->generateReferralCode();
+                        }
                     }
 
                     $this->record->update($updateData);

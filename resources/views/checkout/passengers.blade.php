@@ -660,6 +660,7 @@
         }
 
         let appliedDiscount = 0;
+        let cumulativeWithPix = true;
         const pixDiscountPct = {{ $pixDiscount ?? 0 }};
 
         function atualizarTotalFooter() {
@@ -685,7 +686,8 @@
             }
 
             let pixDiscountVal = 0;
-            if (isPix && pixDiscountPct > 0) {
+            const canApplyPix = appliedDiscount > 0 ? cumulativeWithPix : true;
+            if (isPix && pixDiscountPct > 0 && canApplyPix) {
                 pixDiscountVal = totalComDesconto * (pixDiscountPct / 100);
                 if (modalPixDiscRow) modalPixDiscRow.classList.remove('hidden');
                 if (modalPixDiscValor) modalPixDiscValor.textContent = '- ' + fmt(pixDiscountVal);
@@ -816,6 +818,7 @@
                         couponHidden.value = data.coupon_code;
                         couponInput.disabled = true;
                         appliedDiscount = data.discount_amount;
+                        cumulativeWithPix = data.cumulative_with_pix !== false;
                         if (walletToggle) {
                             walletToggle.checked = false;
                             walletToggle.disabled = true;
@@ -844,6 +847,7 @@
                 successBox.classList.add('hidden');
                 errorBox.classList.add('hidden');
                 appliedDiscount = 0;
+                cumulativeWithPix = true;
                 if (walletToggle) walletToggle.disabled = false;
                 atualizarTotalFooter();
             });

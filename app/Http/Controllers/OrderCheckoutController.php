@@ -275,8 +275,16 @@ class OrderCheckoutController extends Controller
         $totalAfterDiscount = $baseTotal - $discountAmount - $walletAmountUsed;
 
         if ($paymentMethod === 'pix') {
+            $canApplyPixDiscount = true;
+
+            if (isset($referral)) {
+                $canApplyPixDiscount = (bool) Setting::get('referral_cumulative_with_pix', true);
+            } elseif (isset($coupon)) {
+                $canApplyPixDiscount = (bool) $coupon->cumulative_with_pix;
+            }
+
             $pixDiscountPct = (float) Setting::get('pix_discount', 0);
-            if ($pixDiscountPct > 0) {
+            if ($pixDiscountPct > 0 && $canApplyPixDiscount) {
                 $totalAfterDiscount = round($totalAfterDiscount * (1 - $pixDiscountPct / 100), 2);
             }
             $cardData['total_with_interest'] = round($totalAfterDiscount, 2);
@@ -454,6 +462,7 @@ class OrderCheckoutController extends Controller
                 'coupon_code' => $code,
                 'discount_amount' => $preview['discount_amount'],
                 'new_total' => $preview['new_total'],
+                'cumulative_with_pix' => (bool) Setting::get('referral_cumulative_with_pix', true),
                 'message' => 'Desconto de indicação de ' . $preview['affiliate_name'] . ' aplicado!',
             ]);
         }
@@ -480,6 +489,7 @@ class OrderCheckoutController extends Controller
             'coupon_code' => $coupon->code,
             'discount_amount' => round($discount, 2),
             'new_total' => round($baseTotal - $discount, 2),
+            'cumulative_with_pix' => (bool) $coupon->cumulative_with_pix,
             'message' => 'Cupom aplicado!',
         ]);
     }

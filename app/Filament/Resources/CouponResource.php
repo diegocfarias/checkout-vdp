@@ -85,6 +85,11 @@ class CouponResource extends Resource
                     ->label('Ativo')
                     ->default(true),
 
+                Toggle::make('cumulative_with_pix')
+                    ->label('Cumulativo com desconto PIX')
+                    ->helperText('Se desativado, o desconto PIX não será aplicado quando este cupom for usado.')
+                    ->default(true),
+
                 DateTimePicker::make('starts_at')
                     ->label('Válido a partir de')
                     ->displayFormat('d/m/Y H:i'),
@@ -240,6 +245,9 @@ class CouponResource extends Resource
                             ->placeholder('Ilimitado'),
                         Infolists\Components\IconEntry::make('active')
                             ->label('Ativo')
+                            ->boolean(),
+                        Infolists\Components\IconEntry::make('cumulative_with_pix')
+                            ->label('Cumulativo c/ PIX')
                             ->boolean(),
                         Infolists\Components\TextEntry::make('starts_at')
                             ->label('Início')

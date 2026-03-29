@@ -16,6 +16,7 @@ class Coupon extends Model
         'usage_limit',
         'usage_count',
         'active',
+        'cumulative_with_pix',
         'starts_at',
         'expires_at',
     ];
@@ -26,6 +27,7 @@ class Coupon extends Model
         'usage_limit' => 'integer',
         'usage_count' => 'integer',
         'active' => 'boolean',
+        'cumulative_with_pix' => 'boolean',
         'starts_at' => 'datetime',
         'expires_at' => 'datetime',
     ];
