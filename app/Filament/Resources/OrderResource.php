@@ -221,7 +221,7 @@ class OrderResource extends Resource
             ->schema([
                 Section::make('Informações do Pedido')
                     ->icon('heroicon-o-document-text')
-                    ->columns(3)
+                    ->columns(4)
                     ->schema([
                         Infolists\Components\TextEntry::make('tracking_code')
                             ->label('Código de rastreio')
@@ -251,11 +251,29 @@ class OrderResource extends Resource
                             ->getStateUsing(fn (Order $record) => $record->departure_iata && $record->arrival_iata
                                 ? strtoupper($record->departure_iata) . ' → ' . strtoupper($record->arrival_iata)
                                 : '-'),
+                        Infolists\Components\TextEntry::make('outbound_date')
+                            ->label('Data ida')
+                            ->getStateUsing(function (Order $record) {
+                                $record->loadMissing('flightSearch');
+
+                                return $record->flightSearch?->outbound_date?->format('d/m/Y') ?? '-';
+                            }),
+                        Infolists\Components\TextEntry::make('inbound_date')
+                            ->label('Data volta')
+                            ->getStateUsing(function (Order $record) {
+                                $record->loadMissing('flightSearch');
+
+                                return $record->flightSearch?->inbound_date?->format('d/m/Y') ?? '-';
+                            }),
                         Infolists\Components\TextEntry::make('cabin')
                             ->label('Cabine')
-                            ->formatStateUsing(fn (?string $state) => $state ? ucfirst($state) : '-'),
+                            ->formatStateUsing(fn (?string $state) => match ($state) {
+                                'EC' => 'Econômica',
+                                'EX' => 'Executiva',
+                                default => $state ? ucfirst($state) : '-',
+                            }),
                         Infolists\Components\TextEntry::make('passengers_summary')
-                            ->label('Passageiros')
+                            ->label('Qtd. passageiros')
                             ->getStateUsing(function (Order $record) {
                                 $parts = [];
                                 if ($record->total_adults > 0) {
@@ -288,9 +306,10 @@ class OrderResource extends Resource
                                     $miles = $f->price_miles ?? $f->miles_price ?? null;
                                     if ($miles) {
                                         $dir = $f->direction === 'outbound' ? 'Ida' : 'Volta';
-                                        $parts[] = $dir . ': ' . number_format((float) $miles, 0, '', '.') . ' milhas';
+                                        $parts[] = $dir . ': ' . number_format((float) $miles, 0, '', '.') . ' mi';
                                     }
                                 }
+
                                 return count($parts) > 0 ? implode(' | ', $parts) : '-';
                             }),
                         Infolists\Components\TextEntry::make('device_type')
@@ -313,6 +332,33 @@ class OrderResource extends Resource
                         Infolists\Components\TextEntry::make('created_at')
                             ->label('Criado em')
                             ->dateTime('d/m/Y H:i'),
+                    ]),
+
+                Section::make('Cliente / Pagador')
+                    ->icon('heroicon-o-identification')
+                    ->columns(4)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('customer.name')
+                            ->label('Nome')
+                            ->placeholder('Não vinculado'),
+                        Infolists\Components\TextEntry::make('customer.email')
+                            ->label('E-mail')
+                            ->copyable()
+                            ->placeholder('-'),
+                        Infolists\Components\TextEntry::make('customer.document')
+                            ->label('CPF')
+                            ->formatStateUsing(function (?string $state) {
+                                if (! $state || strlen($state) !== 11) {
+                                    return $state ?? '-';
+                                }
+
+                                return substr($state, 0, 3) . '.' . substr($state, 3, 3) . '.' . substr($state, 6, 3) . '-' . substr($state, 9, 2);
+                            })
+                            ->placeholder('-'),
+                        Infolists\Components\TextEntry::make('customer.phone')
+                            ->label('Telefone')
+                            ->copyable()
+                            ->placeholder('-'),
                     ]),
 
                 Section::make('Cupom de Desconto')
@@ -356,13 +402,32 @@ class OrderResource extends Resource
                                     ->color(fn (string $state): string => $state === 'outbound' ? 'info' : 'success'),
                                 Infolists\Components\TextEntry::make('flight_info')
                                     ->label('Voo')
-                                    ->getStateUsing(fn ($record) => trim(($record->cia ?? '') . ' ' . ($record->flight_number ?? '')) ?: '-'),
+                                    ->getStateUsing(fn ($record) => strtoupper(trim(($record->cia ?? '') . ' ' . ($record->flight_number ?? ''))) ?: '-'),
                                 Infolists\Components\TextEntry::make('departure_info')
                                     ->label('Origem')
                                     ->getStateUsing(fn ($record) => ($record->departure_location ?? '-') . ($record->departure_time ? ' · ' . $record->departure_time : '')),
                                 Infolists\Components\TextEntry::make('arrival_info')
                                     ->label('Destino')
                                     ->getStateUsing(fn ($record) => ($record->arrival_location ?? '-') . ($record->arrival_time ? ' · ' . $record->arrival_time : '')),
+                                Infolists\Components\TextEntry::make('flight_date')
+                                    ->label('Data do voo')
+                                    ->getStateUsing(function ($record) {
+                                        $order = $record->order;
+                                        $order->loadMissing('flightSearch');
+                                        $search = $order->flightSearch;
+                                        if (! $search) {
+                                            return '-';
+                                        }
+
+                                        $date = $record->direction === 'outbound'
+                                            ? $search->outbound_date
+                                            : $search->inbound_date;
+
+                                        return $date ? $date->format('d/m/Y') : '-';
+                                    }),
+                                Infolists\Components\TextEntry::make('total_flight_duration')
+                                    ->label('Duração')
+                                    ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('money_price')
                                     ->label('Preço')
                                     ->money('BRL'),
@@ -407,9 +472,9 @@ class OrderResource extends Resource
                                             if ($dur) {
                                                 $html .= " <span style='color:#9ca3af;'>· {$dur}</span>";
                                             }
-                                            $html .= "</div>";
+                                            $html .= '</div>';
                                             if ($i < count($conns) - 1 && $wait) {
-                                                $html .= "<div style='padding:1px 0 1px 12px;color:#d97706;font-size:11px;'>⏳ Espera {$wait} em {$arrIata}</div>";
+                                                $html .= "<div style='padding:1px 0 1px 12px;color:#d97706;font-size:11px;'>Espera {$wait} em {$arrIata}</div>";
                                             }
                                         }
                                         $html .= '</div>';
@@ -417,11 +482,12 @@ class OrderResource extends Resource
                                         return $html;
                                     }),
                             ])
-                            ->columns(4),
+                            ->columns(5),
                     ]),
 
                 Section::make('Passageiros')
                     ->icon('heroicon-o-user-group')
+                    ->description(fn (Order $record) => $record->passengers->isEmpty() ? 'Nenhum passageiro cadastrado neste pedido.' : null)
                     ->schema([
                         Infolists\Components\RepeatableEntry::make('passengers')
                             ->label('')
@@ -429,22 +495,35 @@ class OrderResource extends Resource
                                 Infolists\Components\TextEntry::make('full_name')
                                     ->label('Nome completo'),
                                 Infolists\Components\TextEntry::make('document')
-                                    ->label('CPF'),
+                                    ->label('CPF')
+                                    ->formatStateUsing(function (?string $state) {
+                                        if (! $state || strlen(preg_replace('/\D/', '', $state)) !== 11) {
+                                            return $state ?? '-';
+                                        }
+                                        $d = preg_replace('/\D/', '', $state);
+
+                                        return substr($d, 0, 3) . '.' . substr($d, 3, 3) . '.' . substr($d, 6, 3) . '-' . substr($d, 9, 2);
+                                    })
+                                    ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('birth_date')
                                     ->label('Nascimento')
-                                    ->date('d/m/Y'),
+                                    ->date('d/m/Y')
+                                    ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('email')
                                     ->label('E-mail')
-                                    ->copyable(),
+                                    ->copyable()
+                                    ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('phone')
                                     ->label('Telefone')
-                                    ->copyable(),
+                                    ->copyable()
+                                    ->placeholder('-'),
                             ])
                             ->columns(5),
                     ]),
 
                 Section::make('Pagamentos')
                     ->icon('heroicon-o-credit-card')
+                    ->description(fn (Order $record) => $record->payments->isEmpty() ? 'Nenhum pagamento registrado neste pedido.' : null)
                     ->schema([
                         Infolists\Components\RepeatableEntry::make('payments')
                             ->label('')
@@ -493,8 +572,12 @@ class OrderResource extends Resource
                                     ->label('Pago em')
                                     ->dateTime('d/m/Y H:i')
                                     ->placeholder('-'),
+                                Infolists\Components\TextEntry::make('expires_at')
+                                    ->label('Expira em')
+                                    ->dateTime('d/m/Y H:i')
+                                    ->placeholder('-'),
                             ])
-                            ->columns(3),
+                            ->columns(4),
                     ]),
 
                 Section::make('Histórico de Status')
