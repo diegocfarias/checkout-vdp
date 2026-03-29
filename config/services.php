@@ -78,4 +78,8 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URL', '/auth/google/callback'),
     ],
 
+    'unsplash' => [
+        'access_key' => env('UNSPLASH_ACCESS_KEY'),
+    ],
+
 ];

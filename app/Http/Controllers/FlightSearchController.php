@@ -6,6 +6,7 @@ use App\Http\Requests\FlightSearchRequest;
 use App\Models\FlightSearch;
 use App\Models\Order;
 use App\Models\Setting;
+use App\Models\ShowcaseRoute;
 use App\Services\VdpFlightService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +19,17 @@ class FlightSearchController extends Controller
 
     public function index()
     {
-        return view('search.home');
+        $showcaseRoutes = ShowcaseRoute::where('is_active', true)
+            ->whereNotNull('cached_price')
+            ->orderBy('sort_order')
+            ->limit(9)
+            ->get();
+
+        return view('search.home', [
+            'showcaseRoutes' => $showcaseRoutes,
+            'pixDiscount' => (float) Setting::get('pix_discount', 0),
+            'pixEnabled' => ! empty(Setting::get('gateway_pix')),
+        ]);
     }
 
     public function search(FlightSearchRequest $request)
