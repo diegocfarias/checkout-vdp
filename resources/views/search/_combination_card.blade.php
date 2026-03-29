@@ -321,7 +321,7 @@
                         </div>
                     </div>
 
-                    <p class="text-[11px] text-gray-400 mb-4">Ou parcelado <b class="text-gray-600">sem juros</b> no cartão de crédito</p>
+                    <p class="text-[11px] text-gray-400 mb-4">Ou em até <b class="text-gray-600">{{ \App\Models\Setting::get('max_installments', 12) }}x</b> no cartão de crédito</p>
                 @else
                     <p class="text-2xl font-bold text-gray-900 whitespace-nowrap mb-0.5">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
                     <p class="text-[11px] text-gray-400 mb-3">Por adulto{{ $hasInbound ? ', ida e volta' : '' }}</p>
