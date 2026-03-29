@@ -16,19 +16,20 @@ class EmissionOrderDetail extends Page
 
     public ?int $orderId = null;
 
-    public function mount(Order $order): void
+    public function mount(int|string $order): void
     {
-        $order->loadMissing(['flights', 'flightSearch', 'passengers', 'emission.issuer']);
+        $orderModel = Order::with(['flights', 'flightSearch', 'passengers', 'emission.issuer'])
+            ->findOrFail($order);
 
         $user = auth()->user();
         if (! $user->isAdmin()) {
-            $emission = $order->emission;
+            $emission = $orderModel->emission;
             if (! $emission || $emission->issuer_id !== $user->id) {
                 abort(403);
             }
         }
 
-        $this->orderId = $order->id;
+        $this->orderId = $orderModel->id;
     }
 
     public function getOrder(): Order
