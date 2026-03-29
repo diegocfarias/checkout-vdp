@@ -33,9 +33,19 @@
         ? \Carbon\Carbon::parse($params['inbound_date'])->translatedFormat('D, d/m/Y')
         : '';
 
-    $cabinLabel = ($params['cabin'] ?? 'EC') === 'EX' ? 'Executiva' : 'Econômica';
-    $isExecutive = ($params['cabin'] ?? 'EC') === 'EX';
     $totalPax = ($params['adults'] ?? 1) + ($params['children'] ?? 0);
+
+    $parseTax = function($val) {
+        $val = trim((string)($val ?? '0'));
+        if ($val === '') return 0;
+        if (str_contains($val, ',')) return (float) str_replace(',', '.', str_replace('.', '', $val));
+        if (preg_match('/\.\d{3}$/', $val)) return (float) str_replace('.', '', $val);
+        return (float) $val;
+    };
+    $obTax = $parseTax($obFlights[0]['boarding_tax'] ?? '0');
+    $ibTax = $hasInbound ? $parseTax($ibFlights[0]['boarding_tax'] ?? '0') : 0;
+    $totalTax = round($obTax + $ibTax, 2);
+    $basePrice = round($totalPrice - $totalTax, 2);
 @endphp
 
 <div class="combination-card bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 animate-fadeIn"
@@ -51,8 +61,8 @@
     <div class="flex flex-col lg:flex-row">
         {{-- Coluna esquerda: voos --}}
         <div class="flex-1 min-w-0">
-            {{-- Preço mobile (visível apenas em mobile) --}}
-            <div class="lg:hidden sticky top-14 z-10 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 rounded-t-xl">
+            {{-- Preço mobile --}}
+            <div class="lg:hidden sticky top-[116px] z-[5] flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 rounded-t-xl shadow-sm">
                 <div class="whitespace-nowrap">
                     @if($pixOn)
                         <p class="text-[11px] text-gray-400 line-through">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
@@ -63,7 +73,7 @@
                     @else
                         <p class="text-lg font-bold text-gray-900">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
                     @endif
-                    <p class="text-[11px] text-gray-400">{{ $hasInbound ? 'Por adulto' : 'Por adulto' }}</p>
+                    <p class="text-[11px] text-gray-400">Por adulto{{ $hasInbound ? ', ida e volta' : '' }}</p>
                 </div>
                 <form action="{{ route('search.select') }}" method="POST" class="group-form" data-group="{{ $groupIdx }}">
                     @csrf
@@ -150,23 +160,12 @@
                                                 <p class="text-base sm:text-lg font-bold text-gray-800 leading-tight">{{ $flight['arrival_time'] ?? '' }}</p>
                                                 <p class="text-[11px] font-medium text-gray-500">{{ $flight['arrival_location'] ?? '' }}</p>
                                             </div>
-                                            {{-- Bagagem + Detalhes --}}
-                                            <div class="hidden sm:flex items-center gap-2 ml-3 shrink-0">
-                                                {{-- Bagagem de mão --}}
-                                                <div class="flex flex-col items-center" title="Bagagem de mão incluída">
-                                                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V3a1 1 0 00-1-1h-6a1 1 0 00-1 1v8M5 11h14l1 11H4l1-11z"/></svg>
-                                                </div>
-                                                {{-- Bagagem despachada --}}
-                                                <div class="flex flex-col items-center" title="{{ $isExecutive ? 'Bagagem despachada incluída' : 'Consultar bagagem' }}">
-                                                    <svg class="w-4 h-4 {{ $isExecutive ? 'text-emerald-600' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="6" y="7" width="12" height="13" rx="1" stroke-width="1.5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M6 20v1M18 20v1"/></svg>
-                                                </div>
-                                                @if(!$isDirect)
-                                                    <button type="button" class="conn-toggle-btn text-[11px] text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap"
-                                                            data-target="conn-ob-{{ $groupIdx }}-{{ $fi }}">
-                                                        Detalhes
-                                                    </button>
-                                                @endif
-                                            </div>
+                                            @if(!$isDirect)
+                                                <button type="button" class="conn-toggle-btn hidden sm:inline-flex text-[11px] text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap ml-3 shrink-0"
+                                                        data-target="conn-ob-{{ $groupIdx }}-{{ $fi }}">
+                                                    Detalhes
+                                                </button>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -258,21 +257,12 @@
                                                     <p class="text-base sm:text-lg font-bold text-gray-800 leading-tight">{{ $flight['arrival_time'] ?? '' }}</p>
                                                     <p class="text-[11px] font-medium text-gray-500">{{ $flight['arrival_location'] ?? '' }}</p>
                                                 </div>
-                                                {{-- Bagagem + Detalhes --}}
-                                                <div class="hidden sm:flex items-center gap-2 ml-3 shrink-0">
-                                                    <div class="flex flex-col items-center" title="Bagagem de mão incluída">
-                                                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V3a1 1 0 00-1-1h-6a1 1 0 00-1 1v8M5 11h14l1 11H4l1-11z"/></svg>
-                                                    </div>
-                                                    <div class="flex flex-col items-center" title="{{ $isExecutive ? 'Bagagem despachada incluída' : 'Consultar bagagem' }}">
-                                                        <svg class="w-4 h-4 {{ $isExecutive ? 'text-emerald-600' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="6" y="7" width="12" height="13" rx="1" stroke-width="1.5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M6 20v1M18 20v1"/></svg>
-                                                    </div>
-                                                    @if(!$isDirect)
-                                                        <button type="button" class="conn-toggle-btn text-[11px] text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap"
-                                                                data-target="conn-ib-{{ $groupIdx }}-{{ $fi }}">
-                                                            Detalhes
-                                                        </button>
-                                                    @endif
-                                                </div>
+                                                @if(!$isDirect)
+                                                    <button type="button" class="conn-toggle-btn hidden sm:inline-flex text-[11px] text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap ml-3 shrink-0"
+                                                            data-target="conn-ib-{{ $groupIdx }}-{{ $fi }}">
+                                                        Detalhes
+                                                    </button>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -312,16 +302,20 @@
                     </div>
                     <p class="text-[11px] text-gray-400 mb-3">Por adulto{{ $hasInbound ? ', ida e volta' : '' }}</p>
 
-                    <div class="space-y-1 text-xs text-gray-500 border-t border-gray-100 pt-3 mb-3">
+                    <div class="space-y-1.5 text-xs text-gray-500 border-t border-gray-100 pt-3 mb-3">
                         <div class="flex justify-between">
-                            <span>{{ $totalPax }} {{ $totalPax > 1 ? 'passageiros' : 'passageiro' }}</span>
-                            <span class="text-gray-700 font-medium">R$ {{ number_format($totalPrice, 2, ',', '.') }}</span>
+                            <span>{{ $totalPax }} {{ $totalPax > 1 ? 'adultos' : 'adulto' }}</span>
+                            <span class="text-gray-700 font-medium">R$ {{ number_format($basePrice, 2, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Valor das taxas</span>
+                            <span class="text-gray-700 font-medium">R$ {{ number_format($totalTax, 2, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between text-emerald-600">
                             <span>Desconto no Pix</span>
                             <span class="font-medium">-R$ {{ number_format($pixSavings, 2, ',', '.') }}</span>
                         </div>
-                        <div class="flex justify-between font-bold text-gray-800 pt-1 border-t border-gray-100">
+                        <div class="flex justify-between font-bold text-gray-800 pt-1.5 border-t border-gray-100">
                             <span>Total no Pix</span>
                             <span>R$ {{ number_format($pixPrice, 2, ',', '.') }}</span>
                         </div>
@@ -332,10 +326,14 @@
                     <p class="text-2xl font-bold text-gray-900 whitespace-nowrap mb-0.5">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
                     <p class="text-[11px] text-gray-400 mb-3">Por adulto{{ $hasInbound ? ', ida e volta' : '' }}</p>
 
-                    <div class="space-y-1 text-xs text-gray-500 border-t border-gray-100 pt-3 mb-4">
+                    <div class="space-y-1.5 text-xs text-gray-500 border-t border-gray-100 pt-3 mb-4">
                         <div class="flex justify-between">
-                            <span>{{ $totalPax }} {{ $totalPax > 1 ? 'passageiros' : 'passageiro' }}</span>
-                            <span class="text-gray-700 font-medium">R$ {{ number_format($totalPrice, 2, ',', '.') }}</span>
+                            <span>{{ $totalPax }} {{ $totalPax > 1 ? 'adultos' : 'adulto' }}</span>
+                            <span class="text-gray-700 font-medium">R$ {{ number_format($basePrice, 2, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Valor das taxas</span>
+                            <span class="text-gray-700 font-medium">R$ {{ number_format($totalTax, 2, ',', '.') }}</span>
                         </div>
                     </div>
                 @endif

@@ -139,7 +139,7 @@
 
             {{-- Conteudo principal --}}
             <div class="flex-1 min-w-0">
-                <div class="flex flex-wrap items-center gap-3 mb-5 sticky top-[72px] lg:static bg-gray-50 lg:bg-transparent -mx-4 px-4 py-3 lg:py-0 lg:mx-0 lg:px-0 z-10 border-b lg:border-0 border-gray-200">
+                <div class="flex flex-wrap items-center gap-3 mb-5 sticky top-[72px] lg:static bg-gray-50 lg:bg-transparent -mx-4 px-4 py-3 lg:py-0 lg:mx-0 lg:px-0 z-[15] border-b lg:border-0 border-gray-200">
                     <div class="flex bg-white rounded-lg border border-gray-200 overflow-hidden text-sm shadow-sm">
                         <button type="button" data-sort="price" class="sort-tab sort-tab-active px-5 py-2.5 font-medium text-white bg-blue-600">Menor preço</button>
                         @if($mixEnabled)
