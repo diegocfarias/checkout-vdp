@@ -150,6 +150,11 @@ class EmissionDashboard extends Page implements HasTable
                         ? $this->formatDuration($record->duration_seconds)
                         : '—'),
 
+                Tables\Columns\TextColumn::make('miles_cost_per_thousand')
+                    ->label('Custo/milheiro')
+                    ->prefix('R$ ')
+                    ->placeholder('—'),
+
                 Tables\Columns\TextColumn::make('emission_value')
                     ->label('Valor')
                     ->money('BRL'),

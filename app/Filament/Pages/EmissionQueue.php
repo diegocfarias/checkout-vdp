@@ -181,9 +181,18 @@ class EmissionQueue extends Page implements HasTable
                             ->required()
                             ->maxLength(20)
                             ->placeholder('Ex: ABC123'),
+
+                        TextInput::make('miles_cost_per_thousand')
+                            ->label('Valor do milheiro (R$)')
+                            ->numeric()
+                            ->minValue(0.01)
+                            ->step(0.01)
+                            ->required()
+                            ->prefix('R$')
+                            ->placeholder('Ex: 25.00'),
                     ])
                     ->action(function (OrderEmission $record, array $data): void {
-                        $this->completeEmission($record, $data['loc']);
+                        $this->completeEmission($record, $data['loc'], (float) $data['miles_cost_per_thousand']);
                     }),
 
                 Actions\Action::make('view_order')
@@ -288,7 +297,7 @@ class EmissionQueue extends Page implements HasTable
             ->send();
     }
 
-    private function completeEmission(OrderEmission $emission, string $loc): void
+    private function completeEmission(OrderEmission $emission, string $loc, float $milesCost): void
     {
         $now = now();
         $duration = $emission->calculateDuration();
@@ -299,6 +308,7 @@ class EmissionQueue extends Page implements HasTable
             'completed_at' => $now,
             'duration_seconds' => $duration ?? $emission->assigned_at?->diffInSeconds($now),
             'emission_value' => $emissionValue,
+            'miles_cost_per_thousand' => $milesCost,
         ]);
 
         $emission->order->update([

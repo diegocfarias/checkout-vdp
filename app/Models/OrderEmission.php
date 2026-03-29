@@ -15,6 +15,7 @@ class OrderEmission extends Model
         'completed_at',
         'duration_seconds',
         'emission_value',
+        'miles_cost_per_thousand',
         'status',
     ];
 
@@ -22,6 +23,7 @@ class OrderEmission extends Model
         'assigned_at' => 'datetime',
         'completed_at' => 'datetime',
         'emission_value' => 'decimal:2',
+        'miles_cost_per_thousand' => 'decimal:2',
         'duration_seconds' => 'integer',
     ];
 
