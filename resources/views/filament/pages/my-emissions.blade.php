@@ -1,28 +1,29 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
+    <div style="display:flex; flex-direction:column; gap:24px;">
+
         {{-- Filtro de período --}}
-        <div class="flex flex-wrap items-end gap-4 p-4 bg-white rounded-xl shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+        <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px; padding:16px 20px; background:var(--fi-body-bg, #fff); border:1px solid rgba(128,128,128,0.2); border-radius:12px;">
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">De</label>
+                <label style="display:block; font-size:13px; font-weight:500; margin-bottom:4px; color:var(--fi-fo-field-label-color, #6b7280);">De</label>
                 <input type="date" wire:model.live="dateFrom"
-                    class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm">
+                    style="padding:8px 12px; border:1px solid rgba(128,128,128,0.3); border-radius:8px; font-size:14px; background:transparent; color:inherit;">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Até</label>
+                <label style="display:block; font-size:13px; font-weight:500; margin-bottom:4px; color:var(--fi-fo-field-label-color, #6b7280);">Até</label>
                 <input type="date" wire:model.live="dateTo"
-                    class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-sm">
+                    style="padding:8px 12px; border:1px solid rgba(128,128,128,0.3); border-radius:8px; font-size:14px; background:transparent; color:inherit;">
             </div>
         </div>
 
         {{-- Stats --}}
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
             @foreach($this->getStats() as $stat)
-                <div class="p-4 bg-white rounded-xl shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                    <div class="flex items-center gap-2 mb-2">
-                        <x-filament::icon :icon="$stat['icon']" class="w-5 h-5 text-gray-400" />
-                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ $stat['label'] }}</span>
+                <div style="padding:16px 20px; background:var(--fi-body-bg, #fff); border:1px solid rgba(128,128,128,0.2); border-radius:12px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <x-filament::icon :icon="$stat['icon']" style="width:20px; height:20px; color:var(--fi-fo-field-label-color, #9ca3af);" />
+                        <span style="font-size:12px; font-weight:500; color:var(--fi-fo-field-label-color, #6b7280);">{{ $stat['label'] }}</span>
                     </div>
-                    <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stat['value'] }}</div>
+                    <div style="font-size:24px; font-weight:700; color:inherit;">{{ $stat['value'] }}</div>
                 </div>
             @endforeach
         </div>
