@@ -310,9 +310,17 @@ class EmissionQueue extends Page implements HasTable
             'miles_cost_per_thousand' => $milesCost,
         ]);
 
-        $emission->order->update([
+        $order = $emission->order;
+        $order->loadMissing('flights');
+
+        $locUpper = strtoupper(trim($loc));
+        foreach ($order->flights as $flight) {
+            $flight->update(['loc' => $locUpper]);
+        }
+
+        $order->update([
             'status' => 'completed',
-            'loc' => $loc,
+            'loc' => $locUpper,
         ]);
 
         OrderEmissionLog::create([
