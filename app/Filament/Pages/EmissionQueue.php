@@ -29,7 +29,7 @@ class EmissionQueue extends Page implements HasTable
 
     protected static ?string $title = 'Fila de Emissões';
 
-    protected static ?string $navigationGroup = 'Operacional';
+    protected static string|\UnitEnum|null $navigationGroup = 'Operacional';
 
     protected static ?int $navigationSort = 1;
 

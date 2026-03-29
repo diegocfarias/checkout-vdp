@@ -20,7 +20,7 @@ class MyEmissions extends Page implements HasTable
 
     protected static ?string $title = 'Minhas Emissões';
 
-    protected static ?string $navigationGroup = 'Operacional';
+    protected static string|\UnitEnum|null $navigationGroup = 'Operacional';
 
     protected static ?int $navigationSort = 2;
 

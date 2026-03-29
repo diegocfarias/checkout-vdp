@@ -26,7 +26,7 @@ class IssuerResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Emissores';
 
-    protected static ?string $navigationGroup = 'Gestão';
+    protected static string|\UnitEnum|null $navigationGroup = 'Gestão';
 
     protected static ?int $navigationSort = 10;
 
