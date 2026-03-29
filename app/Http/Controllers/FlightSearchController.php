@@ -58,7 +58,7 @@ class FlightSearchController extends Controller
         $dateFrom = \Carbon\Carbon::parse($request->input('date_from'));
         $dateTo = \Carbon\Carbon::parse($request->input('date_to'));
 
-        $maxDays = 45;
+        $maxDays = 335;
         if ($dateFrom->diffInDays($dateTo) > $maxDays) {
             $dateTo = $dateFrom->copy()->addDays($maxDays);
         }
