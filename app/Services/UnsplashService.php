@@ -19,7 +19,7 @@ class UnsplashService
             $response = Http::acceptJson()
                 ->timeout(10)
                 ->get('https://api.unsplash.com/search/photos', [
-                    'query' => $city . ' city landscape',
+                    'query' => $city . ' tourism landmark sightseeing',
                     'orientation' => 'landscape',
                     'per_page' => 1,
                     'client_id' => $accessKey,
