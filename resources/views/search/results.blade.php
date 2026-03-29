@@ -139,7 +139,7 @@
 
             {{-- Conteudo principal --}}
             <div class="flex-1 min-w-0">
-                <div class="flex flex-wrap items-center gap-3 mb-5 sticky top-[72px] lg:static bg-gray-50 lg:bg-transparent -mx-4 px-4 py-3 lg:py-0 lg:mx-0 lg:px-0 z-[15] border-b lg:border-0 border-gray-200">
+                <div class="flex items-center gap-3 mb-5">
                     <div class="flex bg-white rounded-lg border border-gray-200 overflow-hidden text-sm shadow-sm">
                         <button type="button" data-sort="price" class="sort-tab sort-tab-active px-5 py-2.5 font-medium text-white bg-blue-600">Menor preço</button>
                         @if($mixEnabled)
@@ -147,12 +147,6 @@
                         @endif
                     </div>
                     <span class="text-sm text-gray-500 ml-auto font-medium" id="results-count">{{ count($groups) }} resultado{{ count($groups) !== 1 ? 's' : '' }}</span>
-
-                    <button type="button" onclick="toggleMobileFilters()" class="lg:hidden flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 shadow-sm transition-colors relative">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
-                        Filtros
-                        <span id="mobile-btn-filter-count" class="hidden absolute -top-1.5 -right-1.5 text-xs font-bold text-white bg-blue-500 rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
-                    </button>
                 </div>
 
                 <div class="space-y-5" id="combinations-list">
@@ -173,6 +167,12 @@
                 </div>
             </div>
         </div>
+
+        {{-- FAB filtros mobile --}}
+        <button type="button" onclick="toggleMobileFilters()" class="lg:hidden fixed bottom-6 right-6 z-30 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all active:scale-95" aria-label="Filtros">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            <span id="mobile-btn-filter-count" class="hidden absolute -top-1 -right-1 text-[10px] font-bold text-white bg-red-500 rounded-full w-5 h-5 flex items-center justify-center leading-none">0</span>
+        </button>
 
         {{-- Modal filtros mobile --}}
         <div id="mobile-filters" class="fixed inset-0 z-50 hidden">

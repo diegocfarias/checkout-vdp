@@ -62,7 +62,7 @@
         {{-- Coluna esquerda: voos --}}
         <div class="flex-1 min-w-0">
             {{-- Preço mobile --}}
-            <div class="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 rounded-t-xl">
+            <div class="lg:hidden sticky top-14 z-10 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 rounded-t-xl shadow-sm">
                 <div class="whitespace-nowrap">
                     @if($pixOn)
                         <p class="text-[11px] text-gray-400 line-through">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
