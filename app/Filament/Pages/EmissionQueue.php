@@ -195,12 +195,11 @@ class EmissionQueue extends Page implements HasTable
                         $this->completeEmission($record, $data['loc'], (float) $data['miles_cost_per_thousand']);
                     }),
 
-                Actions\Action::make('view_order')
-                    ->label('Ver pedido')
+                Actions\Action::make('view_detail')
+                    ->label('Ver detalhes')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
-                    ->visible(fn () => auth()->user()->isAdmin())
-                    ->url(fn (OrderEmission $record) => route('filament.admin.resources.orders.view', $record->order_id)),
+                    ->url(fn (OrderEmission $record) => route('filament.admin.pages.emission-order', ['order' => $record->order_id])),
             ])
             ->poll('15s')
             ->emptyStateHeading('Nenhuma emissão na fila')
