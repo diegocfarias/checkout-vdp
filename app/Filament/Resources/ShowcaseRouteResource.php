@@ -95,22 +95,43 @@ class ShowcaseRouteResource extends Resource
                     ->helperText('Início do período de busca.')
                     ->minDate(now()->toDateString())
                     ->required()
+                    ->live()
                     ->displayFormat('d/m/Y'),
 
                 DatePicker::make('search_date_to')
                     ->label('Data final')
-                    ->helperText('Fim do período de busca.')
+                    ->helperText(function (Get $get) {
+                        $from = $get('search_date_from');
+                        $to = $get('search_date_to');
+                        if ($from && $to) {
+                            $days = \Carbon\Carbon::parse($from)->diffInDays(\Carbon\Carbon::parse($to));
+
+                            return "Período total: {$days} dias.";
+                        }
+
+                        return 'Fim do período de busca.';
+                    })
                     ->minDate(now()->toDateString())
                     ->afterOrEqual('search_date_from')
                     ->required()
+                    ->live()
                     ->displayFormat('d/m/Y'),
 
                 TextInput::make('sample_dates_count')
                     ->label('Quantos dias pesquisar')
-                    ->helperText('Quantas datas diferentes amostrar dentro do período.')
+                    ->helperText(function (Get $get) {
+                        $from = $get('search_date_from');
+                        $to = $get('search_date_to');
+                        if ($from && $to) {
+                            $days = \Carbon\Carbon::parse($from)->diffInDays(\Carbon\Carbon::parse($to));
+
+                            return "De {$days} dias disponíveis no período, quantas datas amostrar.";
+                        }
+
+                        return 'Quantas datas diferentes amostrar dentro do período.';
+                    })
                     ->numeric()
-                    ->minValue(2)
-                    ->maxValue(15)
+                    ->minValue(1)
                     ->default(8)
                     ->required(),
 
