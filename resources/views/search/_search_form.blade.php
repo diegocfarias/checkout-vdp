@@ -1,6 +1,7 @@
 @php
     $prefill = $prefill ?? null;
     $compact = $compact ?? false;
+    $calendarPricesEnabled = \App\Models\Setting::get('calendar_prices_enabled', true);
     if ($prefill && isset($prefill['trip_type'])) {
         $tripType = $prefill['trip_type'];
     } elseif ($prefill && !empty($prefill['inbound_date'])) {
@@ -21,6 +22,9 @@
     margin-top: 1px;
     padding: 1px 3px;
     border-radius: 3px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .cal-price-green { color: #059669; background-color: #ecfdf5; }
 .cal-price-yellow { color: #d97706; background-color: #fffbeb; }
@@ -472,9 +476,11 @@
     var maxDate = new Date(today.getFullYear(), today.getMonth() + 11, today.getDate());
     maxDate.setHours(0,0,0,0);
 
+    var calendarPricesFeatureEnabled = @json((bool) $calendarPricesEnabled);
     var calendarPrices = {};
     var calendarPriceThresholds = { p33: null, p66: null };
-    var calendarPricesFetching = false;
+    var calPriceFetchId = 0;
+    var calPriceDirection = 'outbound';
 
     function computePriceThresholds() {
         var vals = [];
@@ -503,10 +509,20 @@
         return Math.round(price).toString();
     }
 
+    function getCurrentPriceDirection() {
+        if (dpOutbound && !dpInbound && isRoundtrip()) return 'inbound';
+        return 'outbound';
+    }
+
     function fetchCalendarPrices(monthFrom, yearFrom, monthTo, yearTo) {
+        if (!calendarPricesFeatureEnabled) return;
         var dep = document.getElementById('departure-iata').value;
         var arr = document.getElementById('arrival-iata').value;
         if (!dep || !arr) return;
+
+        var direction = getCurrentPriceDirection();
+        var fetchDep = direction === 'inbound' ? arr : dep;
+        var fetchArr = direction === 'inbound' ? dep : arr;
 
         var dateFrom = yearFrom + '-' + String(monthFrom + 1).padStart(2, '0') + '-01';
         var lastDay = new Date(yearTo, monthTo + 1, 0).getDate();
@@ -516,29 +532,26 @@
         var adults = parseInt(document.getElementById('input-adults').value) || 1;
         var children = parseInt(document.getElementById('input-children').value) || 0;
         var infants = parseInt(document.getElementById('input-infants').value) || 0;
-        var tripType = document.getElementById('input-trip-type').value || 'roundtrip';
 
-        var inboundOffset = 0;
-        if (tripType === 'roundtrip' && dpOutbound && dpInbound) {
-            inboundOffset = Math.round((dpInbound - dpOutbound) / 86400000);
-        }
-
-        var qs = 'departure=' + encodeURIComponent(dep)
-            + '&arrival=' + encodeURIComponent(arr)
+        var qs = 'departure=' + encodeURIComponent(fetchDep)
+            + '&arrival=' + encodeURIComponent(fetchArr)
             + '&cabin=' + encodeURIComponent(cabin)
             + '&adults=' + adults
             + '&children=' + children
             + '&infants=' + infants
             + '&date_from=' + dateFrom
             + '&date_to=' + dateTo
-            + '&trip_type=' + tripType
-            + '&inbound_offset=' + inboundOffset;
+            + '&trip_type=oneway'
+            + '&inbound_offset=0';
 
-        calendarPricesFetching = true;
+        calPriceFetchId++;
+        var myFetchId = calPriceFetchId;
+        calPriceDirection = direction;
+
         fetch('/api/date-prices?' + qs)
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                calendarPricesFetching = false;
+                if (myFetchId !== calPriceFetchId) return;
                 if (data.prices) {
                     Object.keys(data.prices).forEach(function(k) {
                         if (data.prices[k] != null) calendarPrices[k] = data.prices[k];
@@ -547,7 +560,14 @@
                     updateCalendarPriceCells();
                 }
             })
-            .catch(function() { calendarPricesFetching = false; });
+            .catch(function() {});
+    }
+
+    function clearCalendarPrices() {
+        calendarPrices = {};
+        calendarPriceThresholds = { p33: null, p66: null };
+        calPriceFetchId++;
+        updateCalendarPriceCells();
     }
 
     function updateCalendarPriceCells() {
@@ -586,10 +606,10 @@
         }
 
         if (isStart) {
-            outer += (dpInbound || (dpHover && isRoundtrip())) ? 'bg-blue-50 rounded-l-full' : '';
+            outer += (dpInbound || (dpHover && isRoundtrip())) ? 'bg-blue-50 rounded-l-xl' : '';
             inner += 'bg-blue-600 text-white rounded-full shadow-sm';
         } else if (isEnd) {
-            outer += 'bg-blue-50 rounded-r-full';
+            outer += 'bg-blue-50 rounded-r-xl';
             inner += 'bg-blue-600 text-white rounded-full shadow-sm';
         } else if (inRange) {
             outer += 'bg-blue-50';
@@ -798,14 +818,19 @@
     }
 
     function dpSelectDate(date) {
-        if (!dpOutbound || (dpOutbound && dpInbound) || !isRoundtrip()) {
+        var wasSelectingOutbound = !dpOutbound || (dpOutbound && dpInbound) || !isRoundtrip();
+        var switchedToInbound = false;
+
+        if (wasSelectingOutbound) {
             dpOutbound = date;
             dpInbound = null;
             dpHover = null;
+            if (isRoundtrip()) switchedToInbound = true;
         } else {
             if (date < dpOutbound) {
                 dpOutbound = date;
                 dpInbound = null;
+                switchedToInbound = true;
             } else if (sameDay(date, dpOutbound)) {
                 return;
             } else {
@@ -817,6 +842,11 @@
         document.getElementById('inbound-date').value = dpInbound ? dateKey(dpInbound) : '';
         dpUpdateLabel();
         dpUpdateAllCells();
+
+        if (switchedToInbound) {
+            clearCalendarPrices();
+            dpFetchVisiblePrices();
+        }
 
         if (!isMobile()) {
             if (!isRoundtrip() && dpOutbound) {
@@ -948,7 +978,9 @@
         document.getElementById('outbound-date').value = '';
         document.getElementById('inbound-date').value = '';
         dpUpdateLabel();
+        clearCalendarPrices();
         dpRenderDesktop();
+        dpFetchVisiblePrices();
     });
     document.getElementById('dp-confirm').addEventListener('click', function(e) {
         e.stopPropagation();
@@ -961,7 +993,9 @@
         document.getElementById('outbound-date').value = '';
         document.getElementById('inbound-date').value = '';
         dpUpdateLabel();
+        clearCalendarPrices();
         dpRenderMobile();
+        dpFetchVisiblePrices();
     });
     document.getElementById('dp-mobile-confirm').addEventListener('click', function() { dpToggle(false); });
 

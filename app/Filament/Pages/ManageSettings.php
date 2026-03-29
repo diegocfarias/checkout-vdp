@@ -70,6 +70,7 @@ class ManageSettings extends Page
             'showcase_wait_seconds' => Setting::get('showcase_wait_seconds', 10),
             'showcase_max_cards' => Setting::get('showcase_max_cards', 9),
             'showcase_sort_mode' => Setting::get('showcase_sort_mode', 'manual'),
+            'calendar_prices_enabled' => Setting::get('calendar_prices_enabled', true),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -381,6 +382,11 @@ class ManageSettings extends Page
                             ])
                             ->helperText('Manual: respeita a ordem de exibição configurada em cada rota. Automática: exibe os destinos mais baratos primeiro.')
                             ->required(),
+
+                        Toggle::make('calendar_prices_enabled')
+                            ->label('Preços no calendário')
+                            ->helperText('Exibe preços nas datas do calendário de busca (ida e volta), com código de cores.')
+                            ->default(true),
                     ]),
 
                 Section::make('Emissão')
@@ -479,6 +485,7 @@ class ManageSettings extends Page
         Setting::set('showcase_wait_seconds', (int) ($data['showcase_wait_seconds'] ?? 10), 'integer');
         Setting::set('showcase_max_cards', (int) ($data['showcase_max_cards'] ?? 9), 'integer');
         Setting::set('showcase_sort_mode', $data['showcase_sort_mode'] ?? 'manual', 'string');
+        Setting::set('calendar_prices_enabled', (bool) ($data['calendar_prices_enabled'] ?? true), 'boolean');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {
