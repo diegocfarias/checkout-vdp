@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [FlightSearchController::class, 'index'])->name('search.home');
 
 Route::get('/api/showcase/{showcaseRoute}/price', [FlightSearchController::class, 'showcasePrice'])->name('showcase.price');
+Route::get('/api/date-prices', [FlightSearchController::class, 'datePrices'])->name('api.date-prices');
 Route::post('/api/airports', AirportController::class)
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 

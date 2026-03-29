@@ -108,6 +108,55 @@ class VdpFlightService
     }
 
     /**
+     * Retorna o menor preço total (ida + volta se roundtrip) a partir do cache.
+     * Não faz chamada à API — apenas lê o cache existente.
+     */
+    public function getMinPriceFromCache(array $params): ?float
+    {
+        $pricingVersion = Setting::get('pricing_version', '0');
+        $cacheKey = 'vdp_search:' . $pricingVersion . ':' . md5(json_encode($params));
+
+        $results = Cache::get($cacheKey);
+        if (! $results) {
+            return null;
+        }
+
+        $outbound = $results['outbound'] ?? [];
+        $inbound = $results['inbound'] ?? [];
+
+        if (empty($outbound)) {
+            return null;
+        }
+
+        $minOb = null;
+        foreach ($outbound as $ob) {
+            $price = $this->calculateFlightPrice($ob);
+            if ($minOb === null || $price < $minOb) {
+                $minOb = $price;
+            }
+        }
+
+        if ($minOb === null) {
+            return null;
+        }
+
+        if (! empty($params['inbound_date']) && ! empty($inbound)) {
+            $minIb = null;
+            foreach ($inbound as $ib) {
+                $price = $this->calculateFlightPrice($ib);
+                if ($minIb === null || $price < $minIb) {
+                    $minIb = $price;
+                }
+            }
+            if ($minIb !== null) {
+                return round($minOb + $minIb, 2);
+            }
+        }
+
+        return round($minOb, 2);
+    }
+
+    /**
      * Busca voos direto na API (sem cache) para revalidação de preço.
      */
     public function searchFlightsFresh(array $params): array

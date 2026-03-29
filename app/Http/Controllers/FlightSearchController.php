@@ -40,6 +40,65 @@ class FlightSearchController extends Controller
         ]);
     }
 
+    public function datePrices(Request $request)
+    {
+        $request->validate([
+            'departure' => 'required|string|size:3',
+            'arrival' => 'required|string|size:3',
+            'cabin' => 'required|string',
+            'adults' => 'required|integer|min:1',
+            'children' => 'required|integer|min:0',
+            'infants' => 'required|integer|min:0',
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+            'trip_type' => 'required|in:oneway,roundtrip',
+            'inbound_offset' => 'nullable|integer|min:0',
+        ]);
+
+        $dateFrom = \Carbon\Carbon::parse($request->input('date_from'));
+        $dateTo = \Carbon\Carbon::parse($request->input('date_to'));
+
+        $maxDays = 45;
+        if ($dateFrom->diffInDays($dateTo) > $maxDays) {
+            $dateTo = $dateFrom->copy()->addDays($maxDays);
+        }
+
+        $departure = strtoupper($request->input('departure'));
+        $arrival = strtoupper($request->input('arrival'));
+        $cabin = $request->input('cabin');
+        $adults = (int) $request->input('adults');
+        $children = (int) $request->input('children');
+        $infants = (int) $request->input('infants');
+        $tripType = $request->input('trip_type');
+        $inboundOffset = (int) $request->input('inbound_offset', 0);
+
+        $prices = [];
+        $current = $dateFrom->copy();
+
+        while ($current->lte($dateTo)) {
+            $dateStr = $current->format('Y-m-d');
+
+            $params = [
+                'cia' => 'all',
+                'departure' => $departure,
+                'arrival' => $arrival,
+                'outbound_date' => $dateStr,
+                'inbound_date' => ($tripType === 'roundtrip' && $inboundOffset > 0)
+                    ? $current->copy()->addDays($inboundOffset)->format('Y-m-d')
+                    : null,
+                'adults' => $adults,
+                'children' => $children,
+                'infants' => $infants,
+                'cabin' => $cabin,
+            ];
+
+            $prices[$dateStr] = $this->vdpService->getMinPriceFromCache($params);
+            $current->addDay();
+        }
+
+        return response()->json(['prices' => $prices]);
+    }
+
     public function showcasePrice(ShowcaseRoute $showcaseRoute)
     {
         $pixDiscount = (float) Setting::get('pix_discount', 0);

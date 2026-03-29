@@ -12,6 +12,20 @@
     }
 @endphp
 
+<style>
+.cal-price-tag {
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    margin-top: 1px;
+    padding: 1px 3px;
+    border-radius: 3px;
+}
+.cal-price-green { color: #059669; background-color: #ecfdf5; }
+.cal-price-yellow { color: #d97706; background-color: #fffbeb; }
+.cal-price-red { color: #ef4444; background-color: #fef2f2; }
+</style>
 <form action="{{ route('search.results') }}" method="GET" id="search-form" class="{{ $compact ? 'w-full' : 'max-w-5xl mx-auto' }}">
     <div class="{{ $compact ? 'bg-white rounded-xl border border-gray-200 p-4 sm:p-5' : 'bg-white rounded-2xl shadow-2xl p-5 sm:p-7' }}">
 
@@ -458,6 +472,105 @@
     var maxDate = new Date(today.getFullYear(), today.getMonth() + 11, today.getDate());
     maxDate.setHours(0,0,0,0);
 
+    var calendarPrices = {};
+    var calendarPriceThresholds = { p33: null, p66: null };
+    var calendarPricesFetching = false;
+
+    function computePriceThresholds() {
+        var vals = [];
+        Object.keys(calendarPrices).forEach(function(k) {
+            if (calendarPrices[k] != null) vals.push(calendarPrices[k]);
+        });
+        vals.sort(function(a, b) { return a - b; });
+        if (vals.length > 2) {
+            calendarPriceThresholds.p33 = vals[Math.floor(vals.length * 0.33)];
+            calendarPriceThresholds.p66 = vals[Math.floor(vals.length * 0.66)];
+        } else {
+            calendarPriceThresholds.p33 = null;
+            calendarPriceThresholds.p66 = null;
+        }
+    }
+
+    function getPriceColorClass(price) {
+        if (price == null || calendarPriceThresholds.p33 == null) return '';
+        if (price <= calendarPriceThresholds.p33) return 'cal-price-green';
+        if (price > calendarPriceThresholds.p66) return 'cal-price-red';
+        return 'cal-price-yellow';
+    }
+
+    function formatCalPrice(price) {
+        if (price >= 1000) return (price / 1000).toFixed(1).replace('.', ',') + 'k';
+        return Math.round(price).toString();
+    }
+
+    function fetchCalendarPrices(monthFrom, yearFrom, monthTo, yearTo) {
+        var dep = document.getElementById('departure-iata').value;
+        var arr = document.getElementById('arrival-iata').value;
+        if (!dep || !arr) return;
+
+        var dateFrom = yearFrom + '-' + String(monthFrom + 1).padStart(2, '0') + '-01';
+        var lastDay = new Date(yearTo, monthTo + 1, 0).getDate();
+        var dateTo = yearTo + '-' + String(monthTo + 1).padStart(2, '0') + '-' + String(lastDay).padStart(2, '0');
+
+        var cabin = document.getElementById('input-cabin').value || 'EC';
+        var adults = parseInt(document.getElementById('input-adults').value) || 1;
+        var children = parseInt(document.getElementById('input-children').value) || 0;
+        var infants = parseInt(document.getElementById('input-infants').value) || 0;
+        var tripType = document.getElementById('input-trip-type').value || 'roundtrip';
+
+        var inboundOffset = 0;
+        if (tripType === 'roundtrip' && dpOutbound && dpInbound) {
+            inboundOffset = Math.round((dpInbound - dpOutbound) / 86400000);
+        }
+
+        var qs = 'departure=' + encodeURIComponent(dep)
+            + '&arrival=' + encodeURIComponent(arr)
+            + '&cabin=' + encodeURIComponent(cabin)
+            + '&adults=' + adults
+            + '&children=' + children
+            + '&infants=' + infants
+            + '&date_from=' + dateFrom
+            + '&date_to=' + dateTo
+            + '&trip_type=' + tripType
+            + '&inbound_offset=' + inboundOffset;
+
+        calendarPricesFetching = true;
+        fetch('/api/date-prices?' + qs)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                calendarPricesFetching = false;
+                if (data.prices) {
+                    Object.keys(data.prices).forEach(function(k) {
+                        if (data.prices[k] != null) calendarPrices[k] = data.prices[k];
+                    });
+                    computePriceThresholds();
+                    updateCalendarPriceCells();
+                }
+            })
+            .catch(function() { calendarPricesFetching = false; });
+    }
+
+    function updateCalendarPriceCells() {
+        var containers = ['dp-calendars', 'dp-mobile-months'];
+        containers.forEach(function(cid) {
+            var cells = document.querySelectorAll('#' + cid + ' [data-date]');
+            for (var i = 0; i < cells.length; i++) {
+                var wrapper = cells[i];
+                var dk = wrapper.getAttribute('data-date');
+                var existing = wrapper.querySelector('.cal-price-tag');
+                if (existing) existing.remove();
+
+                var price = calendarPrices[dk];
+                if (price != null) {
+                    var tag = document.createElement('span');
+                    tag.className = 'cal-price-tag ' + getPriceColorClass(price);
+                    tag.textContent = 'R$' + formatCalPrice(price);
+                    wrapper.appendChild(tag);
+                }
+            }
+        });
+    }
+
     function buildCellClasses(date) {
         var isPast = date < today || date > maxDate;
         var isToday = sameDay(date, today);
@@ -465,8 +578,8 @@
         var isEnd = sameDay(date, dpInbound);
         var inRange = isInRange(date);
 
-        var outer = 'flex items-center justify-center relative ';
-        var inner = 'w-10 h-10 flex items-center justify-center text-sm font-medium transition-all duration-150 ';
+        var outer = 'flex flex-col items-center justify-start relative pt-1 min-h-[3.5rem] ';
+        var inner = 'w-9 h-9 flex items-center justify-center text-sm font-medium transition-all duration-150 ';
 
         if (isPast) {
             return { outer: outer, inner: inner + 'text-gray-300 cursor-not-allowed rounded-full' };
@@ -515,7 +628,7 @@
 
         for (var blank = 0; blank < startDay; blank++) {
             var empty = document.createElement('div');
-            empty.className = 'h-11';
+            empty.className = 'h-14';
             grid.appendChild(empty);
         }
 
@@ -558,6 +671,16 @@
                 })(date);
             }
             cellWrapper.appendChild(cell);
+
+            var dk = dateKey(date);
+            var cachedPrice = calendarPrices[dk];
+            if (cachedPrice != null && !(date < today || date > maxDate)) {
+                var priceTag = document.createElement('span');
+                priceTag.className = 'cal-price-tag ' + getPriceColorClass(cachedPrice);
+                priceTag.textContent = 'R$' + formatCalPrice(cachedPrice);
+                cellWrapper.appendChild(priceTag);
+            }
+
             grid.appendChild(cellWrapper);
         }
         wrap.appendChild(grid);
@@ -586,6 +709,17 @@
                     labelTag.className = 'absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase whitespace-nowrap ' + (isStart ? 'text-blue-600' : 'text-blue-600');
                     labelTag.textContent = isStart ? 'IDA' : 'VOLTA';
                     wrapper.insertBefore(labelTag, wrapper.firstChild);
+                }
+
+                var oldPriceTag = wrapper.querySelector('.cal-price-tag');
+                if (oldPriceTag) oldPriceTag.remove();
+                var price = calendarPrices[dk];
+                var isPast = dt < today || dt > maxDate;
+                if (price != null && !isPast) {
+                    var priceTag = document.createElement('span');
+                    priceTag.className = 'cal-price-tag ' + getPriceColorClass(price);
+                    priceTag.textContent = 'R$' + formatCalPrice(price);
+                    wrapper.appendChild(priceTag);
                 }
             }
         });
@@ -741,6 +875,23 @@
         }
     }
 
+    function dpFetchVisiblePrices() {
+        if (isMobile()) {
+            var startM = today.getMonth();
+            var startY = today.getFullYear();
+            var endIdx = MOBILE_MONTHS_COUNT - 1;
+            var endM = (startM + endIdx) % 12;
+            var endY = startY + Math.floor((startM + endIdx) / 12);
+            fetchCalendarPrices(startM, startY, endM, endY);
+        } else {
+            var m1 = dpViewMonth % 12;
+            var y1 = dpViewYear + Math.floor(dpViewMonth / 12);
+            var m2 = (dpViewMonth + 1) % 12;
+            var y2 = dpViewYear + Math.floor((dpViewMonth + 1) / 12);
+            fetchCalendarPrices(m1, y1, m2, y2);
+        }
+    }
+
     function dpToggle(force) {
         dpOpen = force !== undefined ? force : !dpOpen;
         if (isMobile()) {
@@ -749,13 +900,17 @@
             if (dpOpen) {
                 document.body.classList.add('overflow-hidden');
                 dpRenderMobile();
+                dpFetchVisiblePrices();
             } else {
                 document.body.classList.remove('overflow-hidden');
             }
         } else {
             var dd = document.getElementById('datepicker-dropdown');
             dd.classList.toggle('hidden', !dpOpen);
-            if (dpOpen) dpRenderDesktop();
+            if (dpOpen) {
+                dpRenderDesktop();
+                dpFetchVisiblePrices();
+            }
         }
     }
 
@@ -768,6 +923,7 @@
         dpViewMonth--;
         if (dpViewMonth < 0) { dpViewMonth = 11; dpViewYear--; }
         dpRenderDesktop();
+        dpFetchVisiblePrices();
     });
     var maxMonth = today.getMonth() + 10;
     var maxMonthVal = maxMonth % 12;
@@ -784,6 +940,7 @@
         dpViewMonth = nextM;
         dpViewYear = nextY;
         dpRenderDesktop();
+        dpFetchVisiblePrices();
     });
     document.getElementById('dp-clear').addEventListener('click', function(e) {
         e.stopPropagation();
