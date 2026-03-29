@@ -8,13 +8,13 @@ use Filament\Panel;
 
 class EmissionOrderDetail extends Page
 {
-    protected static string|\BackedEnum|null $navigationIcon = null;
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
     protected static bool $shouldRegisterNavigation = false;
 
     protected string $view = 'filament.pages.emission-order-detail';
 
-    public ?Order $order = null;
+    public ?int $orderId = null;
 
     public function mount(Order $order): void
     {
@@ -28,12 +28,17 @@ class EmissionOrderDetail extends Page
             }
         }
 
-        $this->order = $order;
+        $this->orderId = $order->id;
+    }
+
+    public function getOrder(): Order
+    {
+        return Order::with(['flights', 'flightSearch', 'passengers', 'emission'])->findOrFail($this->orderId);
     }
 
     public function getTitle(): string
     {
-        return 'Emissão — ' . ($this->order->tracking_code ?? '');
+        return 'Emissão — ' . ($this->getOrder()->tracking_code ?? '');
     }
 
     public static function getRoutePath(Panel $panel): string

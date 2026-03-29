@@ -1,7 +1,6 @@
 <x-filament-panels::page>
     @php
-        $order = $this->order;
-        $order->loadMissing(['flights', 'flightSearch', 'passengers', 'emission']);
+        $order = $this->getOrder();
         $flights = $order->flights;
         $cabin = match($order->cabin) {
             'EC' => 'Econômica',
