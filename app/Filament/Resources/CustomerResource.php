@@ -5,9 +5,11 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CustomerResource\Pages;
 use App\Models\Customer;
 use App\Models\CustomerAuditLog;
+use App\Services\ReferralService;
 use BackedEnum;
 use Filament\Actions;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Infolists;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -68,6 +70,11 @@ class CustomerResource extends Resource
                     ->getStateUsing(fn (Customer $record) => $record->google_id ? 'Sim' : 'Não')
                     ->badge()
                     ->color(fn (Customer $record) => $record->google_id ? 'info' : 'gray'),
+                Tables\Columns\TextColumn::make('is_affiliate')
+                    ->label('Afiliado')
+                    ->getStateUsing(fn (Customer $record) => $record->is_affiliate ? 'Sim' : '—')
+                    ->badge()
+                    ->color(fn (Customer $record) => $record->is_affiliate ? 'success' : 'gray'),
                 Tables\Columns\TextColumn::make('orders_count')
                     ->label('Pedidos')
                     ->counts('orders')
@@ -86,6 +93,8 @@ class CustomerResource extends Resource
                         'active' => 'Ativo',
                         'pending' => 'Pendente',
                     ]),
+                Tables\Filters\TernaryFilter::make('is_affiliate')
+                    ->label('Afiliado'),
             ])
             ->actions([
                 Actions\ViewAction::make()->label('Ver'),
@@ -114,6 +123,58 @@ class CustomerResource extends Resource
                             'document' => preg_replace('/\D/', '', $data['document'] ?? ''),
                         ]);
                         Notification::make()->title('Dados atualizados e auditados')->success()->send();
+                    }),
+                Actions\Action::make('manage_affiliate')
+                    ->label(fn (Customer $record) => $record->is_affiliate ? 'Editar afiliado' : 'Tornar afiliado')
+                    ->icon('heroicon-o-gift')
+                    ->color(fn (Customer $record) => $record->is_affiliate ? 'info' : 'success')
+                    ->modalHeading('Configurar afiliado')
+                    ->form([
+                        Toggle::make('is_affiliate')
+                            ->label('Habilitar como afiliado')
+                            ->default(true),
+                        TextInput::make('affiliate_discount_pct')
+                            ->label('Desconto para indicados (%)')
+                            ->helperText('Deixe vazio para usar o valor padrão das configurações.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%'),
+                        TextInput::make('affiliate_credit_pct')
+                            ->label('Crédito para o afiliado (%)')
+                            ->helperText('Deixe vazio para usar o valor padrão das configurações.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%'),
+                    ])
+                    ->fillForm(fn (Customer $record) => [
+                        'is_affiliate' => $record->is_affiliate,
+                        'affiliate_discount_pct' => $record->affiliate_discount_pct,
+                        'affiliate_credit_pct' => $record->affiliate_credit_pct,
+                    ])
+                    ->action(function (Customer $record, array $data): void {
+                        $isAffiliate = (bool) ($data['is_affiliate'] ?? false);
+
+                        $updateData = [
+                            'is_affiliate' => $isAffiliate,
+                            'affiliate_discount_pct' => $data['affiliate_discount_pct'] ?: null,
+                            'affiliate_credit_pct' => $data['affiliate_credit_pct'] ?: null,
+                        ];
+
+                        if ($isAffiliate && ! $record->referral_code) {
+                            $updateData['referral_code'] = $record->generateReferralCode();
+                        }
+
+                        $record->update($updateData);
+
+                        $msg = $isAffiliate
+                            ? 'Afiliado habilitado! Código: ' . $record->fresh()->referral_code
+                            : 'Afiliado desabilitado.';
+
+                        Notification::make()->title($msg)->success()->send();
                     }),
             ]);
     }
@@ -156,6 +217,34 @@ class CustomerResource extends Resource
                         Infolists\Components\TextEntry::make('created_at')
                             ->label('Cadastro')
                             ->dateTime('d/m/Y H:i'),
+                    ]),
+
+                Section::make('Afiliado — Indique e Ganhe')
+                    ->icon('heroicon-o-gift')
+                    ->visible(fn (Customer $record) => $record->is_affiliate)
+                    ->columns(4)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('referral_code')
+                            ->label('Código de indicação')
+                            ->badge()
+                            ->color('primary')
+                            ->copyable(),
+                        Infolists\Components\TextEntry::make('affiliate_discount_pct')
+                            ->label('Desconto indicados (%)')
+                            ->suffix('%')
+                            ->placeholder('Padrão global'),
+                        Infolists\Components\TextEntry::make('affiliate_credit_pct')
+                            ->label('Crédito afiliado (%)')
+                            ->suffix('%')
+                            ->placeholder('Padrão global'),
+                        Infolists\Components\TextEntry::make('wallet_balance')
+                            ->label('Saldo disponível')
+                            ->getStateUsing(function (Customer $record) {
+                                $service = app(ReferralService::class);
+
+                                return 'R$ ' . number_format($service->getAvailableBalance($record), 2, ',', '.');
+                            })
+                            ->color('success'),
                     ]),
 
                 Section::make('Pedidos')

@@ -21,7 +21,9 @@ class Order extends Model
         'conversation_id',
         'customer_id',
         'coupon_id',
+        'referral_id',
         'discount_amount',
+        'wallet_amount_used',
         'cabin',
         'departure_iata',
         'arrival_iata',
@@ -84,6 +86,11 @@ class Order extends Model
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class);
+    }
+
+    public function referral(): BelongsTo
+    {
+        return $this->belongsTo(Referral::class);
     }
 
     public function flightSearch(): BelongsTo

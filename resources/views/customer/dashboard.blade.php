@@ -16,7 +16,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-{{ $customer->isAffiliate() ? '4' : '3' }} gap-4 mb-8">
             <a href="{{ route('customer.orders') }}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-300 transition-colors group">
                 <div class="flex items-center gap-3 mb-2">
                     <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -46,6 +46,19 @@
                 </div>
                 <p class="text-sm text-gray-500">Gerencie seus dados pessoais.</p>
             </a>
+
+            @if($customer->isAffiliate())
+            <a href="{{ route('customer.referrals') }}" class="bg-white rounded-xl shadow-sm border border-emerald-200 p-5 hover:border-emerald-400 transition-colors group">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 group-hover:text-emerald-700">Indicações</h3>
+                </div>
+                @php $balance = app(\App\Services\ReferralService::class)->getAvailableBalance($customer); @endphp
+                <p class="text-sm text-emerald-600 font-semibold">Saldo: R$ {{ number_format($balance, 2, ',', '.') }}</p>
+            </a>
+            @endif
         </div>
 
         @if($recentOrders->isNotEmpty())

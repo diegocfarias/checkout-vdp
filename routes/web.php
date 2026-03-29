@@ -120,6 +120,7 @@ Route::middleware(['auth:customer', EnsureCustomerIsActive::class])->group(funct
     Route::put('/minha-conta/perfil', [CustomerAreaController::class, 'updateProfile'])->name('customer.profile.update');
     Route::get('/minha-conta/passageiros', [CustomerAreaController::class, 'passengers'])->name('customer.passengers');
     Route::delete('/minha-conta/passageiros/{savedPassenger}', [CustomerAreaController::class, 'destroyPassenger'])->name('customer.passenger.destroy');
+    Route::get('/minha-conta/indicacoes', [CustomerAreaController::class, 'referrals'])->name('customer.referrals');
     Route::post('/minha-conta/solicitar-alteracao', [ChangeRequestController::class, 'store'])->name('customer.change-request');
 });
 

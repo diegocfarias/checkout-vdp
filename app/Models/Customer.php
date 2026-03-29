@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class Customer extends Authenticatable
 {
@@ -21,6 +22,10 @@ class Customer extends Authenticatable
         'google_id',
         'avatar_url',
         'status',
+        'is_affiliate',
+        'referral_code',
+        'affiliate_discount_pct',
+        'affiliate_credit_pct',
     ];
 
     protected $hidden = [
@@ -33,6 +38,9 @@ class Customer extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_affiliate' => 'boolean',
+            'affiliate_discount_pct' => 'decimal:2',
+            'affiliate_credit_pct' => 'decimal:2',
         ];
     }
 
@@ -56,6 +64,16 @@ class Customer extends Authenticatable
         return $this->hasMany(SavedPassenger::class)->orderBy('full_name');
     }
 
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(Referral::class, 'affiliate_id');
+    }
+
+    public function walletTransactions(): HasMany
+    {
+        return $this->hasMany(WalletTransaction::class);
+    }
+
     public function isPending(): bool
     {
         return $this->status === 'pending';
@@ -69,6 +87,25 @@ class Customer extends Authenticatable
     public function hasPassword(): bool
     {
         return ! is_null($this->password);
+    }
+
+    public function isAffiliate(): bool
+    {
+        return $this->is_affiliate && $this->referral_code;
+    }
+
+    public function generateReferralCode(): string
+    {
+        do {
+            $code = 'IND-' . strtoupper(Str::random(6));
+        } while (static::where('referral_code', $code)->exists());
+
+        return $code;
+    }
+
+    public function getCleanDocument(): ?string
+    {
+        return $this->document ? preg_replace('/\D/', '', $this->document) : null;
     }
 
     public function sendPasswordResetNotification($token): void

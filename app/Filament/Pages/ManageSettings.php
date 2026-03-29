@@ -58,6 +58,12 @@ class ManageSettings extends Page
         }
 
         $this->form->fill([
+            'referral_enabled' => Setting::get('referral_enabled', false),
+            'referral_discount_pct' => Setting::get('referral_discount_pct', '5'),
+            'referral_credit_pct' => Setting::get('referral_credit_pct', '5'),
+            'referral_credit_release_mode' => Setting::get('referral_credit_release_mode', 'after_purchase'),
+            'referral_credit_release_hours' => Setting::get('referral_credit_release_hours', 24),
+            'referral_cookie_days' => Setting::get('referral_cookie_days', 30),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -259,6 +265,64 @@ class ManageSettings extends Page
                             ->placeholder('5511999999999'),
                     ]),
 
+                Section::make('Indique e Ganhe')
+                    ->icon('heroicon-o-gift')
+                    ->description('Sistema de indicação com carteira de créditos para afiliados.')
+                    ->schema([
+                        Toggle::make('referral_enabled')
+                            ->label('Habilitar sistema de indicação')
+                            ->helperText('Ativa/desativa o sistema de Indique e Ganhe em todo o site.')
+                            ->default(false)
+                            ->live(),
+
+                        TextInput::make('referral_discount_pct')
+                            ->label('Desconto para o indicado (%)')
+                            ->helperText('Percentual de desconto padrão que o indicado recebe ao usar o código. Pode ser sobrescrito por afiliado.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%')
+                            ->visible(fn ($get) => $get('referral_enabled')),
+
+                        TextInput::make('referral_credit_pct')
+                            ->label('Crédito para o afiliado (%)')
+                            ->helperText('Percentual de crédito que o afiliado recebe sobre o valor base do pedido. Pode ser sobrescrito por afiliado.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%')
+                            ->visible(fn ($get) => $get('referral_enabled')),
+
+                        Select::make('referral_credit_release_mode')
+                            ->label('Momento de liberação do crédito')
+                            ->options([
+                                'after_purchase' => 'Após a compra',
+                                'after_arrival' => 'Após a chegada do voo de ida',
+                            ])
+                            ->helperText('Quando o crédito do afiliado será liberado para uso.')
+                            ->visible(fn ($get) => $get('referral_enabled')),
+
+                        TextInput::make('referral_credit_release_hours')
+                            ->label('Horas após o evento para liberar')
+                            ->helperText('Quantidade de horas após o evento selecionado acima para liberar o crédito.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(720)
+                            ->suffix('horas')
+                            ->visible(fn ($get) => $get('referral_enabled')),
+
+                        TextInput::make('referral_cookie_days')
+                            ->label('Validade do cookie de indicação (dias)')
+                            ->helperText('Por quantos dias o cookie de indicação fica ativo após o visitante acessar o link de indicação.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(365)
+                            ->suffix('dias')
+                            ->visible(fn ($get) => $get('referral_enabled')),
+                    ]),
+
                 Section::make('Emissão')
                     ->icon('heroicon-o-paper-airplane')
                     ->description('Configurações de emissão de passagens e notificações Pushover.')
@@ -341,6 +405,13 @@ class ManageSettings extends Page
 
         Setting::set('emission_value_per_order', $data['emission_value_per_order'] ?? '0', 'string');
         Setting::set('pushover_app_token', $data['pushover_app_token'] ?? '', 'string');
+
+        Setting::set('referral_enabled', (bool) ($data['referral_enabled'] ?? false), 'boolean');
+        Setting::set('referral_discount_pct', $data['referral_discount_pct'] ?? '5', 'string');
+        Setting::set('referral_credit_pct', $data['referral_credit_pct'] ?? '5', 'string');
+        Setting::set('referral_credit_release_mode', $data['referral_credit_release_mode'] ?? 'after_purchase', 'string');
+        Setting::set('referral_credit_release_hours', (int) ($data['referral_credit_release_hours'] ?? 24), 'integer');
+        Setting::set('referral_cookie_days', (int) ($data['referral_cookie_days'] ?? 30), 'integer');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {

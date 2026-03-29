@@ -222,16 +222,37 @@
                     </div>
                 </div>
 
-                {{-- Cupom de desconto --}}
-                <div class="mt-8 pt-8 border-t border-gray-200">
+                {{-- Créditos de indicação --}}
+                @if($walletBalance > 0 && $isAffiliate)
+                <div class="mt-8 pt-8 border-t border-gray-200" id="wallet-section">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                            <h3 class="text-lg font-semibold text-gray-800">Usar créditos</h3>
+                        </div>
+                        <span class="text-sm text-emerald-600 font-semibold">Saldo: R$ {{ number_format($walletBalance, 2, ',', '.') }}</span>
+                    </div>
+                    <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-blue-300 transition-colors">
+                        <input type="checkbox" id="use_wallet_toggle" name="use_wallet" value="1"
+                               class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <div class="flex-1">
+                            <span class="text-sm font-medium text-gray-800">Usar meus créditos de indicação</span>
+                            <p class="text-xs text-gray-500 mt-0.5">Será aplicado automaticamente até o valor total. Não acumulável com cupom.</p>
+                        </div>
+                    </label>
+                </div>
+                @endif
+
+                {{-- Cupom / Código de indicação --}}
+                <div class="mt-8 pt-8 border-t border-gray-200" id="coupon-section">
                     <div class="flex items-center gap-2 mb-4">
                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                        <h3 class="text-lg font-semibold text-gray-800">Cupom de desconto</h3>
+                        <h3 class="text-lg font-semibold text-gray-800">Cupom ou código de indicação</h3>
                     </div>
                     <div class="flex gap-2">
-                        <input type="text" id="coupon_input" placeholder="Digite o código do cupom"
+                        <input type="text" id="coupon_input" placeholder="Digite o código do cupom ou indicação"
                                class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border uppercase"
-                               maxlength="20" autocomplete="off">
+                               maxlength="20" autocomplete="off" value="{{ $refCookie }}">
                         <button type="button" id="btn-apply-coupon"
                                 class="px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-md hover:bg-gray-700 transition-colors shrink-0">
                             Aplicar
@@ -243,8 +264,8 @@
                                 <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <span class="text-sm text-emerald-700">
-                                    Cupom <strong id="coupon-applied-code"></strong> aplicado: <strong id="coupon-applied-discount"></strong>
+                                <span class="text-sm text-emerald-700" id="coupon-success-msg">
+                                    Código <strong id="coupon-applied-code"></strong> aplicado: <strong id="coupon-applied-discount"></strong>
                                 </span>
                             </div>
                             <button type="button" id="btn-remove-coupon" class="text-sm text-red-600 hover:text-red-800 font-medium">Remover</button>
@@ -736,7 +757,30 @@
             const errorMsg = document.getElementById('coupon-error-msg');
             const appliedCode = document.getElementById('coupon-applied-code');
             const appliedDisc = document.getElementById('coupon-applied-discount');
+            const successMsg = document.getElementById('coupon-success-msg');
+            const walletToggle = document.getElementById('use_wallet_toggle');
+            const couponSection = document.getElementById('coupon-section');
+            const walletSection = document.getElementById('wallet-section');
             const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            if (walletToggle) {
+                walletToggle.addEventListener('change', function () {
+                    if (this.checked) {
+                        couponInput.value = '';
+                        couponHidden.value = '';
+                        couponInput.disabled = true;
+                        btnApply.disabled = true;
+                        feedback.classList.add('hidden');
+                        appliedDiscount = 0;
+                        if (couponSection) couponSection.style.opacity = '0.5';
+                    } else {
+                        couponInput.disabled = false;
+                        btnApply.disabled = false;
+                        if (couponSection) couponSection.style.opacity = '1';
+                    }
+                    atualizarTotalFooter();
+                });
+            }
 
             btnApply.addEventListener('click', async function () {
                 const code = couponInput.value.trim();
@@ -765,9 +809,17 @@
                         errorBox.classList.add('hidden');
                         appliedCode.textContent = data.coupon_code;
                         appliedDisc.textContent = '- ' + fmt(data.discount_amount);
+                        if (successMsg) {
+                            const label = data.type === 'referral' ? 'Indicação' : 'Cupom';
+                            successMsg.innerHTML = label + ' <strong>' + data.coupon_code + '</strong> aplicado: <strong>- ' + fmt(data.discount_amount) + '</strong>';
+                        }
                         couponHidden.value = data.coupon_code;
                         couponInput.disabled = true;
                         appliedDiscount = data.discount_amount;
+                        if (walletToggle) {
+                            walletToggle.checked = false;
+                            walletToggle.disabled = true;
+                        }
                         atualizarTotalFooter();
                     } else {
                         errorBox.classList.remove('hidden');
@@ -777,7 +829,7 @@
                 } catch (e) {
                     errorBox.classList.remove('hidden');
                     successBox.classList.add('hidden');
-                    errorMsg.textContent = 'Erro ao verificar cupom.';
+                    errorMsg.textContent = 'Erro ao verificar código.';
                 }
 
                 btnApply.disabled = false;
@@ -792,6 +844,7 @@
                 successBox.classList.add('hidden');
                 errorBox.classList.add('hidden');
                 appliedDiscount = 0;
+                if (walletToggle) walletToggle.disabled = false;
                 atualizarTotalFooter();
             });
         })();

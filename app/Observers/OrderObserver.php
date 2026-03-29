@@ -9,6 +9,7 @@ use App\Models\OrderEmission;
 use App\Models\OrderEmissionLog;
 use App\Models\OrderStatusHistory;
 use App\Services\BotpressNotifier;
+use App\Services\ReferralService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -40,6 +41,7 @@ class OrderObserver
         $this->notifyWhatsApp($order, $newStatus);
         $this->notifyEmail($order, $newStatus);
         $this->handleEmission($order, $newStatus);
+        $this->handleReferralOnCancel($order, $newStatus);
     }
 
     private function notifyWhatsApp(Order $order, string $status): void
@@ -102,6 +104,38 @@ class OrderObserver
             NotifyIssuersNewEmission::dispatch($order);
         } catch (\Throwable $e) {
             Log::error('OrderObserver: falha ao criar emissão', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function handleReferralOnCancel(Order $order, string $status): void
+    {
+        if ($status !== 'cancelled') {
+            return;
+        }
+
+        try {
+            $referralService = app(ReferralService::class);
+
+            $referralService->refundWalletUsage($order);
+
+            $order->loadMissing('referral');
+            $referral = \App\Models\Referral::where('referred_order_id', $order->id)
+                ->whereIn('credit_status', ['pending', 'available'])
+                ->where('status', 'active')
+                ->first();
+
+            if ($referral) {
+                $referralService->reverseCredit($referral);
+                Log::info('OrderObserver: crédito de indicação revertido', [
+                    'order_id' => $order->id,
+                    'referral_id' => $referral->id,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('OrderObserver: falha ao processar estorno de indicação', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
             ]);

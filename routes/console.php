@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('orders:expire-checkouts')->everyMinute();
 Schedule::command('showcase:refresh')->hourly();
+Schedule::job(new \App\Jobs\ReleaseReferralCredits)->hourly();

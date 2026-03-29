@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderPassengersRequest;
 use App\Models\Coupon;
+use App\Models\Customer;
 use App\Models\FlightSearch;
 use App\Models\Order;
 use App\Models\SavedPassenger;
 use App\Models\Setting;
 use App\Services\CustomerService;
 use App\Services\PaymentGatewayResolver;
+use App\Services\ReferralService;
 use App\Services\VdpFlightService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +22,7 @@ class OrderCheckoutController extends Controller
         private PaymentGatewayResolver $paymentResolver,
         private VdpFlightService $vdpService,
         private CustomerService $customerService,
+        private ReferralService $referralService,
     ) {}
 
     public function show(string $token)
@@ -70,9 +73,17 @@ class OrderCheckoutController extends Controller
         $interestRates = Setting::get('interest_rates_' . $ccGateway, Setting::get('interest_rates', []));
 
         $savedPassengers = collect();
+        $walletBalance = 0;
+        $isAffiliate = false;
         if (auth('customer')->check()) {
-            $savedPassengers = auth('customer')->user()->savedPassengers;
+            $customer = auth('customer')->user();
+            $savedPassengers = $customer->savedPassengers;
+            $walletBalance = $this->referralService->getAvailableBalance($customer);
+            $isAffiliate = $customer->isAffiliate();
         }
+
+        $referralEnabled = (bool) Setting::get('referral_enabled', false);
+        $refCookie = request()->cookie('ref_code', '');
 
         return view('checkout.passengers', [
             'order' => $order,
@@ -84,6 +95,10 @@ class OrderCheckoutController extends Controller
             'creditCardEnabled' => $creditCardEnabled,
             'pixDiscount' => $pixDiscount,
             'savedPassengers' => $savedPassengers,
+            'walletBalance' => $walletBalance,
+            'isAffiliate' => $isAffiliate,
+            'referralEnabled' => $referralEnabled,
+            'refCookie' => $refCookie,
         ]);
     }
 
@@ -191,31 +206,73 @@ class OrderCheckoutController extends Controller
 
         $couponCode = strtoupper(trim($request->input('coupon_code', '')));
         $discountAmount = 0;
+        $walletAmountUsed = 0;
+        $useWallet = $request->boolean('use_wallet');
 
-        if ($couponCode) {
-            $coupon = Coupon::where('code', $couponCode)->first();
+        if ($useWallet && ! $couponCode) {
+            $baseTotal = $this->calculateBaseTotal($order);
+            $customer = $order->customer ?? (auth('customer')->check() ? auth('customer')->user() : null);
 
-            if ($coupon && $coupon->isValid()) {
-                $payerDoc = $request->input('payer_document');
-                $customerDoc = auth('customer')->user()?->document;
-                $docValid = $coupon->isAvailableForDocument($payerDoc) || $coupon->isAvailableForDocument($customerDoc);
+            if ($customer) {
+                $balance = $this->referralService->getAvailableBalance($customer);
+                $walletAmountUsed = min($balance, $baseTotal);
 
-                if ($docValid) {
+                if ($walletAmountUsed > 0) {
+                    try {
+                        $this->referralService->debitWallet($customer, $order, $walletAmountUsed);
+                        $order->update(['wallet_amount_used' => $walletAmountUsed]);
+                    } catch (\Throwable $e) {
+                        Log::warning('Checkout: falha ao debitar carteira', [
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $walletAmountUsed = 0;
+                    }
+                }
+            }
+        } elseif ($couponCode) {
+            $resolved = $this->referralService->resolveCode($couponCode);
+
+            if ($resolved && $resolved['type'] === 'referral') {
+                $affiliate = $resolved['model'];
+                $payerDoc = $request->input('payer_document', '');
+                $validation = $this->referralService->validateReferral($affiliate, $payerDoc);
+
+                if ($validation['valid']) {
                     $baseTotal = $this->calculateBaseTotal($order);
-                    $discountAmount = $coupon->calculateDiscount($baseTotal);
+                    $referredCustomerId = $order->customer_id;
 
-                    $order->update([
-                        'coupon_id' => $coupon->id,
-                        'discount_amount' => $discountAmount,
-                    ]);
+                    $referral = $this->referralService->applyReferralDiscount(
+                        $order, $affiliate, $baseTotal, $payerDoc, $referredCustomerId
+                    );
 
-                    $coupon->incrementUsage();
+                    $discountAmount = (float) $referral->discount_amount;
+                }
+            } elseif ($resolved && $resolved['type'] === 'coupon') {
+                $coupon = $resolved['model'];
+
+                if ($coupon->isValid()) {
+                    $payerDoc = $request->input('payer_document');
+                    $customerDoc = auth('customer')->user()?->document;
+                    $docValid = $coupon->isAvailableForDocument($payerDoc) || $coupon->isAvailableForDocument($customerDoc);
+
+                    if ($docValid) {
+                        $baseTotal = $this->calculateBaseTotal($order);
+                        $discountAmount = $coupon->calculateDiscount($baseTotal);
+
+                        $order->update([
+                            'coupon_id' => $coupon->id,
+                            'discount_amount' => $discountAmount,
+                        ]);
+
+                        $coupon->incrementUsage();
+                    }
                 }
             }
         }
 
         $baseTotal = $this->calculateBaseTotal($order);
-        $totalAfterDiscount = $baseTotal - $discountAmount;
+        $totalAfterDiscount = $baseTotal - $discountAmount - $walletAmountUsed;
 
         if ($paymentMethod === 'pix') {
             $pixDiscountPct = (float) Setting::get('pix_discount', 0);
@@ -229,6 +286,27 @@ class OrderCheckoutController extends Controller
             $allRates = Setting::get('interest_rates_' . $ccGateway, Setting::get('interest_rates', []));
             $rate = $allRates[$installments] ?? 0;
             $cardData['total_with_interest'] = round($totalAfterDiscount * (1 + $rate / 100), 2);
+        }
+
+        if ($totalAfterDiscount <= 0 && $walletAmountUsed > 0) {
+            $now = now();
+            $order->payments()->create([
+                'gateway' => 'wallet',
+                'status' => 'paid',
+                'payment_method' => 'wallet',
+                'amount' => $walletAmountUsed,
+                'currency' => 'BRL',
+                'paid_at' => $now,
+            ]);
+
+            $order->update([
+                'status' => 'awaiting_emission',
+                'paid_at' => $now,
+            ]);
+
+            session(["tracking_verified_{$order->tracking_code}" => true]);
+
+            return redirect()->route('tracking.show', $order->tracking_code);
         }
 
         try {
@@ -348,12 +426,41 @@ class OrderCheckoutController extends Controller
         $code = strtoupper(trim($request->input('coupon_code', '')));
 
         if (empty($code)) {
-            return response()->json(['success' => false, 'message' => 'Informe o código do cupom.']);
+            return response()->json(['success' => false, 'message' => 'Informe o código do cupom ou indicação.']);
         }
 
-        $coupon = Coupon::where('code', $code)->first();
+        $resolved = $this->referralService->resolveCode($code);
 
-        if (! $coupon || ! $coupon->isValid()) {
+        if (! $resolved) {
+            return response()->json(['success' => false, 'message' => 'Código inválido ou expirado.']);
+        }
+
+        $baseTotal = $this->calculateBaseTotal($order);
+
+        if ($resolved['type'] === 'referral') {
+            $affiliate = $resolved['model'];
+            $document = $request->input('payer_document', '');
+            $validation = $this->referralService->validateReferral($affiliate, $document);
+
+            if (! $validation['valid']) {
+                return response()->json(['success' => false, 'message' => $validation['error']]);
+            }
+
+            $preview = $this->referralService->previewReferralDiscount($affiliate, $baseTotal);
+
+            return response()->json([
+                'success' => true,
+                'type' => 'referral',
+                'coupon_code' => $code,
+                'discount_amount' => $preview['discount_amount'],
+                'new_total' => $preview['new_total'],
+                'message' => 'Desconto de indicação de ' . $preview['affiliate_name'] . ' aplicado!',
+            ]);
+        }
+
+        $coupon = $resolved['model'];
+
+        if (! $coupon->isValid()) {
             return response()->json(['success' => false, 'message' => 'Cupom inválido ou expirado.']);
         }
 
@@ -365,11 +472,11 @@ class OrderCheckoutController extends Controller
             }
         }
 
-        $baseTotal = $this->calculateBaseTotal($order);
         $discount = $coupon->calculateDiscount($baseTotal);
 
         return response()->json([
             'success' => true,
+            'type' => 'coupon',
             'coupon_code' => $coupon->code,
             'discount_amount' => round($discount, 2),
             'new_total' => round($baseTotal - $discount, 2),
