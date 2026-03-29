@@ -19,11 +19,19 @@ class FlightSearchController extends Controller
 
     public function index()
     {
-        $showcaseRoutes = ShowcaseRoute::where('is_active', true)
-            ->whereNotNull('cached_price')
-            ->orderBy('sort_order')
-            ->limit(9)
-            ->get();
+        $maxCards = (int) Setting::get('showcase_max_cards', 9);
+        $sortMode = Setting::get('showcase_sort_mode', 'manual');
+
+        $showcaseQuery = ShowcaseRoute::where('is_active', true)
+            ->whereNotNull('cached_price');
+
+        if ($sortMode === 'cheapest') {
+            $showcaseQuery->orderBy('cached_price', 'asc');
+        } else {
+            $showcaseQuery->orderBy('sort_order');
+        }
+
+        $showcaseRoutes = $showcaseQuery->limit($maxCards)->get();
 
         return view('search.home', [
             'showcaseRoutes' => $showcaseRoutes,

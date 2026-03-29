@@ -68,6 +68,8 @@ class ManageSettings extends Page
             'showcase_refresh_minutes' => Setting::get('showcase_refresh_minutes', 60),
             'showcase_max_searches_per_minute' => Setting::get('showcase_max_searches_per_minute', 6),
             'showcase_wait_seconds' => Setting::get('showcase_wait_seconds', 10),
+            'showcase_max_cards' => Setting::get('showcase_max_cards', 9),
+            'showcase_sort_mode' => Setting::get('showcase_sort_mode', 'manual'),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -362,6 +364,23 @@ class ManageSettings extends Page
                             ->maxValue(120)
                             ->suffix('s')
                             ->required(),
+
+                        TextInput::make('showcase_max_cards')
+                            ->label('Quantidade de cards na vitrine')
+                            ->helperText('Máximo de cards exibidos na home.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(50)
+                            ->required(),
+
+                        Select::make('showcase_sort_mode')
+                            ->label('Ordenação da vitrine')
+                            ->options([
+                                'manual' => 'Manual (ordem definida na lista)',
+                                'cheapest' => 'Automática (menor preço primeiro)',
+                            ])
+                            ->helperText('Manual: respeita a ordem de exibição configurada em cada rota. Automática: exibe os destinos mais baratos primeiro.')
+                            ->required(),
                     ]),
 
                 Section::make('Emissão')
@@ -458,6 +477,8 @@ class ManageSettings extends Page
         Setting::set('showcase_refresh_minutes', (int) ($data['showcase_refresh_minutes'] ?? 60), 'integer');
         Setting::set('showcase_max_searches_per_minute', (int) ($data['showcase_max_searches_per_minute'] ?? 6), 'integer');
         Setting::set('showcase_wait_seconds', (int) ($data['showcase_wait_seconds'] ?? 10), 'integer');
+        Setting::set('showcase_max_cards', (int) ($data['showcase_max_cards'] ?? 9), 'integer');
+        Setting::set('showcase_sort_mode', $data['showcase_sort_mode'] ?? 'manual', 'string');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {
