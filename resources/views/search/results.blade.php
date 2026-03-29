@@ -66,7 +66,7 @@
                         <div class="flex flex-wrap gap-1.5">
                             @foreach($airlines as $cia)
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-cia sr-only" value="{{ strtolower($cia) }}" checked>
+                                <input type="checkbox" class="filter-cia sr-only" value="{{ strtolower($cia) }}">
                                 <span class="filter-pill-label inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border transition-all">{{ strtoupper($cia) }}</span>
                             </label>
                             @endforeach
@@ -81,14 +81,14 @@
                         </div>
                         <div class="flex flex-wrap gap-1.5">
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-stops sr-only" value="direct" checked>
+                                <input type="checkbox" class="filter-stops sr-only" value="direct">
                                 <span class="filter-pill-label inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                                     Direto
                                 </span>
                             </label>
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-stops sr-only" value="connection" checked>
+                                <input type="checkbox" class="filter-stops sr-only" value="connection">
                                 <span class="filter-pill-label inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h7m4 0h7"/></svg>
                                     Conexão
@@ -105,7 +105,7 @@
                         <div class="grid grid-cols-2 gap-1.5">
                             @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-ob-period sr-only" value="{{ $key }}" checked>
+                                <input type="checkbox" class="filter-ob-period sr-only" value="{{ $key }}">
                                 <span class="filter-pill-label inline-flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-xs font-medium border transition-all w-full text-center">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
                                     {{ $info[0] }}
@@ -124,7 +124,7 @@
                         <div class="grid grid-cols-2 gap-1.5">
                             @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-ib-period sr-only" value="{{ $key }}" checked>
+                                <input type="checkbox" class="filter-ib-period sr-only" value="{{ $key }}">
                                 <span class="filter-pill-label inline-flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-xs font-medium border transition-all w-full text-center">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
                                     {{ $info[0] }}
@@ -199,7 +199,7 @@
                         <div class="flex flex-wrap gap-2">
                             @foreach($airlines as $cia)
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-cia sr-only" value="{{ strtolower($cia) }}" checked>
+                                <input type="checkbox" class="filter-cia sr-only" value="{{ strtolower($cia) }}">
                                 <span class="filter-pill-label inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border transition-all">{{ strtoupper($cia) }}</span>
                             </label>
                             @endforeach
@@ -214,14 +214,14 @@
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-stops sr-only" value="direct" checked>
+                                <input type="checkbox" class="filter-stops sr-only" value="direct">
                                 <span class="filter-pill-label inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                                     Direto
                                 </span>
                             </label>
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-stops sr-only" value="connection" checked>
+                                <input type="checkbox" class="filter-stops sr-only" value="connection">
                                 <span class="filter-pill-label inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h7m4 0h7"/></svg>
                                     Conexão
@@ -238,7 +238,7 @@
                         <div class="grid grid-cols-2 gap-2">
                             @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-ob-period sr-only" value="{{ $key }}" checked>
+                                <input type="checkbox" class="filter-ob-period sr-only" value="{{ $key }}">
                                 <span class="filter-pill-label inline-flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all w-full text-center">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
                                     {{ $info[0] }}
@@ -257,7 +257,7 @@
                         <div class="grid grid-cols-2 gap-2">
                             @foreach(['madrugada' => ['00h-06h', 'M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.95 7.95l-.71-.71M4.05 4.05l-.71-.71'], 'manha' => ['06h-12h', 'M12 3v1m0 0a8 8 0 100 16m0-16a8 8 0 110 16m0 0v1'], 'tarde' => ['12h-18h', 'M12 3v1m4.22 1.78l.71-.71M20 12h1M17.22 17.22l.71.71M12 20v1m-4.22-1.78l-.71.71M4 12H3m1.78-5.22l-.71-.71'], 'noite' => ['18h-00h', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z']] as $key => $info)
                             <label class="filter-pill cursor-pointer">
-                                <input type="checkbox" class="filter-ib-period sr-only" value="{{ $key }}" checked>
+                                <input type="checkbox" class="filter-ib-period sr-only" value="{{ $key }}">
                                 <span class="filter-pill-label inline-flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all w-full text-center">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $info[1] }}"/></svg>
                                     {{ $info[0] }}
@@ -282,9 +282,9 @@
 @push('styles')
 <style>
     .filter-pill input:checked + .filter-pill-label {
-        background-color: #ecfdf5;
-        border-color: #6ee7b7;
-        color: #047857;
+        background-color: #eff6ff;
+        border-color: #93c5fd;
+        color: #1d4ed8;
     }
     .filter-pill input:not(:checked) + .filter-pill-label {
         background-color: #f9fafb;
@@ -296,17 +296,17 @@
         border-color: #d1d5db;
     }
     .filter-pill input:checked + .filter-pill-label svg {
-        color: #059669;
+        color: #2563eb;
     }
     .filter-pill input:not(:checked) + .filter-pill-label svg {
         color: #9ca3af;
     }
     .sort-tab-active {
-        background-color: #059669 !important;
+        background-color: #2563eb !important;
         color: #fff !important;
     }
     .sort-tab-active:hover {
-        background-color: #059669 !important;
+        background-color: #2563eb !important;
     }
 </style>
 @endpush
@@ -335,15 +335,17 @@
 
     // --- Flight selection within groups ---
     function updateFlightSelection(groupIdx, dir, flightIdx) {
-        var form = document.querySelector('.group-form[data-group="' + groupIdx + '"]');
-        if (!form) return;
+        var forms = document.querySelectorAll('.group-form[data-group="' + groupIdx + '"]');
+        if (!forms.length) return;
         var flights = dir === 'ob'
             ? groupsData[groupIdx].outbound_flights
             : groupsData[groupIdx].inbound_flights;
         var flight = flights[flightIdx];
         if (!flight) return;
-        var input = form.querySelector(dir === 'ob' ? '.selected-ob' : '.selected-ib');
-        if (input) input.value = JSON.stringify(flight);
+        forms.forEach(function(form) {
+            var input = form.querySelector(dir === 'ob' ? '.selected-ob' : '.selected-ib');
+            if (input) input.value = JSON.stringify(flight);
+        });
     }
 
     function toggleConnDetails(connBtn) {
@@ -502,9 +504,9 @@
 
     function updateFilterCount() {
         var all = document.querySelectorAll('.filter-cia, .filter-stops, .filter-ob-period, .filter-ib-period');
-        var unchecked = 0;
-        all.forEach(function(el) { if (!el.checked) unchecked++; });
-        var deduped = Math.floor(unchecked / 2);
+        var checked = 0;
+        all.forEach(function(el) { if (el.checked) checked++; });
+        var deduped = Math.floor(checked / 2);
         var badges = [
             document.getElementById('active-filter-count'),
             document.getElementById('mobile-active-filter-count'),
@@ -523,7 +525,7 @@
 
     window.clearFilters = function() {
         document.querySelectorAll('.filter-cia, .filter-stops, .filter-ob-period, .filter-ib-period').forEach(function(el) {
-            el.checked = true;
+            el.checked = false;
         });
         applyFilters();
         updateFilterCount();
