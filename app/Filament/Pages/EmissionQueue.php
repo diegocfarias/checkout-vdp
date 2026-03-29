@@ -190,6 +190,7 @@ class EmissionQueue extends Page implements HasTable
                     ->label('Ver pedido')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
+                    ->visible(fn () => auth()->user()->isAdmin())
                     ->url(fn (OrderEmission $record) => route('filament.admin.resources.orders.view', $record->order_id)),
             ])
             ->poll('15s')

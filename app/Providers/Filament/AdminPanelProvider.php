@@ -38,10 +38,8 @@ class AdminPanelProvider extends PanelProvider
                 'warning' => Color::Amber,
             ])
             ->navigationGroups([
-                NavigationGroup::make('Operacional')
-                    ->icon('heroicon-o-queue-list'),
-                NavigationGroup::make('Gestão')
-                    ->icon('heroicon-o-chart-bar'),
+                NavigationGroup::make('Operacional'),
+                NavigationGroup::make('Gestão'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
