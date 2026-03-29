@@ -3,7 +3,7 @@
     <div class="relative flex flex-col items-center justify-center min-h-screen px-6 text-center">
 
         <div class="travel-plane-wrap mb-6">
-            <svg class="w-20 h-20 text-emerald-600" viewBox="0 0 24 24" fill="currentColor">
+            <svg class="w-20 h-20 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0011.5 2 1.5 1.5 0 0010 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
             </svg>
         </div>
@@ -29,7 +29,7 @@
 
         <div id="travel-loading-timeout" class="hidden mt-8">
             <p class="text-sm text-gray-500 mb-3">Está demorando mais que o esperado...</p>
-            <button type="button" onclick="location.reload()" class="text-sm font-medium text-emerald-600 hover:text-emerald-700 underline">
+            <button type="button" onclick="location.reload()" class="text-sm font-medium text-blue-600 hover:text-blue-700 underline">
                 Tentar novamente
             </button>
         </div>

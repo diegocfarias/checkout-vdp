@@ -1,11 +1,11 @@
-{{-- Recebe: $segments (array de connection), $accentColor ('emerald'|'blue'), $compact (bool, default false) --}}
+{{-- Recebe: $segments (array de connection), $accentColor ('blue'), $compact (bool, default false) --}}
 @php
     $segments = $segments ?? [];
-    $accent = $accentColor ?? 'emerald';
+    $accent = $accentColor ?? 'blue';
     $compact = $compact ?? false;
-    $dotBg = $accent === 'blue' ? 'bg-blue-500' : 'bg-emerald-500';
-    $lineBg = $accent === 'blue' ? 'bg-blue-200' : 'bg-emerald-200';
-    $waitBg = $accent === 'blue' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600';
+    $dotBg = 'bg-blue-500';
+    $lineBg = 'bg-blue-200';
+    $waitBg = 'bg-blue-50 text-blue-600';
     $textSm = $compact ? 'text-xs' : 'text-sm';
     $textXs = $compact ? 'text-[11px]' : 'text-xs';
     $timeSz = $compact ? 'text-xs font-bold' : 'text-sm font-bold';

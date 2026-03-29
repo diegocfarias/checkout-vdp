@@ -32,7 +32,7 @@
                         ];
                         $total = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0)) - (float)($order->discount_amount ?? 0);
                     @endphp
-                    <a href="{{ route('customer.order.show', $order) }}" class="block bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-emerald-300 hover:shadow-md transition-all">
+                    <a href="{{ route('customer.order.show', $order) }}" class="block bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-300 hover:shadow-md transition-all">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-mono font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ $order->tracking_code }}</span>
                             <span class="text-xs px-2 py-1 rounded-full font-medium {{ $statusColors[$order->status] ?? 'bg-gray-100 text-gray-600' }}">
@@ -61,7 +61,7 @@
         @else
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
                 <p class="text-gray-500 mb-3">Nenhum pedido encontrado.</p>
-                <a href="{{ route('search.home') }}" class="text-emerald-600 hover:text-emerald-700 font-medium text-sm">Buscar passagens</a>
+                <a href="{{ route('search.home') }}" class="text-blue-600 hover:text-blue-700 font-medium text-sm">Buscar passagens</a>
             </div>
         @endif
     </div>

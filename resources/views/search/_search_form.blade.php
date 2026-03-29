@@ -19,11 +19,11 @@
         <div class="flex justify-start mb-6">
             <div class="inline-flex bg-gray-100 rounded-full p-1 gap-0.5" id="trip-type-toggle">
                 <button type="button" data-value="roundtrip"
-                        class="trip-type-btn rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 {{ $tripType === 'roundtrip' ? 'bg-white shadow-sm text-emerald-700 font-semibold' : 'text-gray-500 hover:text-gray-700' }}">
+                        class="trip-type-btn rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 {{ $tripType === 'roundtrip' ? 'bg-white shadow-sm text-blue-700 font-semibold' : 'text-gray-500 hover:text-gray-700' }}">
                     Ida e volta
                 </button>
                 <button type="button" data-value="oneway"
-                        class="trip-type-btn rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 {{ $tripType === 'oneway' ? 'bg-white shadow-sm text-emerald-700 font-semibold' : 'text-gray-500 hover:text-gray-700' }}">
+                        class="trip-type-btn rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 {{ $tripType === 'oneway' ? 'bg-white shadow-sm text-blue-700 font-semibold' : 'text-gray-500 hover:text-gray-700' }}">
                     Somente ida
                 </button>
             </div>
@@ -37,7 +37,7 @@
                 <div class="relative">
                     <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2v4m0 12v4m-10-10h4m12 0h4"/></svg>
                     <input type="text" id="departure-input" placeholder="De onde você sai?"
-                           class="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                           class="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                            autocomplete="off" required
                            @if($prefill) value="{{ $prefill['departure'] }}" @endif>
                 </div>
@@ -47,7 +47,7 @@
 
             {{-- Swap Button --}}
             <button type="button" id="swap-airports-btn"
-                    class="hidden sm:flex absolute left-1/2 top-[38px] -translate-x-1/2 z-10 w-9 h-9 bg-white border-2 border-gray-200 rounded-full items-center justify-center text-gray-400 hover:text-emerald-600 hover:border-emerald-300 transition-all shadow-sm hover:shadow">
+                    class="hidden sm:flex absolute left-1/2 top-[38px] -translate-x-1/2 z-10 w-9 h-9 bg-white border-2 border-gray-200 rounded-full items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm hover:shadow">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
             </button>
 
@@ -56,7 +56,7 @@
                 <div class="relative">
                     <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     <input type="text" id="arrival-input" placeholder="Para onde você vai?"
-                           class="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                           class="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                            autocomplete="off" required
                            @if($prefill) value="{{ $prefill['arrival'] }}" @endif>
                 </div>
@@ -70,8 +70,8 @@
             <div class="relative sm:col-span-1" id="datepicker-container" style="overflow:visible;">
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5 tracking-wide">Datas</label>
                 <button type="button" id="datepicker-toggle"
-                        class="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-left bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none flex items-center gap-2.5 transition-all">
-                    <svg class="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        class="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-left bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none flex items-center gap-2.5 transition-all">
+                    <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span id="datepicker-label" class="text-gray-500">Selecione as datas</span>
                 </button>
                 <input type="hidden" name="outbound_date" id="outbound-date" required
@@ -96,7 +96,7 @@
                         <div class="flex items-center gap-3" id="dp-chips"></div>
                         <div class="flex items-center gap-3">
                             <button type="button" id="dp-clear" class="text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors">Limpar</button>
-                            <button type="button" id="dp-confirm" class="text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors">Confirmar</button>
+                            <button type="button" id="dp-confirm" class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors">Confirmar</button>
                         </div>
                     </div>
                 </div>
@@ -128,7 +128,7 @@
                         {{-- Sticky footer --}}
                         <div class="shrink-0 border-t border-gray-200 bg-white px-5 py-4 flex gap-3">
                             <button type="button" id="dp-mobile-clear" class="flex-1 py-3 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Limpar</button>
-                            <button type="button" id="dp-mobile-confirm" class="flex-1 py-3 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors">Confirmar</button>
+                            <button type="button" id="dp-mobile-confirm" class="flex-1 py-3 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">Confirmar</button>
                         </div>
                     </div>
                 </div>
@@ -137,8 +137,8 @@
             <div class="relative">
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5 tracking-wide">Passageiros</label>
                 <button type="button" id="pax-toggle"
-                        class="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-left bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none flex items-center gap-2.5 transition-all">
-                    <svg class="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        class="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-left bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none flex items-center gap-2.5 transition-all">
+                    <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     <span id="pax-label" class="flex-1">1 Adulto</span>
                     <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
@@ -168,7 +168,7 @@
                         </div>
                     </div>
                     <button type="button" onclick="document.getElementById('pax-dropdown').classList.add('hidden')"
-                            class="w-full text-center text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg transition-colors mt-1">Pronto</button>
+                            class="w-full text-center text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors mt-1">Pronto</button>
                 </div>
                 <input type="hidden" name="adults" id="input-adults" value="{{ $prefill['adults'] ?? 1 }}">
                 <input type="hidden" name="children" id="input-children" value="{{ $prefill['children'] ?? 0 }}">
@@ -178,19 +178,19 @@
             <div class="relative">
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5 tracking-wide">Classe</label>
                 <button type="button" id="cabin-toggle"
-                        class="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-left bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none flex items-center gap-2.5 transition-all">
-                    <svg class="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                        class="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-left bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none flex items-center gap-2.5 transition-all">
+                    <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                     <span id="cabin-label" class="flex-1">{{ ($prefill['cabin'] ?? 'EC') === 'EX' ? 'Executiva' : 'Econômica' }}</span>
                     <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <div id="cabin-dropdown" class="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-xl mt-1 hidden overflow-hidden">
-                    <div class="cabin-option px-4 py-3.5 text-sm cursor-pointer hover:bg-emerald-50 transition-colors {{ ($prefill['cabin'] ?? 'EC') === 'EC' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-gray-700' }}" data-value="EC">
+                    <div class="cabin-option px-4 py-3.5 text-sm cursor-pointer hover:bg-blue-50 transition-colors {{ ($prefill['cabin'] ?? 'EC') === 'EC' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700' }}" data-value="EC">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             Econômica
                         </span>
                     </div>
-                    <div class="cabin-option px-4 py-3.5 text-sm cursor-pointer hover:bg-emerald-50 transition-colors border-t border-gray-100 {{ ($prefill['cabin'] ?? 'EC') === 'EX' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-gray-700' }}" data-value="EX">
+                    <div class="cabin-option px-4 py-3.5 text-sm cursor-pointer hover:bg-blue-50 transition-colors border-t border-gray-100 {{ ($prefill['cabin'] ?? 'EC') === 'EX' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700' }}" data-value="EX">
                         <span class="flex items-center gap-2">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                             Executiva
@@ -202,7 +202,7 @@
         </div>
 
         <button type="submit" id="btn-search"
-                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-4 rounded-xl transition-all text-base flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-xl transition-all text-base flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             Buscar voos
         </button>
@@ -219,11 +219,11 @@
         btn.addEventListener('click', function() {
             tripInput.value = btn.getAttribute('data-value');
             document.querySelectorAll('.trip-type-btn').forEach(function(b) {
-                b.classList.remove('bg-white', 'shadow-sm', 'text-emerald-700', 'font-semibold');
+                b.classList.remove('bg-white', 'shadow-sm', 'text-blue-700', 'font-semibold');
                 b.classList.add('text-gray-500');
             });
             btn.classList.remove('text-gray-500');
-            btn.classList.add('bg-white', 'shadow-sm', 'text-emerald-700', 'font-semibold');
+            btn.classList.add('bg-white', 'shadow-sm', 'text-blue-700', 'font-semibold');
             toggleInbound();
         });
     });
@@ -293,7 +293,7 @@
                     dropdown.innerHTML = '';
                     results.forEach(function(item) {
                         var div = document.createElement('div');
-                        div.className = 'px-4 py-3 text-sm hover:bg-emerald-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors';
+                        div.className = 'px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors';
                         div.innerHTML = '<span class="font-semibold text-gray-800">' + item.c + '</span> <span class="text-gray-500">' + item.d.replace(' (' + item.c + ')', '') + '</span>';
                         div.addEventListener('click', function() {
                             input.value = item.d;
@@ -373,11 +373,11 @@
             document.getElementById('input-cabin').value = val;
             document.getElementById('cabin-label').textContent = cabinLabels[val];
             document.querySelectorAll('.cabin-option').forEach(function(o) {
-                o.classList.remove('bg-emerald-50', 'text-emerald-700', 'font-semibold');
+                o.classList.remove('bg-blue-50', 'text-blue-700', 'font-semibold');
                 o.classList.add('text-gray-700');
             });
             opt.classList.remove('text-gray-700');
-            opt.classList.add('bg-emerald-50', 'text-emerald-700', 'font-semibold');
+            opt.classList.add('bg-blue-50', 'text-blue-700', 'font-semibold');
             document.getElementById('cabin-dropdown').classList.add('hidden');
         });
     });
@@ -473,18 +473,18 @@
         }
 
         if (isStart) {
-            outer += (dpInbound || (dpHover && isRoundtrip())) ? 'bg-emerald-50 rounded-l-full' : '';
-            inner += 'bg-emerald-600 text-white rounded-full shadow-sm';
+            outer += (dpInbound || (dpHover && isRoundtrip())) ? 'bg-blue-50 rounded-l-full' : '';
+            inner += 'bg-blue-600 text-white rounded-full shadow-sm';
         } else if (isEnd) {
-            outer += 'bg-emerald-50 rounded-r-full';
-            inner += 'bg-emerald-600 text-white rounded-full shadow-sm';
+            outer += 'bg-blue-50 rounded-r-full';
+            inner += 'bg-blue-600 text-white rounded-full shadow-sm';
         } else if (inRange) {
-            outer += 'bg-emerald-50';
-            inner += 'text-emerald-800 hover:bg-emerald-200 cursor-pointer rounded-full';
+            outer += 'bg-blue-50';
+            inner += 'text-blue-800 hover:bg-blue-200 cursor-pointer rounded-full';
         } else {
             inner += 'text-gray-700 hover:bg-gray-100 cursor-pointer rounded-full';
             if (isToday) {
-                inner += ' ring-1 ring-emerald-400';
+                inner += ' ring-1 ring-blue-400';
             }
         }
 
@@ -531,7 +531,7 @@
             var isEnd = sameDay(date, dpInbound);
             if (isStart || isEnd) {
                 var labelTag = document.createElement('span');
-                labelTag.className = 'absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase whitespace-nowrap ' + (isStart ? 'text-emerald-600' : 'text-blue-600');
+                labelTag.className = 'absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase whitespace-nowrap ' + (isStart ? 'text-blue-600' : 'text-blue-600');
                 labelTag.textContent = isStart ? 'IDA' : 'VOLTA';
                 cellWrapper.appendChild(labelTag);
             }
@@ -583,7 +583,7 @@
                 var isEnd = sameDay(dt, dpInbound);
                 if (isStart || isEnd) {
                     var labelTag = document.createElement('span');
-                    labelTag.className = 'absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase whitespace-nowrap ' + (isStart ? 'text-emerald-600' : 'text-blue-600');
+                    labelTag.className = 'absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase whitespace-nowrap ' + (isStart ? 'text-blue-600' : 'text-blue-600');
                     labelTag.textContent = isStart ? 'IDA' : 'VOLTA';
                     wrapper.insertBefore(labelTag, wrapper.firstChild);
                 }
@@ -653,8 +653,8 @@
         idaVal.textContent = dpOutbound ? formatDisplay(dpOutbound) : 'Selecionar';
         voltaVal.textContent = dpInbound ? formatDisplay(dpInbound) : 'Selecionar';
 
-        idaTab.className = 'flex-1 pb-3' + (!dpOutbound || (dpOutbound && !dpInbound && !isRoundtrip()) ? ' border-b-2 border-emerald-600' : ' border-b-2 border-transparent');
-        voltaTab.className = 'flex-1 pb-3 pl-4' + (dpOutbound && !dpInbound && isRoundtrip() ? ' border-b-2 border-emerald-600' : ' border-b-2 border-transparent');
+        idaTab.className = 'flex-1 pb-3' + (!dpOutbound || (dpOutbound && !dpInbound && !isRoundtrip()) ? ' border-b-2 border-blue-600' : ' border-b-2 border-transparent');
+        voltaTab.className = 'flex-1 pb-3 pl-4' + (dpOutbound && !dpInbound && isRoundtrip() ? ' border-b-2 border-blue-600' : ' border-b-2 border-transparent');
 
         if (isRoundtrip()) {
             voltaTab.style.display = '';
@@ -718,7 +718,7 @@
         container.innerHTML = '';
         if (dpOutbound) {
             var chip1 = document.createElement('span');
-            chip1.className = 'inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1.5 rounded-full';
+            chip1.className = 'inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full';
             chip1.innerHTML = '<span class="text-[10px] font-bold uppercase">IDA</span> ' + formatShort(dpOutbound);
             container.appendChild(chip1);
         }
@@ -872,9 +872,9 @@
                     document.querySelectorAll('.trip-type-btn').forEach(function(b) {
                         if (b.getAttribute('data-value') === saved.trip_type) {
                             b.classList.remove('text-gray-500');
-                            b.classList.add('bg-white', 'shadow-sm', 'text-emerald-700', 'font-semibold');
+                            b.classList.add('bg-white', 'shadow-sm', 'text-blue-700', 'font-semibold');
                         } else {
-                            b.classList.remove('bg-white', 'shadow-sm', 'text-emerald-700', 'font-semibold');
+                            b.classList.remove('bg-white', 'shadow-sm', 'text-blue-700', 'font-semibold');
                             b.classList.add('text-gray-500');
                         }
                     });
@@ -899,9 +899,9 @@
                     document.querySelectorAll('.cabin-option').forEach(function(o) {
                         if (o.getAttribute('data-value') === saved.cabin) {
                             o.classList.remove('text-gray-700');
-                            o.classList.add('bg-emerald-50', 'text-emerald-700', 'font-semibold');
+                            o.classList.add('bg-blue-50', 'text-blue-700', 'font-semibold');
                         } else {
-                            o.classList.remove('bg-emerald-50', 'text-emerald-700', 'font-semibold');
+                            o.classList.remove('bg-blue-50', 'text-blue-700', 'font-semibold');
                             o.classList.add('text-gray-700');
                         }
                     });

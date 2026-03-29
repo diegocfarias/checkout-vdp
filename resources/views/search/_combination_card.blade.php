@@ -56,7 +56,7 @@
                 <input type="hidden" name="inbound" class="selected-ib" value="{{ json_encode($ibFlights[0] ?? [], JSON_UNESCAPED_UNICODE) }}">
             @endif
             <button type="submit"
-                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-8 rounded-xl transition-colors text-sm">
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl transition-colors text-sm">
                 Selecionar
             </button>
         </form>
@@ -75,7 +75,7 @@
 
     <div class="px-5 pb-5">
         {{-- Outbound --}}
-        <p class="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2">Ida</p>
+        <p class="text-xs font-bold text-blue-700 uppercase tracking-wide mb-2">Ida</p>
         <div class="space-y-2 mb-4">
             @foreach($obFlights as $fi => $flight)
                 @php
@@ -87,15 +87,15 @@
                 @endphp
                 <div class="{{ $hiddenOb ? 'collapsed-ob-' . $groupIdx . ' hidden' : '' }}">
                     <label class="flight-option block p-4 rounded-xl border cursor-pointer transition-all
-                        {{ $fi === 0 ? 'border-emerald-400 bg-emerald-50/60 shadow-sm' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50' }}"
+                        {{ $fi === 0 ? 'border-blue-400 bg-blue-50/60 shadow-sm' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50' }}"
                         data-group="{{ $groupIdx }}" data-dir="ob">
                         <input type="radio" name="group_{{ $groupIdx }}_ob" value="{{ $fi }}"
                                class="sr-only ob-radio" data-group="{{ $groupIdx }}"
                                {{ $fi === 0 ? 'checked' : '' }}>
                         <div class="flex items-start gap-3">
                             <div class="radio-dot w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center mt-1
-                                {{ $fi === 0 ? 'border-emerald-600' : 'border-gray-300' }}">
-                                <div class="radio-dot-inner w-2.5 h-2.5 rounded-full {{ $fi === 0 ? 'bg-emerald-600' : '' }}"></div>
+                                {{ $fi === 0 ? 'border-blue-600' : 'border-gray-300' }}">
+                                <div class="radio-dot-inner w-2.5 h-2.5 rounded-full {{ $fi === 0 ? 'bg-blue-600' : '' }}"></div>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 mb-2 text-xs text-gray-500">
@@ -131,13 +131,13 @@
                     </label>
                     @if(!$isDirect)
                         <div id="conn-ob-{{ $groupIdx }}-{{ $fi }}" class="conn-details hidden ml-8 mr-2 mt-1 mb-1 bg-gray-50 rounded-lg px-4 py-2 border border-gray-100">
-                            @include('partials._connection_details', ['segments' => $conns, 'accentColor' => 'emerald', 'compact' => true])
+                            @include('partials._connection_details', ['segments' => $conns, 'accentColor' => 'blue', 'compact' => true])
                         </div>
                     @endif
                 </div>
             @endforeach
             @if(count($obFlights) > $collapseAfter)
-                <button type="button" class="toggle-more-btn w-full text-center text-sm text-emerald-600 font-medium py-2 hover:text-emerald-700"
+                <button type="button" class="toggle-more-btn w-full text-center text-sm text-blue-600 font-medium py-2 hover:text-blue-700"
                         data-target="collapsed-ob-{{ $groupIdx }}" data-count="{{ count($obFlights) - $collapseAfter }}">
                     + {{ count($obFlights) - $collapseAfter }} opções de ida
                 </button>

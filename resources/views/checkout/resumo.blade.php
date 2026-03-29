@@ -14,7 +14,7 @@
             @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div class="flex items-center gap-2 mb-4">
-                    <span class="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2.5 py-0.5 rounded">IDA</span>
+                    <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded">IDA</span>
                     <span class="text-sm text-gray-600 font-medium uppercase">{{ $outbound->cia }}</span>
                     @if($outbound->flight_number)
                         <span class="text-sm text-gray-400">{{ $outbound->flight_number }}</span>
@@ -44,7 +44,7 @@
                 @if($obStops > 0)
                     <div class="mt-3 pt-3 border-t border-gray-100">
                         <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Trechos do voo</p>
-                        @include('partials._connection_details', ['segments' => $obConns, 'accentColor' => 'emerald', 'compact' => false])
+                        @include('partials._connection_details', ['segments' => $obConns, 'accentColor' => 'blue', 'compact' => false])
                     </div>
                 @endif
             </div>
@@ -145,7 +145,7 @@
         </div>
 
         <a href="{{ route('checkout.passengers', $order->token) }}"
-           class="block w-full text-center bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+           class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
             Continuar
         </a>
     </div>

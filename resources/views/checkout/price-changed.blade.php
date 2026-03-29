@@ -16,8 +16,8 @@
                 </div>
                 <h2 class="text-lg font-bold text-gray-800 mb-1">O preço do voo aumentou</h2>
             @else
-                <div class="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 </div>
                 <h2 class="text-lg font-bold text-gray-800 mb-1">O preço do voo diminuiu!</h2>
             @endif
@@ -60,7 +60,7 @@
                     @endif
                 @endforeach
                 <input type="hidden" name="price_confirmed" value="1">
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition-colors">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors">
                     Continuar com o novo preço
                 </button>
             </form>

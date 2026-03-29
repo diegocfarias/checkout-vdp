@@ -25,7 +25,7 @@
             <span>{{ $params['adults'] }} ad.{{ $params['children'] > 0 ? ', ' . $params['children'] . ' cr.' : '' }}{{ $params['infants'] > 0 ? ', ' . $params['infants'] . ' bb.' : '' }}</span>
             <span class="text-gray-400">|</span>
             <span>{{ $params['cabin'] === 'EX' ? 'Executiva' : 'Econômica' }}</span>
-            <button type="button" id="toggle-search-form" class="ml-auto text-emerald-600 hover:text-emerald-700 font-medium text-sm flex items-center gap-1">
+            <button type="button" id="toggle-search-form" class="ml-auto text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 Nova busca
             </button>
@@ -41,7 +41,7 @@
             <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <h2 class="text-xl font-semibold text-gray-700 mb-2">Nenhum voo encontrado</h2>
             <p class="text-gray-500 mb-6">Tente alterar as datas ou os aeroportos da sua busca.</p>
-            <a href="{{ route('search.home') }}" class="inline-block bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors">Nova busca</a>
+            <a href="{{ route('search.home') }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors">Nova busca</a>
         </div>
     @else
         <div class="flex flex-col lg:flex-row gap-5">
@@ -52,9 +52,9 @@
                         <div class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                             <h3 class="font-semibold text-gray-800 text-sm">Filtros</h3>
-                            <span id="active-filter-count" class="hidden text-xs font-bold text-white bg-emerald-500 rounded-full w-4.5 h-4.5 flex items-center justify-center leading-none px-1.5 py-0.5">0</span>
+                            <span id="active-filter-count" class="hidden text-xs font-bold text-white bg-blue-500 rounded-full w-4.5 h-4.5 flex items-center justify-center leading-none px-1.5 py-0.5">0</span>
                         </div>
-                        <button type="button" onclick="clearFilters()" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium transition-colors">Limpar</button>
+                        <button type="button" onclick="clearFilters()" class="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors">Limpar</button>
                     </div>
 
                     @if(count($airlines) > 0)
@@ -141,7 +141,7 @@
             <div class="flex-1 min-w-0">
                 <div class="flex flex-wrap items-center gap-3 mb-5 sticky top-[72px] lg:static bg-gray-50 lg:bg-transparent -mx-4 px-4 py-3 lg:py-0 lg:mx-0 lg:px-0 z-10 border-b lg:border-0 border-gray-200">
                     <div class="flex bg-white rounded-lg border border-gray-200 overflow-hidden text-sm shadow-sm">
-                        <button type="button" data-sort="price" class="sort-tab sort-tab-active px-5 py-2.5 font-medium text-white bg-emerald-600">Menor preço</button>
+                        <button type="button" data-sort="price" class="sort-tab sort-tab-active px-5 py-2.5 font-medium text-white bg-blue-600">Menor preço</button>
                         @if($mixEnabled)
                         <button type="button" data-sort="same-cia" class="sort-tab px-5 py-2.5 font-medium text-gray-600 hover:bg-gray-50">Mesma cia</button>
                         @endif
@@ -151,7 +151,7 @@
                     <button type="button" onclick="toggleMobileFilters()" class="lg:hidden flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 shadow-sm transition-colors relative">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                         Filtros
-                        <span id="mobile-btn-filter-count" class="hidden absolute -top-1.5 -right-1.5 text-xs font-bold text-white bg-emerald-500 rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
+                        <span id="mobile-btn-filter-count" class="hidden absolute -top-1.5 -right-1.5 text-xs font-bold text-white bg-blue-500 rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
                     </button>
                 </div>
 
@@ -163,7 +163,7 @@
 
                 <div id="no-results-msg" class="hidden bg-white rounded-xl border border-gray-200 p-8 text-center">
                     <p class="text-gray-500">Nenhum resultado com os filtros selecionados.</p>
-                    <button type="button" onclick="clearFilters()" class="mt-3 text-emerald-600 font-medium text-sm">Limpar filtros</button>
+                    <button type="button" onclick="clearFilters()" class="mt-3 text-blue-600 font-medium text-sm">Limpar filtros</button>
                 </div>
 
                 <div id="load-more-wrap" class="text-center mt-4">
@@ -182,7 +182,7 @@
                     <div class="flex items-center gap-2">
                         <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                         <h3 class="font-bold text-gray-800 text-base">Filtros</h3>
-                        <span id="mobile-active-filter-count" class="hidden text-xs font-bold text-white bg-emerald-500 rounded-full px-1.5 py-0.5 leading-none">0</span>
+                        <span id="mobile-active-filter-count" class="hidden text-xs font-bold text-white bg-blue-500 rounded-full px-1.5 py-0.5 leading-none">0</span>
                     </div>
                     <button type="button" onclick="toggleMobileFilters()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -271,7 +271,7 @@
 
                 <div class="flex gap-3 px-5 py-4 border-t border-gray-100 shrink-0 bg-white">
                     <button type="button" onclick="clearFilters()" class="flex-1 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Limpar</button>
-                    <button type="button" onclick="toggleMobileFilters()" class="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors">Aplicar</button>
+                    <button type="button" onclick="toggleMobileFilters()" class="flex-1 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">Aplicar</button>
                 </div>
             </div>
         </div>
@@ -367,18 +367,18 @@
             updateFlightSelection(groupIdx, dir, parseInt(radio.value));
 
             var activeClasses = dir === 'ob'
-                ? ['border-emerald-400', 'bg-emerald-50/60', 'shadow-sm']
+                ? ['border-blue-400', 'bg-blue-50/60', 'shadow-sm']
                 : ['border-blue-400', 'bg-blue-50/60', 'shadow-sm'];
-            var dotBorder = dir === 'ob' ? 'border-emerald-600' : 'border-blue-600';
-            var dotBg = dir === 'ob' ? 'bg-emerald-600' : 'bg-blue-600';
+            var dotBorder = dir === 'ob' ? 'border-blue-600' : 'border-blue-600';
+            var dotBg = dir === 'ob' ? 'bg-blue-600' : 'bg-blue-600';
 
             label.closest('.space-y-2').querySelectorAll('.flight-option[data-dir="' + dir + '"]').forEach(function(opt) {
-                opt.classList.remove('border-emerald-400', 'bg-emerald-50/60', 'border-blue-400', 'bg-blue-50/60', 'shadow-sm');
+                opt.classList.remove('border-blue-400', 'bg-blue-50/60', 'border-blue-400', 'bg-blue-50/60', 'shadow-sm');
                 opt.classList.add('border-gray-200');
                 var d = opt.querySelector('.radio-dot');
-                if (d) { d.classList.remove('border-emerald-600', 'border-blue-600'); d.classList.add('border-gray-300'); }
+                if (d) { d.classList.remove('border-blue-600', 'border-blue-600'); d.classList.add('border-gray-300'); }
                 var inner = opt.querySelector('.radio-dot-inner');
-                if (inner) { inner.classList.remove('bg-emerald-600', 'bg-blue-600'); }
+                if (inner) { inner.classList.remove('bg-blue-600', 'bg-blue-600'); }
 
                 if (opt !== label) {
                     var otherConnBtn = opt.querySelector('.conn-toggle-btn');
@@ -533,11 +533,11 @@
     document.querySelectorAll('.sort-tab').forEach(function(tab) {
         tab.addEventListener('click', function() {
             document.querySelectorAll('.sort-tab').forEach(function(t) {
-                t.classList.remove('text-white', 'bg-emerald-600', 'sort-tab-active');
+                t.classList.remove('text-white', 'bg-blue-600', 'sort-tab-active');
                 t.classList.add('text-gray-600');
             });
             tab.classList.remove('text-gray-600');
-            tab.classList.add('text-white', 'bg-emerald-600', 'sort-tab-active');
+            tab.classList.add('text-white', 'bg-blue-600', 'sort-tab-active');
 
             var sortBy = tab.dataset.sort;
             var list = document.getElementById('combinations-list');

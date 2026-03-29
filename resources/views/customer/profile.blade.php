@@ -31,7 +31,7 @@
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
                     <input type="text" name="name" id="name" value="{{ old('name', $customer->name) }}" required
                            data-validate="name"
-                           class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('name') is-invalid @enderror">
+                           class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('name') is-invalid @enderror">
                     <span class="error-msg">@error('name'){{ $message }}@enderror</span>
                 </div>
                 <div>
@@ -39,10 +39,10 @@
                     <input type="tel" name="phone" id="phone" value="{{ old('phone', $customer->phone) }}" required
                            placeholder="(00) 00000-0000" inputmode="numeric" maxlength="15"
                            data-mask="phone" data-validate="phone"
-                           class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('phone') is-invalid @enderror">
+                           class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('phone') is-invalid @enderror">
                     <span class="error-msg">@error('phone'){{ $message }}@enderror</span>
                 </div>
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors text-sm">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors text-sm">
                     Salvar alterações
                 </button>
             </div>
@@ -124,14 +124,14 @@
                         <div>
                             <label for="requested_value" class="block text-sm font-medium text-gray-700 mb-1">Novo valor desejado</label>
                             <input type="text" name="requested_value" id="change-new-value" required
-                                   class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border">
+                                   class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                             <span class="error-msg"></span>
                         </div>
                         <div>
                             <label for="reason" class="block text-sm font-medium text-gray-700 mb-1">Motivo <span class="text-gray-400 font-normal">(opcional)</span></label>
-                            <textarea name="reason" rows="2" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border"></textarea>
+                            <textarea name="reason" rows="2" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"></textarea>
                         </div>
-                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
                             Enviar solicitação
                         </button>
                     </div>

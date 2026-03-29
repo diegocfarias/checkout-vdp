@@ -26,7 +26,7 @@
                         <input type="text" name="document" id="document" value="{{ old('document') }}" required
                                placeholder="000.000.000-00" inputmode="numeric" maxlength="14"
                                data-mask="cpf" data-validate="cpf"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('document') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('document') is-invalid @enderror">
                         <span class="error-msg">@error('document'){{ $message }}@enderror</span>
                     </div>
 
@@ -35,12 +35,12 @@
                         <input type="tel" name="phone" id="phone" value="{{ old('phone') }}" required
                                placeholder="(00) 00000-0000" inputmode="numeric" maxlength="15"
                                data-mask="phone" data-validate="phone"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('phone') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('phone') is-invalid @enderror">
                         <span class="error-msg">@error('phone'){{ $message }}@enderror</span>
                     </div>
 
                     <button type="submit"
-                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition-colors">
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors">
                         Finalizar cadastro
                     </button>
                 </div>

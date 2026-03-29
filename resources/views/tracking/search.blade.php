@@ -49,7 +49,7 @@
                 </div>
 
                 <button type="submit"
-                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-base">
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-base">
                     Consultar pedido
                 </button>
             </form>

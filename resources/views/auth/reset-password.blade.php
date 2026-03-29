@@ -25,7 +25,7 @@
                         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Nova senha</label>
                         <input type="password" name="password" id="password" required autofocus
                                data-validate="password"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('password') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('password') is-invalid @enderror">
                         <span class="error-msg">@error('password'){{ $message }}@enderror</span>
                         <div class="password-strength"><div class="password-strength-bar"></div></div>
                         <p class="password-strength-label"></p>
@@ -35,12 +35,12 @@
                         <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirmar senha</label>
                         <input type="password" name="password_confirmation" id="password_confirmation" required
                                data-validate="password-confirm"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                         <span class="error-msg"></span>
                     </div>
 
                     <button type="submit"
-                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition-colors">
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors">
                         Definir senha
                     </button>
                 </div>

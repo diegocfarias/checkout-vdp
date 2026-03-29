@@ -26,7 +26,7 @@
                         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
                         <input type="text" name="name" id="name" value="{{ old('name') }}" required
                                data-validate="name"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('name') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('name') is-invalid @enderror">
                         <span class="error-msg">@error('name'){{ $message }}@enderror</span>
                     </div>
 
@@ -34,7 +34,7 @@
                         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
                         <input type="email" name="email" id="email" value="{{ old('email') }}" required
                                data-validate="email"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('email') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('email') is-invalid @enderror">
                         <span class="error-msg">@error('email'){{ $message }}@enderror</span>
                     </div>
 
@@ -43,7 +43,7 @@
                         <input type="text" name="document" id="document" value="{{ old('document') }}" required
                                placeholder="000.000.000-00" inputmode="numeric" maxlength="14"
                                data-mask="cpf" data-validate="cpf"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('document') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('document') is-invalid @enderror">
                         <span class="error-msg">@error('document'){{ $message }}@enderror</span>
                     </div>
 
@@ -52,7 +52,7 @@
                         <input type="tel" name="phone" id="phone" value="{{ old('phone') }}" required
                                placeholder="(00) 00000-0000" inputmode="numeric" maxlength="15"
                                data-mask="phone" data-validate="phone"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('phone') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('phone') is-invalid @enderror">
                         <span class="error-msg">@error('phone'){{ $message }}@enderror</span>
                     </div>
 
@@ -60,7 +60,7 @@
                         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
                         <input type="password" name="password" id="password" required
                                data-validate="password"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('password') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('password') is-invalid @enderror">
                         <span class="error-msg">@error('password'){{ $message }}@enderror</span>
                         <div class="password-strength"><div class="password-strength-bar"></div></div>
                         <p class="password-strength-label"></p>
@@ -70,19 +70,19 @@
                         <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirmar senha</label>
                         <input type="password" name="password_confirmation" id="password_confirmation" required
                                data-validate="password-confirm"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                         <span class="error-msg"></span>
                     </div>
 
                     <button type="submit"
-                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition-colors">
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors">
                         Criar conta
                     </button>
                 </div>
             </form>
 
             <p class="mt-6 text-center text-sm text-gray-500">
-                Já tem uma conta? <a href="{{ route('customer.login') }}" class="text-emerald-600 hover:text-emerald-700 font-medium">Entrar</a>
+                Já tem uma conta? <a href="{{ route('customer.login') }}" class="text-blue-600 hover:text-blue-700 font-medium">Entrar</a>
             </p>
         </div>
     </div>

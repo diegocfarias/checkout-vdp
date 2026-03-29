@@ -152,7 +152,7 @@
                                 <div class="mt-4 pt-3 border-t border-gray-100">
                                     <label class="flex items-center gap-2 cursor-pointer">
                                         <input type="checkbox" name="passengers[{{ $i }}][save_passenger]" value="1"
-                                               class="rounded border-gray-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
+                                               class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
                                         <span class="text-sm text-gray-600">Salvar para futuras compras</span>
                                     </label>
                                 </div>
@@ -269,9 +269,9 @@
                         @if($pixEnabled ?? true)
                             <label class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition
                                 {{ ($pixDiscount ?? 0) > 0
-                                    ? 'border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50'
+                                    ? 'border-blue-300 bg-blue-50/50 hover:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50'
                                     : 'border-gray-200 hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50' }}">
-                                <input type="radio" name="payment_method" value="pix" {{ old('payment_method', $defaultMethod) === 'pix' ? 'checked' : '' }} class="payment-method-radio text-emerald-600">
+                                <input type="radio" name="payment_method" value="pix" {{ old('payment_method', $defaultMethod) === 'pix' ? 'checked' : '' }} class="payment-method-radio text-blue-600">
                                 <div class="flex-1">
                                     <span class="font-medium">PIX</span>
                                     @if(($pixDiscount ?? 0) > 0)
@@ -450,7 +450,7 @@
                 </button>
             </div>
             <button type="submit" form="checkout-form"
-                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-base">
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-base">
                 Finalizar compra
             </button>
         </div>
@@ -506,7 +506,7 @@
                             </div>
                             @if($obStopsModal > 0)
                                 <div class="mt-3 pt-3 border-t border-gray-200">
-                                    @include('partials._connection_details', ['segments' => $obConnsModal, 'accentColor' => 'emerald', 'compact' => false])
+                                    @include('partials._connection_details', ['segments' => $obConnsModal, 'accentColor' => 'blue', 'compact' => false])
                                 </div>
                             @endif
                         </div>

@@ -33,7 +33,7 @@
                         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
                         <input type="email" name="email" id="email" value="{{ old('email') }}" required autofocus
                                data-validate="email"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border @error('email') is-invalid @enderror">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border @error('email') is-invalid @enderror">
                         <span class="error-msg">@error('email'){{ $message }}@enderror</span>
                     </div>
 
@@ -41,20 +41,20 @@
                         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
                         <input type="password" name="password" id="password" required
                                data-validate="password"
-                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm px-3 py-3 border">
+                               class="v-input w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                         <span class="error-msg"></span>
                     </div>
 
                     <div class="flex items-center justify-between">
                         <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="remember" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                            <input type="checkbox" name="remember" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                             <span class="text-sm text-gray-600">Lembrar de mim</span>
                         </label>
-                        <a href="{{ route('customer.password.request') }}" class="text-sm text-emerald-600 hover:text-emerald-700 font-medium">Esqueci minha senha</a>
+                        <a href="{{ route('customer.password.request') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Esqueci minha senha</a>
                     </div>
 
                     <button type="submit"
-                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition-colors">
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors">
                         Entrar
                     </button>
                 </div>
@@ -71,7 +71,7 @@
             @endif
 
             <p class="mt-6 text-center text-sm text-gray-500">
-                Não tem uma conta? <a href="{{ route('customer.register') }}" class="text-emerald-600 hover:text-emerald-700 font-medium">Criar conta</a>
+                Não tem uma conta? <a href="{{ route('customer.register') }}" class="text-blue-600 hover:text-blue-700 font-medium">Criar conta</a>
             </p>
         </div>
     </div>
