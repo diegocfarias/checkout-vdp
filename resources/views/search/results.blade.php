@@ -621,6 +621,20 @@
         document.getElementById('mobile-filters').classList.toggle('hidden');
         document.body.classList.toggle('overflow-hidden');
     };
+
+    // --- Loading on page reload/navigation ---
+    window.addEventListener('beforeunload', function() {
+        showTravelLoading({
+            title: 'Buscando os melhores voos...',
+            messages: [
+                'Consultando companhias aéreas...',
+                'Verificando disponibilidade...',
+                'Comparando preços...',
+                'Quase lá...'
+            ],
+            timeoutMs: 60000
+        });
+    });
 })();
 </script>
 @endpush

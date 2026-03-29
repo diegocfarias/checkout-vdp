@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ChangeRequestController;
 use App\Http\Controllers\CustomerAreaController;
 use App\Http\Controllers\FlightSearchController;
+use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\OrderCheckoutController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Middleware\EnsureCustomerIsActive;
@@ -123,6 +124,11 @@ Route::middleware(['auth:customer', EnsureCustomerIsActive::class])->group(funct
     Route::delete('/minha-conta/passageiros/{savedPassenger}', [CustomerAreaController::class, 'destroyPassenger'])->name('customer.passenger.destroy');
     Route::get('/minha-conta/indicacoes', [CustomerAreaController::class, 'referrals'])->name('customer.referrals');
     Route::post('/minha-conta/solicitar-alteracao', [ChangeRequestController::class, 'store'])->name('customer.change-request');
+
+    Route::get('/minha-conta/atendimentos', [SupportTicketController::class, 'index'])->name('customer.support.index');
+    Route::get('/minha-conta/atendimentos/{ticket:uuid}', [SupportTicketController::class, 'show'])->name('customer.support.show');
+    Route::post('/minha-conta/atendimentos', [SupportTicketController::class, 'store'])->name('customer.support.store');
+    Route::post('/minha-conta/atendimentos/{ticket:uuid}/responder', [SupportTicketController::class, 'reply'])->name('customer.support.reply');
 });
 
 // ── Checkout & Tracking ──

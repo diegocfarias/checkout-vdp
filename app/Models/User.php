@@ -46,6 +46,11 @@ class User extends Authenticatable
         return $this->role === 'issuer';
     }
 
+    public function isSupport(): bool
+    {
+        return $this->role === 'support';
+    }
+
     public function canIssue(): bool
     {
         return true;
@@ -59,6 +64,11 @@ class User extends Authenticatable
     public function scopeIssuers($query)
     {
         return $query->whereIn('role', ['admin', 'issuer'])->where('is_active', true);
+    }
+
+    public function scopeSupportAgents($query)
+    {
+        return $query->where('role', 'support')->where('is_active', true);
     }
 
     public function scopeWithPushover($query)

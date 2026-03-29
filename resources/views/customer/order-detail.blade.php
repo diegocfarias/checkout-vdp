@@ -178,6 +178,61 @@
             </div>
         @endif
 
+        {{-- Botão Atendimento --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-semibold text-gray-800 text-sm">Precisa de ajuda?</h3>
+                    <p class="text-xs text-gray-500">Abra uma solicitação sobre este pedido.</p>
+                </div>
+                <button type="button" onclick="document.getElementById('support-modal').classList.remove('hidden')"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                    Abrir atendimento
+                </button>
+            </div>
+        </div>
+
+        {{-- Modal de Atendimento --}}
+        <div id="support-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/50" onclick="document.getElementById('support-modal').classList.add('hidden')"></div>
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative z-10 max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-gray-800">Abrir atendimento</h2>
+                        <button type="button" onclick="document.getElementById('support-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+
+                    <form method="POST" action="{{ route('customer.support.store') }}">
+                        @csrf
+                        <input type="hidden" name="order_id" value="{{ $order->id }}">
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Assunto</label>
+                            <select name="subject" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Selecione...</option>
+                                @foreach(\App\Models\SupportTicket::SUBJECTS as $key => $label)
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Mensagem</label>
+                            <textarea name="message" rows="5" required maxlength="5000" placeholder="Descreva o que precisa..."
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors text-sm">
+                            Enviar solicitação
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         @php
             $total = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0));
             $finalTotal = $total - (float)($order->discount_amount ?? 0);
