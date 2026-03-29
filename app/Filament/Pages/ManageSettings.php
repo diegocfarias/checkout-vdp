@@ -60,7 +60,6 @@ class ManageSettings extends Page
         $this->form->fill([
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
-            'pushover_user_key' => Setting::get('pushover_user_key', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
             'pricing_miles_enabled' => Setting::get('pricing_miles_enabled', true),
             'pricing_pct_enabled' => Setting::get('pricing_pct_enabled', false),
@@ -275,17 +274,10 @@ class ManageSettings extends Page
 
                         TextInput::make('pushover_app_token')
                             ->label('Pushover App Token')
-                            ->helperText('Token do aplicativo Pushover para notificações de novas emissões.')
+                            ->helperText('Token do aplicativo Pushover para notificações de novas emissões. Cada emissor deve ter sua própria User Key configurada no cadastro.')
                             ->password()
                             ->revealable()
                             ->placeholder('Token do app'),
-
-                        TextInput::make('pushover_user_key')
-                            ->label('Pushover User Key')
-                            ->helperText('Chave de usuário/grupo do Pushover.')
-                            ->password()
-                            ->revealable()
-                            ->placeholder('Chave do usuário'),
                     ]),
             ])
             ->statePath('data');
@@ -349,7 +341,6 @@ class ManageSettings extends Page
 
         Setting::set('emission_value_per_order', $data['emission_value_per_order'] ?? '0', 'string');
         Setting::set('pushover_app_token', $data['pushover_app_token'] ?? '', 'string');
-        Setting::set('pushover_user_key', $data['pushover_user_key'] ?? '', 'string');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {

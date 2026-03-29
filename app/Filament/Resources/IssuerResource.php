@@ -67,11 +67,13 @@ class IssuerResource extends Resource
                             ->dehydrated(fn ($state) => filled($state))
                             ->maxLength(255),
 
-                        TextInput::make('pushover_device_id')
-                            ->label('Pushover Device ID')
-                            ->helperText('ID do dispositivo no Pushover para receber notificações de novas emissões.')
+                        TextInput::make('pushover_user_key')
+                            ->label('Pushover User Key')
+                            ->helperText('Chave de usuário individual do Pushover para receber notificações de novas emissões.')
+                            ->password()
+                            ->revealable()
                             ->maxLength(255)
-                            ->placeholder('device_name'),
+                            ->placeholder('Ex: uQiRzpo4DXghDmr9QZgQ...'),
 
                         Toggle::make('is_active')
                             ->label('Ativo')
@@ -96,7 +98,7 @@ class IssuerResource extends Resource
 
                 Tables\Columns\IconColumn::make('has_pushover')
                     ->label('Pushover')
-                    ->getStateUsing(fn (User $record) => filled($record->pushover_device_id))
+                    ->getStateUsing(fn (User $record) => filled($record->pushover_user_key))
                     ->boolean()
                     ->trueIcon('heroicon-o-bell-alert')
                     ->falseIcon('heroicon-o-bell-slash')

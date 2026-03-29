@@ -10,10 +10,9 @@ use Illuminate\Support\Facades\Log;
 
 class PushoverService
 {
-    public function send(string $message, ?string $device = null, array $options = []): bool
+    public function send(string $message, string $userKey, array $options = []): bool
     {
         $token = Setting::get('pushover_app_token') ?: config('services.pushover.token');
-        $userKey = Setting::get('pushover_user_key') ?: config('services.pushover.user_key');
 
         if (! $token || ! $userKey) {
             Log::warning('PushoverService: token ou user_key não configurados');
@@ -25,10 +24,6 @@ class PushoverService
             'user' => $userKey,
             'message' => $message,
         ], $options);
-
-        if ($device) {
-            $payload['device'] = $device;
-        }
 
         try {
             $response = Http::timeout(10)->post('https://api.pushover.net/1/messages.json', $payload);
@@ -86,7 +81,7 @@ class PushoverService
             . "Milhas: {$milesFormatted}";
 
         foreach ($issuers as $issuer) {
-            $this->send($message, $issuer->pushover_device_id, [
+            $this->send($message, $issuer->pushover_user_key, [
                 'title' => 'Voe de Primeira - Nova Emissão',
                 'priority' => 1,
                 'sound' => 'cashregister',

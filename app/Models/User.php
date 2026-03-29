@@ -18,7 +18,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        'pushover_device_id',
+        'pushover_user_key',
         'is_active',
     ];
 
@@ -63,6 +63,6 @@ class User extends Authenticatable
 
     public function scopeWithPushover($query)
     {
-        return $query->whereNotNull('pushover_device_id');
+        return $query->whereNotNull('pushover_user_key');
     }
 }
