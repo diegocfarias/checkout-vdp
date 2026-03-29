@@ -2,6 +2,7 @@
     $prefill = $prefill ?? null;
     $compact = $compact ?? false;
     $calendarPricesEnabled = \App\Models\Setting::get('calendar_prices_enabled', true);
+    $calendarPricesMonths = (int) \App\Models\Setting::get('calendar_prices_months', 3);
     if ($prefill && isset($prefill['trip_type'])) {
         $tripType = $prefill['trip_type'];
     } elseif ($prefill && !empty($prefill['inbound_date'])) {
@@ -477,6 +478,7 @@
     maxDate.setHours(0,0,0,0);
 
     var calendarPricesFeatureEnabled = @json((bool) $calendarPricesEnabled);
+    var calendarPricesMonths = @json($calendarPricesMonths);
     var calendarPrices = {};
     var calendarPriceThresholds = { p33: null, p66: null };
     var calPriceFetchId = 0;
@@ -906,10 +908,12 @@
     }
 
     function dpFetchVisiblePrices() {
+        var startM = today.getMonth();
+        var startY = today.getFullYear();
+        var maxEndIdx = calendarPricesMonths - 1;
+
         if (isMobile()) {
-            var startM = today.getMonth();
-            var startY = today.getFullYear();
-            var endIdx = MOBILE_MONTHS_COUNT - 1;
+            var endIdx = Math.min(MOBILE_MONTHS_COUNT - 1, maxEndIdx);
             var endM = (startM + endIdx) % 12;
             var endY = startY + Math.floor((startM + endIdx) / 12);
             fetchCalendarPrices(startM, startY, endM, endY);
@@ -918,6 +922,13 @@
             var y1 = dpViewYear + Math.floor(dpViewMonth / 12);
             var m2 = (dpViewMonth + 1) % 12;
             var y2 = dpViewYear + Math.floor((dpViewMonth + 1) / 12);
+            var limitM = (startM + maxEndIdx) % 12;
+            var limitY = startY + Math.floor((startM + maxEndIdx) / 12);
+            if (y1 > limitY || (y1 === limitY && m1 > limitM)) return;
+            if (y2 > limitY || (y2 === limitY && m2 > limitM)) {
+                m2 = limitM;
+                y2 = limitY;
+            }
             fetchCalendarPrices(m1, y1, m2, y2);
         }
     }

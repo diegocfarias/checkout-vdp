@@ -71,6 +71,7 @@ class ManageSettings extends Page
             'showcase_max_cards' => Setting::get('showcase_max_cards', 9),
             'showcase_sort_mode' => Setting::get('showcase_sort_mode', 'manual'),
             'calendar_prices_enabled' => Setting::get('calendar_prices_enabled', true),
+            'calendar_prices_months' => Setting::get('calendar_prices_months', 3),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -106,6 +107,20 @@ class ManageSettings extends Page
                             ->label('Mix de companhias')
                             ->helperText('Permite agrupar voos de companhias diferentes no mesmo pedido.')
                             ->default(true),
+
+                        Toggle::make('calendar_prices_enabled')
+                            ->label('Preços no calendário')
+                            ->helperText('Exibe preços nas datas do calendário de busca (ida e volta), com código de cores.')
+                            ->default(true),
+
+                        TextInput::make('calendar_prices_months')
+                            ->label('Meses de preços no calendário')
+                            ->helperText('Quantos meses à frente buscar preços para exibir no calendário.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(11)
+                            ->default(3)
+                            ->suffix('meses'),
                     ]),
 
                 Section::make('Precificação')
@@ -383,10 +398,6 @@ class ManageSettings extends Page
                             ->helperText('Manual: respeita a ordem de exibição configurada em cada rota. Automática: exibe os destinos mais baratos primeiro.')
                             ->required(),
 
-                        Toggle::make('calendar_prices_enabled')
-                            ->label('Preços no calendário')
-                            ->helperText('Exibe preços nas datas do calendário de busca (ida e volta), com código de cores.')
-                            ->default(true),
                     ]),
 
                 Section::make('Emissão')
@@ -486,6 +497,7 @@ class ManageSettings extends Page
         Setting::set('showcase_max_cards', (int) ($data['showcase_max_cards'] ?? 9), 'integer');
         Setting::set('showcase_sort_mode', $data['showcase_sort_mode'] ?? 'manual', 'string');
         Setting::set('calendar_prices_enabled', (bool) ($data['calendar_prices_enabled'] ?? true), 'boolean');
+        Setting::set('calendar_prices_months', (int) ($data['calendar_prices_months'] ?? 3), 'integer');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {
