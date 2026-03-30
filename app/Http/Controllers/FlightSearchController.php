@@ -225,6 +225,9 @@ class FlightSearchController extends Controller
 
     private function buildGroups(array $outbound, array $inbound): array
     {
+        $outbound = array_map([$this, 'sanitizeFlight'], $outbound);
+        $inbound = array_map([$this, 'sanitizeFlight'], $inbound);
+
         $obByCiaPrice = [];
         foreach ($outbound as $ob) {
             $cia = strtoupper($ob['operator'] ?? '');
@@ -350,6 +353,35 @@ class FlightSearchController extends Controller
         return 'noite';
     }
 
+    private function sanitizeFlight(array $flight): array
+    {
+        $allowed = [
+            'operator', 'flight_number', 'departure_time', 'arrival_time',
+            'departure_location', 'arrival_location', 'departure_label', 'arrival_label',
+            'boarding_tax', 'class_service', 'price_money', 'price_miles', 'price_miles_vip',
+            'total_flight_duration', 'unique_id', 'connection',
+        ];
+
+        $clean = [];
+        foreach ($allowed as $key) {
+            if (array_key_exists($key, $flight)) {
+                $clean[$key] = $flight[$key];
+            }
+        }
+
+        if (isset($clean['connection']) && is_array($clean['connection'])) {
+            $allowedConn = [
+                'DEPARTURE_TIME', 'ARRIVAL_TIME', 'DEPARTURE_LOCATION', 'ARRIVAL_LOCATION',
+                'FLIGHT_NUMBER', 'FLIGHT_DURATION', 'OP', 'TIME_WAITING',
+            ];
+            $clean['connection'] = array_map(function ($seg) use ($allowedConn) {
+                return array_intersect_key($seg, array_flip($allowedConn));
+            }, $clean['connection']);
+        }
+
+        return $clean;
+    }
+
     public function select(Request $request)
     {
         $request->validate([
@@ -401,9 +433,9 @@ class FlightSearchController extends Controller
             return back()->with('error', 'O voo de volta selecionado não está mais disponível. Por favor, faça uma nova busca.');
         }
 
-        $outboundData = $fresh['outbound'];
+        $outboundData = $this->sanitizeFlight($fresh['outbound']);
         if ($fresh['inbound']) {
-            $inboundData = $fresh['inbound'];
+            $inboundData = $this->sanitizeFlight($fresh['inbound']);
         }
 
         $newObPrice = $this->parseFlightPrice($outboundData);
