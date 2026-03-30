@@ -72,6 +72,11 @@ class ManageSettings extends Page
             'showcase_sort_mode' => Setting::get('showcase_sort_mode', 'manual'),
             'calendar_prices_enabled' => Setting::get('calendar_prices_enabled', true),
             'calendar_prices_months' => Setting::get('calendar_prices_months', 3),
+            'provider_gol' => Setting::get('provider_gol', 'vdp'),
+            'provider_azul' => Setting::get('provider_azul', 'vdp'),
+            'provider_latam' => Setting::get('provider_latam', 'latam_crawler'),
+            'vdp_timeout' => Setting::get('vdp_timeout', 35),
+            'crawler_timeout' => Setting::get('crawler_timeout', 35),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -121,6 +126,51 @@ class ManageSettings extends Page
                             ->maxValue(11)
                             ->default(3)
                             ->suffix('meses'),
+
+                        Select::make('provider_gol')
+                            ->label('Fornecedor — GOL')
+                            ->options([
+                                'vdp' => 'VDP (API atual)',
+                                'latam_crawler' => 'LATAM Crawler',
+                            ])
+                            ->helperText('Qual API usar para buscar voos GOL.')
+                            ->default('vdp'),
+
+                        Select::make('provider_azul')
+                            ->label('Fornecedor — Azul')
+                            ->options([
+                                'vdp' => 'VDP (API atual)',
+                                'latam_crawler' => 'LATAM Crawler',
+                            ])
+                            ->helperText('Qual API usar para buscar voos Azul.')
+                            ->default('vdp'),
+
+                        Select::make('provider_latam')
+                            ->label('Fornecedor — LATAM')
+                            ->options([
+                                'vdp' => 'VDP (API atual)',
+                                'latam_crawler' => 'LATAM Crawler',
+                            ])
+                            ->helperText('Qual API usar para buscar voos LATAM.')
+                            ->default('latam_crawler'),
+
+                        TextInput::make('vdp_timeout')
+                            ->label('Timeout — VDP (segundos)')
+                            ->helperText('Tempo máximo de espera para a API VDP responder.')
+                            ->numeric()
+                            ->minValue(5)
+                            ->maxValue(120)
+                            ->default(35)
+                            ->suffix('s'),
+
+                        TextInput::make('crawler_timeout')
+                            ->label('Timeout — LATAM Crawler (segundos)')
+                            ->helperText('Tempo máximo de espera para a API LATAM Crawler responder.')
+                            ->numeric()
+                            ->minValue(5)
+                            ->maxValue(120)
+                            ->default(35)
+                            ->suffix('s'),
                     ]),
 
                 Section::make('Precificação')
@@ -498,6 +548,11 @@ class ManageSettings extends Page
         Setting::set('showcase_sort_mode', $data['showcase_sort_mode'] ?? 'manual', 'string');
         Setting::set('calendar_prices_enabled', (bool) ($data['calendar_prices_enabled'] ?? true), 'boolean');
         Setting::set('calendar_prices_months', (int) ($data['calendar_prices_months'] ?? 3), 'integer');
+        Setting::set('provider_gol', $data['provider_gol'] ?? 'vdp', 'string');
+        Setting::set('provider_azul', $data['provider_azul'] ?? 'vdp', 'string');
+        Setting::set('provider_latam', $data['provider_latam'] ?? 'latam_crawler', 'string');
+        Setting::set('vdp_timeout', (int) ($data['vdp_timeout'] ?? 35), 'integer');
+        Setting::set('crawler_timeout', (int) ($data['crawler_timeout'] ?? 35), 'integer');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {

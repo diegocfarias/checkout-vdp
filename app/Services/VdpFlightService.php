@@ -9,6 +9,25 @@ use Illuminate\Support\Facades\Log;
 
 class VdpFlightService
 {
+    private ?LatamCrawlerService $crawlerService = null;
+
+    private function getCrawlerService(): LatamCrawlerService
+    {
+        if (! $this->crawlerService) {
+            $this->crawlerService = app(LatamCrawlerService::class);
+        }
+
+        return $this->crawlerService;
+    }
+
+    private function getProviderForCia(string $cia): string
+    {
+        $cia = strtolower(trim($cia));
+        $normalized = $this->normalizeCia($cia);
+
+        return Setting::get("provider_{$normalized}", $normalized === 'latam' ? 'latam_crawler' : 'vdp');
+    }
+
     public function searchAndFilter(array $payload): array
     {
         $ida = $payload['ida'];
@@ -25,24 +44,21 @@ class VdpFlightService
             'inbound_date' => $volta['inbound_date'] ?? null,
         ];
 
-        $sameCia = $volta && $ida['cia'] === $volta['cia'];
         $outboundFlight = null;
         $inboundFlight = null;
 
-        if (! $volta || $sameCia) {
-            $response = $this->callApi(array_merge($basePax, ['cia' => $ida['cia']]));
+        $obProvider = $this->getProviderForCia($ida['cia']);
+        $obResponse = $this->callForProvider($obProvider, array_merge($basePax, ['cia' => $ida['cia']]));
+        $outboundFlight = $this->findByUniqueId($obResponse['outbound'] ?? [], $ida['unique_id']);
 
-            $outboundFlight = $this->findByUniqueId($response['outbound'] ?? [], $ida['unique_id']);
-
-            if ($volta) {
-                $inboundFlight = $this->findByUniqueId($response['inbound'] ?? [], $volta['unique_id']);
+        if ($volta) {
+            $ibProvider = $this->getProviderForCia($volta['cia']);
+            if ($ibProvider === $obProvider && $ida['cia'] === $volta['cia']) {
+                $inboundFlight = $this->findByUniqueId($obResponse['inbound'] ?? [], $volta['unique_id']);
+            } else {
+                $ibResponse = $this->callForProvider($ibProvider, array_merge($basePax, ['cia' => $volta['cia']]));
+                $inboundFlight = $this->findByUniqueId($ibResponse['inbound'] ?? [], $volta['unique_id']);
             }
-        } else {
-            $outboundResponse = $this->callApi(array_merge($basePax, ['cia' => $ida['cia']]));
-            $outboundFlight = $this->findByUniqueId($outboundResponse['outbound'] ?? [], $ida['unique_id']);
-
-            $inboundResponse = $this->callApi(array_merge($basePax, ['cia' => $volta['cia']]));
-            $inboundFlight = $this->findByUniqueId($inboundResponse['inbound'] ?? [], $volta['unique_id']);
         }
 
         if (! $outboundFlight) {
@@ -81,6 +97,7 @@ class VdpFlightService
     /**
      * Busca voos com cache de 30 minutos.
      * A chave inclui a versão de pricing para invalidação automática ao alterar preços.
+     * Roteia cada cia para o fornecedor configurado e mescla os resultados.
      */
     public function searchFlights(array $params): array
     {
@@ -88,7 +105,7 @@ class VdpFlightService
         $cacheKey = 'vdp_search:' . $pricingVersion . ':' . md5(json_encode($params));
 
         $results = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($params) {
-            return $this->callApi($params);
+            return $this->fetchFromProviders($params);
         });
 
         $this->cacheDirectionPrices($params, $results, $pricingVersion);
@@ -222,11 +239,172 @@ class VdpFlightService
     }
 
     /**
+     * Roteia a busca para os fornecedores configurados e mescla resultados.
+     * VDP e Crawler rodam em paralelo quando ambos estão ativos.
+     */
+    private function fetchFromProviders(array $params): array
+    {
+        $cia = strtolower($params['cia'] ?? 'all');
+        $allCias = ['gol', 'azul', 'latam'];
+
+        if ($cia !== 'all') {
+            $normalized = $this->normalizeCia($cia);
+            $provider = $this->getProviderForCia($normalized);
+
+            return $this->callForProvider($provider, $params);
+        }
+
+        $vdpCias = [];
+        $crawlerCias = [];
+
+        foreach ($allCias as $c) {
+            $provider = $this->getProviderForCia($c);
+            if ($provider === 'latam_crawler') {
+                $crawlerCias[] = $c;
+            } else {
+                $vdpCias[] = $c;
+            }
+        }
+
+        $needVdp = ! empty($vdpCias);
+        $needCrawler = ! empty($crawlerCias);
+
+        if ($needVdp && $needCrawler) {
+            return $this->fetchParallel($params, $vdpCias);
+        }
+
+        if ($needVdp) {
+            try {
+                return $this->callApi($params);
+            } catch (\Throwable $e) {
+                Log::warning('VDP API: falha na busca', ['error' => $e->getMessage()]);
+
+                return ['outbound' => [], 'inbound' => []];
+            }
+        }
+
+        if ($needCrawler) {
+            try {
+                return $this->getCrawlerService()->searchFlights($params);
+            } catch (\Throwable $e) {
+                Log::warning('LatamCrawler: falha na busca', ['error' => $e->getMessage()]);
+
+                return ['outbound' => [], 'inbound' => []];
+            }
+        }
+
+        return ['outbound' => [], 'inbound' => []];
+    }
+
+    /**
+     * Executa VDP e Crawler em paralelo via Http::pool() (curl_multi).
+     */
+    private function fetchParallel(array $params, array $vdpCias): array
+    {
+        $vdpUrl = rtrim(config('services.vdp.url'), '/') . '/api/search/flights';
+        $crawlerUrl = rtrim(config('services.latam_crawler.url', ''), '/');
+        $crawlerKey = config('services.latam_crawler.api_key', '');
+        $crawlerService = $this->getCrawlerService();
+
+        $cabin = $params['cabin'] ?? 'EC';
+        $crawlerCabin = $crawlerService->mapCabin($cabin);
+        $hasInbound = ! empty($params['inbound_date']);
+
+        $crawlerBaseQuery = [
+            'adt' => $params['adults'] ?? 1,
+            'chd' => $params['children'] ?? 0,
+            'inf' => $params['infants'] ?? 0,
+            'cabin' => $crawlerCabin,
+        ];
+
+        $vdpTimeout = $this->getVdpTimeout();
+        $crawlerTimeout = $this->getCrawlerTimeout();
+
+        $responses = Http::pool(function ($pool) use ($vdpUrl, $params, $crawlerUrl, $crawlerKey, $crawlerBaseQuery, $hasInbound, $vdpTimeout, $crawlerTimeout) {
+            $pool->as('vdp')
+                ->acceptJson()
+                ->timeout($vdpTimeout)
+                ->post($vdpUrl, $params);
+
+            $pool->as('crawler_ob')
+                ->withHeaders(['X-API-KEY' => $crawlerKey])
+                ->acceptJson()
+                ->timeout($crawlerTimeout)
+                ->get("{$crawlerUrl}/v1/miles", array_merge($crawlerBaseQuery, [
+                    'ori' => $params['departure'] ?? '',
+                    'dst' => $params['arrival'] ?? '',
+                    'outbound_date' => $params['outbound_date'] ?? '',
+                ]));
+
+            if ($hasInbound) {
+                $pool->as('crawler_ib')
+                    ->withHeaders(['X-API-KEY' => $crawlerKey])
+                    ->acceptJson()
+                    ->timeout($crawlerTimeout)
+                    ->get("{$crawlerUrl}/v1/miles", array_merge($crawlerBaseQuery, [
+                        'ori' => $params['arrival'] ?? '',
+                        'dst' => $params['departure'] ?? '',
+                        'outbound_date' => $params['inbound_date'],
+                    ]));
+            }
+        });
+
+        $outbound = [];
+        $inbound = [];
+
+        $vdpResponse = $responses['vdp'] ?? null;
+        if ($vdpResponse && ! ($vdpResponse instanceof \Throwable) && $vdpResponse->successful()) {
+            $vdpData = $vdpResponse->json();
+            $outbound = $this->filterByCias($vdpData['outbound'] ?? [], $vdpCias);
+            $inbound = $this->filterByCias($vdpData['inbound'] ?? [], $vdpCias);
+        } elseif ($vdpResponse instanceof \Throwable) {
+            Log::warning('VDP API: falha na busca paralela', ['error' => $vdpResponse->getMessage()]);
+        } elseif ($vdpResponse && $vdpResponse->failed()) {
+            Log::warning('VDP API: erro na busca paralela', ['status' => $vdpResponse->status()]);
+        }
+
+        $crawlerOb = $crawlerService->transformResponse($responses['crawler_ob'] ?? null, $cabin);
+        $outbound = array_merge($outbound, $crawlerOb);
+
+        if ($hasInbound) {
+            $crawlerIb = $crawlerService->transformResponse($responses['crawler_ib'] ?? null, $cabin);
+            $inbound = array_merge($inbound, $crawlerIb);
+        }
+
+        return ['outbound' => $outbound, 'inbound' => $inbound];
+    }
+
+    /**
+     * Chama o fornecedor correto para um único provider.
+     */
+    private function callForProvider(string $provider, array $params): array
+    {
+        if ($provider === 'latam_crawler') {
+            return $this->getCrawlerService()->searchFlights($params);
+        }
+
+        return $this->callApi($params);
+    }
+
+    /**
+     * Filtra voos mantendo apenas os das cias informadas.
+     */
+    private function filterByCias(array $flights, array $cias): array
+    {
+        return array_values(array_filter($flights, function ($flight) use ($cias) {
+            $op = $this->normalizeCia($flight['operator'] ?? '');
+
+            return in_array($op, $cias);
+        }));
+    }
+
+    /**
      * Busca voos direto na API (sem cache) para revalidação de preço.
+     * Roteia para o fornecedor configurado.
      */
     public function searchFlightsFresh(array $params): array
     {
-        return $this->callApi($params);
+        return $this->fetchFromProviders($params);
     }
 
     /**
@@ -252,7 +430,7 @@ class VdpFlightService
     }
 
     /**
-     * Revalida ida e volta em 1 chamada (mesma cia) ou 2 chamadas (cias diferentes).
+     * Revalida ida e volta roteando para o fornecedor configurado de cada cia.
      *
      * @return array{outbound: ?array, inbound: ?array}
      */
@@ -263,12 +441,13 @@ class VdpFlightService
         ?string $ibUniqueId = null,
         ?string $ibCia = null,
     ): array {
+        $obProvider = $this->getProviderForCia($obCia);
         $obParams = array_merge($baseParams, ['cia' => strtolower($obCia)]);
 
         $sameCia = $ibCia && strtolower($obCia) === strtolower($ibCia);
 
         try {
-            $obResults = $this->searchFlightsFresh($obParams);
+            $obResults = $this->callForProvider($obProvider, $obParams);
             $freshOb = $this->findByUniqueId($obResults['outbound'] ?? [], $obUniqueId);
 
             $freshIb = null;
@@ -276,8 +455,9 @@ class VdpFlightService
                 if ($sameCia) {
                     $freshIb = $this->findByUniqueId($obResults['inbound'] ?? [], $ibUniqueId);
                 } else {
+                    $ibProvider = $this->getProviderForCia($ibCia);
                     $ibParams = array_merge($baseParams, ['cia' => strtolower($ibCia)]);
-                    $ibResults = $this->searchFlightsFresh($ibParams);
+                    $ibResults = $this->callForProvider($ibProvider, $ibParams);
                     $freshIb = $this->findByUniqueId($ibResults['inbound'] ?? [], $ibUniqueId);
                 }
             }
@@ -294,6 +474,16 @@ class VdpFlightService
         }
     }
 
+    private function getVdpTimeout(): int
+    {
+        return (int) Setting::get('vdp_timeout', 35);
+    }
+
+    private function getCrawlerTimeout(): int
+    {
+        return (int) Setting::get('crawler_timeout', 35);
+    }
+
     private function callApi(array $params): array
     {
         $url = rtrim(config('services.vdp.url'), '/') . '/api/search/flights';
@@ -301,7 +491,7 @@ class VdpFlightService
         Log::info('VDP API request', ['url' => $url, 'params' => $params]);
 
         $response = Http::acceptJson()
-            ->timeout(30)
+            ->timeout($this->getVdpTimeout())
             ->post($url, $params);
 
         if ($response->failed()) {

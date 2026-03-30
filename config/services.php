@@ -87,4 +87,9 @@ return [
         'user_key' => env('PUSHOVER_USER_KEY'),
     ],
 
+    'latam_crawler' => [
+        'url' => env('LATAM_CRAWLER_URL'),
+        'api_key' => env('LATAM_CRAWLER_API_KEY'),
+    ],
+
 ];
