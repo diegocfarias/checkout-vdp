@@ -167,11 +167,36 @@
         @endif
 
         @if($order->passengers->isNotEmpty())
+            @php
+                $natLabelsOd = [
+                    'BR' => 'Brasil', 'AR' => 'Argentina', 'UY' => 'Uruguai', 'PY' => 'Paraguai',
+                    'CL' => 'Chile', 'CO' => 'Colômbia', 'PE' => 'Peru', 'BO' => 'Bolívia',
+                    'EC' => 'Equador', 'VE' => 'Venezuela', 'US' => 'Estados Unidos', 'PT' => 'Portugal',
+                    'ES' => 'Espanha', 'IT' => 'Itália', 'DE' => 'Alemanha', 'FR' => 'França',
+                    'GB' => 'Reino Unido', 'JP' => 'Japão', 'XX' => 'Outro',
+                ];
+            @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
                 <h3 class="font-semibold text-gray-800 mb-3">Passageiros</h3>
                 @foreach($order->passengers as $passenger)
                     <div class="p-3 rounded-lg bg-gray-50 mb-2 last:mb-0 text-sm">
                         <p class="font-medium text-gray-700">{{ $passenger->full_name }}</p>
+                        <p class="text-gray-500">{{ $natLabelsOd[$passenger->nationality ?? 'BR'] ?? $passenger->nationality }}</p>
+                        @if($passenger->document)
+                            @php
+                                $odDoc = preg_replace('/\D/', '', $passenger->document);
+                                $odDocFmt = strlen($odDoc) === 11
+                                    ? substr($odDoc, 0, 3) . '.' . substr($odDoc, 3, 3) . '.' . substr($odDoc, 6, 3) . '-' . substr($odDoc, 9, 2)
+                                    : $passenger->document;
+                            @endphp
+                            <p class="text-gray-500">CPF: {{ $odDocFmt }}</p>
+                        @endif
+                        @if($passenger->passport_number)
+                            <p class="text-gray-500">Passaporte: {{ $passenger->passport_number }}</p>
+                        @endif
+                        @if($passenger->passport_expiry)
+                            <p class="text-gray-500">Validade: {{ $passenger->passport_expiry->format('d/m/Y') }}</p>
+                        @endif
                         <p class="text-gray-500">{{ $passenger->email }}</p>
                     </div>
                 @endforeach

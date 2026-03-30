@@ -24,10 +24,19 @@
 
         @if($savedPassengers->isNotEmpty())
             <div class="space-y-3">
+                @php
+                    $natLabels = [
+                        'BR' => 'Brasil', 'AR' => 'Argentina', 'UY' => 'Uruguai', 'PY' => 'Paraguai',
+                        'CL' => 'Chile', 'CO' => 'Colômbia', 'PE' => 'Peru', 'BO' => 'Bolívia',
+                        'EC' => 'Equador', 'VE' => 'Venezuela', 'US' => 'Estados Unidos', 'PT' => 'Portugal',
+                        'ES' => 'Espanha', 'IT' => 'Itália', 'DE' => 'Alemanha', 'FR' => 'França',
+                        'GB' => 'Reino Unido', 'JP' => 'Japão', 'XX' => 'Outro',
+                    ];
+                @endphp
                 @foreach($savedPassengers as $passenger)
                     @php
                         $doc = $passenger->document;
-                        $docFormatted = strlen($doc) === 11
+                        $docFormatted = $doc && strlen($doc) === 11
                             ? substr($doc, 0, 3) . '.' . substr($doc, 3, 3) . '.' . substr($doc, 6, 3) . '-' . substr($doc, 9, 2)
                             : $doc;
                     @endphp
@@ -40,7 +49,16 @@
                                 <div>
                                     <h3 class="font-semibold text-gray-800">{{ $passenger->full_name }}</h3>
                                     <div class="mt-1 space-y-0.5 text-sm text-gray-500">
-                                        <p>{{ $docFormatted }}</p>
+                                        <p>{{ $natLabels[$passenger->nationality ?? 'BR'] ?? $passenger->nationality }}</p>
+                                        @if($docFormatted)
+                                            <p>CPF: {{ $docFormatted }}</p>
+                                        @endif
+                                        @if($passenger->passport_number)
+                                            <p>Passaporte: {{ $passenger->passport_number }}</p>
+                                        @endif
+                                        @if($passenger->passport_expiry)
+                                            <p>Validade: {{ $passenger->passport_expiry->format('d/m/Y') }}</p>
+                                        @endif
                                         <p>{{ $passenger->email }}</p>
                                         <p>{{ $passenger->birth_date->format('d/m/Y') }}</p>
                                         @if($passenger->phone)

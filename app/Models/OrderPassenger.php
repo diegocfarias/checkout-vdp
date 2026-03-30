@@ -11,6 +11,9 @@ class OrderPassenger extends Model
     protected $fillable = [
         'order_id',
         'full_name',
+        'nationality',
+        'passport_number',
+        'passport_expiry',
         'document',
         'birth_date',
         'email',
@@ -19,6 +22,7 @@ class OrderPassenger extends Model
 
     protected $casts = [
         'birth_date' => 'date',
+        'passport_expiry' => 'date',
     ];
 
     public function order(): BelongsTo

@@ -112,6 +112,10 @@ class EmissionOrderDetail extends Page
                             ->schema([
                                 Infolists\Components\TextEntry::make('full_name')
                                     ->label('Nome completo'),
+                                Infolists\Components\TextEntry::make('nationality')
+                                    ->label('Nacionalidade')
+                                    ->formatStateUsing(fn (?string $state) => \App\Filament\Resources\OrderResource::nationalityLabel($state))
+                                    ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('document')
                                     ->label('CPF')
                                     ->formatStateUsing(function (?string $state) {
@@ -123,7 +127,18 @@ class EmissionOrderDetail extends Page
                                         return substr($d, 0, 3) . '.' . substr($d, 3, 3) . '.' . substr($d, 6, 3) . '-' . substr($d, 9, 2);
                                     })
                                     ->copyable()
-                                    ->placeholder('-'),
+                                    ->placeholder('-')
+                                    ->visible(fn ($record) => ! empty($record->document)),
+                                Infolists\Components\TextEntry::make('passport_number')
+                                    ->label('Passaporte')
+                                    ->copyable()
+                                    ->placeholder('-')
+                                    ->visible(fn ($record) => ! empty($record->passport_number)),
+                                Infolists\Components\TextEntry::make('passport_expiry')
+                                    ->label('Validade Passaporte')
+                                    ->date('d/m/Y')
+                                    ->placeholder('-')
+                                    ->visible(fn ($record) => ! empty($record->passport_expiry)),
                                 Infolists\Components\TextEntry::make('birth_date')
                                     ->label('Nascimento')
                                     ->date('d/m/Y')
@@ -137,7 +152,7 @@ class EmissionOrderDetail extends Page
                                     ->copyable()
                                     ->placeholder('-'),
                             ])
-                            ->columns(5),
+                            ->columns(4),
                     ]),
             ]);
     }
@@ -171,11 +186,20 @@ class EmissionOrderDetail extends Page
                         $num = $i + 1;
                         $lines[] = "Passageiro {$num}:";
                         $lines[] = 'Nome: ' . strtoupper($p->full_name ?? '-');
+                        $lines[] = 'Nacionalidade: ' . \App\Filament\Resources\OrderResource::nationalityLabel($p->nationality ?? 'BR');
                         $doc = $p->document ? preg_replace('/\D/', '', $p->document) : null;
                         if ($doc && strlen($doc) === 11) {
                             $doc = substr($doc, 0, 3) . '.' . substr($doc, 3, 3) . '.' . substr($doc, 6, 3) . '-' . substr($doc, 9, 2);
                         }
-                        $lines[] = 'CPF: ' . ($doc ?? '-');
+                        if ($doc) {
+                            $lines[] = 'CPF: ' . $doc;
+                        }
+                        if ($p->passport_number) {
+                            $lines[] = 'Passaporte: ' . $p->passport_number;
+                        }
+                        if ($p->passport_expiry) {
+                            $lines[] = 'Validade Passaporte: ' . $p->passport_expiry->format('d/m/Y');
+                        }
                         $lines[] = 'Nascimento: ' . ($p->birth_date ? $p->birth_date->format('d/m/Y') : '-');
                         $lines[] = 'E-mail: ' . ($p->email ?? '-');
                         $lines[] = 'Telefone: ' . ($p->phone ?? '-');

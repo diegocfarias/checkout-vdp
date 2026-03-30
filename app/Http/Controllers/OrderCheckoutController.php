@@ -140,18 +140,28 @@ class OrderCheckoutController extends Controller
             foreach ($rawPassengers as $i => $raw) {
                 if (! empty($raw['save_passenger']) && isset($passengers[$i])) {
                     $p = $passengers[$i];
+                    $nationality = $p['nationality'] ?? 'BR';
                     $doc = preg_replace('/\D/', '', $p['document'] ?? '');
-                    if ($doc) {
-                        SavedPassenger::updateOrCreate(
-                            ['customer_id' => $authCustomer->id, 'document' => $doc],
-                            [
-                                'full_name' => $p['full_name'],
-                                'birth_date' => $p['birth_date'],
-                                'email' => $p['email'],
-                                'phone' => $p['phone'],
-                            ]
-                        );
+                    $passport = trim($p['passport_number'] ?? '');
+
+                    if ($nationality === 'BR' && $doc) {
+                        $matchKey = ['customer_id' => $authCustomer->id, 'document' => $doc];
+                    } elseif ($passport) {
+                        $matchKey = ['customer_id' => $authCustomer->id, 'passport_number' => $passport];
+                    } else {
+                        continue;
                     }
+
+                    SavedPassenger::updateOrCreate($matchKey, [
+                        'full_name' => $p['full_name'],
+                        'nationality' => $nationality,
+                        'document' => $doc ?: null,
+                        'passport_number' => $passport ?: null,
+                        'passport_expiry' => $p['passport_expiry'] ?? null,
+                        'birth_date' => $p['birth_date'],
+                        'email' => $p['email'],
+                        'phone' => $p['phone'],
+                    ]);
                 }
             }
         }

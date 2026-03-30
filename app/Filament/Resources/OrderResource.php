@@ -509,6 +509,10 @@ class OrderResource extends Resource
                             ->schema([
                                 Infolists\Components\TextEntry::make('full_name')
                                     ->label('Nome completo'),
+                                Infolists\Components\TextEntry::make('nationality')
+                                    ->label('Nacionalidade')
+                                    ->formatStateUsing(fn (?string $state) => self::nationalityLabel($state))
+                                    ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('document')
                                     ->label('CPF')
                                     ->formatStateUsing(function (?string $state) {
@@ -519,7 +523,18 @@ class OrderResource extends Resource
 
                                         return substr($d, 0, 3) . '.' . substr($d, 3, 3) . '.' . substr($d, 6, 3) . '-' . substr($d, 9, 2);
                                     })
-                                    ->placeholder('-'),
+                                    ->placeholder('-')
+                                    ->visible(fn ($record) => ! empty($record->document)),
+                                Infolists\Components\TextEntry::make('passport_number')
+                                    ->label('Passaporte')
+                                    ->copyable()
+                                    ->placeholder('-')
+                                    ->visible(fn ($record) => ! empty($record->passport_number)),
+                                Infolists\Components\TextEntry::make('passport_expiry')
+                                    ->label('Validade Passaporte')
+                                    ->date('d/m/Y')
+                                    ->placeholder('-')
+                                    ->visible(fn ($record) => ! empty($record->passport_expiry)),
                                 Infolists\Components\TextEntry::make('birth_date')
                                     ->label('Nascimento')
                                     ->date('d/m/Y')
@@ -533,7 +548,7 @@ class OrderResource extends Resource
                                     ->copyable()
                                     ->placeholder('-'),
                             ])
-                            ->columns(5),
+                            ->columns(4),
                     ]),
 
                 Section::make('Pagamentos')
@@ -656,6 +671,36 @@ class OrderResource extends Resource
             'completed' => 'Emitido',
             'cancelled' => 'Cancelado',
             default => ucfirst($status),
+        };
+    }
+
+    public static function nationalityLabel(?string $code): string
+    {
+        if (! $code) {
+            return '-';
+        }
+
+        return match ($code) {
+            'BR' => 'Brasil',
+            'AR' => 'Argentina',
+            'UY' => 'Uruguai',
+            'PY' => 'Paraguai',
+            'CL' => 'Chile',
+            'CO' => 'Colômbia',
+            'PE' => 'Peru',
+            'BO' => 'Bolívia',
+            'EC' => 'Equador',
+            'VE' => 'Venezuela',
+            'US' => 'Estados Unidos',
+            'PT' => 'Portugal',
+            'ES' => 'Espanha',
+            'IT' => 'Itália',
+            'DE' => 'Alemanha',
+            'FR' => 'França',
+            'GB' => 'Reino Unido',
+            'JP' => 'Japão',
+            'XX' => 'Outro',
+            default => $code,
         };
     }
 }

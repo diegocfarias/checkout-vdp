@@ -10,6 +10,9 @@ class SavedPassenger extends Model
     protected $fillable = [
         'customer_id',
         'full_name',
+        'nationality',
+        'passport_number',
+        'passport_expiry',
         'document',
         'birth_date',
         'email',
@@ -18,6 +21,7 @@ class SavedPassenger extends Model
 
     protected $casts = [
         'birth_date' => 'date',
+        'passport_expiry' => 'date',
     ];
 
     public function customer(): BelongsTo

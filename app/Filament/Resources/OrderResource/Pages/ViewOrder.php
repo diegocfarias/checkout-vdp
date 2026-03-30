@@ -33,11 +33,20 @@ class ViewOrder extends ViewRecord
                         $num = $i + 1;
                         $lines[] = "Passageiro {$num}:";
                         $lines[] = "Nome: " . strtoupper($p->full_name ?? '-');
+                        $lines[] = "Nacionalidade: " . OrderResource::nationalityLabel($p->nationality ?? 'BR');
                         $doc = $p->document ? preg_replace('/\D/', '', $p->document) : null;
                         if ($doc && strlen($doc) === 11) {
                             $doc = substr($doc, 0, 3) . '.' . substr($doc, 3, 3) . '.' . substr($doc, 6, 3) . '-' . substr($doc, 9, 2);
                         }
-                        $lines[] = "CPF: " . ($doc ?? '-');
+                        if ($doc) {
+                            $lines[] = "CPF: " . $doc;
+                        }
+                        if ($p->passport_number) {
+                            $lines[] = "Passaporte: " . $p->passport_number;
+                        }
+                        if ($p->passport_expiry) {
+                            $lines[] = "Validade Passaporte: " . $p->passport_expiry->format('d/m/Y');
+                        }
                         $lines[] = "Nascimento: " . ($p->birth_date ? $p->birth_date->format('d/m/Y') : '-');
                         $lines[] = "E-mail: " . ($p->email ?? '-');
                         $lines[] = "Telefone: " . ($p->phone ?? '-');

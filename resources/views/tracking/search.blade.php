@@ -57,7 +57,29 @@
     </div>
 
     <script>
-        document.getElementById('document').addEventListener('input', function () {
+        function validateCpfDigits(cpf) {
+            cpf = cpf.replace(/\D/g, '');
+            if (cpf.length !== 11) return false;
+            if (/^(\d)\1{10}$/.test(cpf)) return false;
+            var sum = 0;
+            for (var i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
+            var d1 = 11 - (sum % 11);
+            if (d1 >= 10) d1 = 0;
+            if (parseInt(cpf.charAt(9)) !== d1) return false;
+            sum = 0;
+            for (var i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i)) * (11 - i);
+            var d2 = 11 - (sum % 11);
+            if (d2 >= 10) d2 = 0;
+            return parseInt(cpf.charAt(10)) === d2;
+        }
+
+        var docInput = document.getElementById('document');
+        var docError = document.createElement('p');
+        docError.className = 'text-xs text-red-500 mt-1 hidden';
+        docError.textContent = 'CPF inválido.';
+        docInput.parentNode.appendChild(docError);
+
+        docInput.addEventListener('input', function () {
             let v = this.value.replace(/\D/g, '').slice(0, 11);
             if (v.length > 9) {
                 v = v.slice(0, 3) + '.' + v.slice(3, 6) + '.' + v.slice(6, 9) + '-' + v.slice(9);
@@ -67,10 +89,30 @@
                 v = v.slice(0, 3) + '.' + v.slice(3);
             }
             this.value = v;
+            docError.classList.add('hidden');
+            docInput.classList.remove('border-red-500');
+        });
+
+        docInput.addEventListener('blur', function() {
+            var raw = this.value.replace(/\D/g, '');
+            if (raw.length === 11 && !validateCpfDigits(raw)) {
+                docError.classList.remove('hidden');
+                docInput.classList.add('border-red-500');
+            }
         });
 
         document.getElementById('tracking_code').addEventListener('input', function () {
             this.value = this.value.toUpperCase();
+        });
+
+        document.querySelector('form').addEventListener('submit', function(e) {
+            var raw = docInput.value.replace(/\D/g, '');
+            if (raw.length !== 11 || !validateCpfDigits(raw)) {
+                e.preventDefault();
+                docError.classList.remove('hidden');
+                docInput.classList.add('border-red-500');
+                docInput.focus();
+            }
         });
     </script>
 @endsection

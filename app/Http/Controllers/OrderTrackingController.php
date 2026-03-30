@@ -47,7 +47,7 @@ class OrderTrackingController extends Controller
         if ($token) {
             $order = Order::where('tracking_code', $trackingCode)
                 ->where('token', $token)
-                ->with(['flights', 'statusHistories', 'latestPayment', 'flightSearch'])
+                ->with(['flights', 'statusHistories', 'latestPayment', 'payments', 'flightSearch'])
                 ->first();
 
             if ($order) {
@@ -63,7 +63,7 @@ class OrderTrackingController extends Controller
         }
 
         $order = Order::where('tracking_code', $trackingCode)
-            ->with(['flights', 'statusHistories', 'latestPayment', 'flightSearch'])
+            ->with(['flights', 'statusHistories', 'latestPayment', 'payments', 'flightSearch'])
             ->firstOrFail();
 
         return view('tracking.show', ['order' => $order]);

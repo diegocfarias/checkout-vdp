@@ -61,17 +61,26 @@
                                         @foreach($savedPassengers as $sp)
                                             @php
                                                 $spDoc = $sp->document;
-                                                $spDocMasked = strlen($spDoc) === 11
+                                                $spDocMasked = $spDoc && strlen($spDoc) === 11
                                                     ? '***.' . substr($spDoc, 3, 3) . '.' . substr($spDoc, 6, 3) . '-' . substr($spDoc, 9, 2)
-                                                    : $spDoc;
+                                                    : ($spDoc ?: '');
+                                                $spLabel = $sp->full_name;
+                                                if ($sp->nationality !== 'BR' && $sp->passport_number) {
+                                                    $spLabel .= ' (Pass. ***' . substr($sp->passport_number, -4) . ')';
+                                                } elseif ($spDocMasked) {
+                                                    $spLabel .= ' (' . $spDocMasked . ')';
+                                                }
                                             @endphp
                                             <option value="{{ $sp->id }}"
                                                     data-name="{{ $sp->full_name }}"
-                                                    data-document="{{ strlen($spDoc) === 11 ? substr($spDoc, 0, 3) . '.' . substr($spDoc, 3, 3) . '.' . substr($spDoc, 6, 3) . '-' . substr($spDoc, 9, 2) : $spDoc }}"
+                                                    data-nationality="{{ $sp->nationality ?? 'BR' }}"
+                                                    data-document="{{ $spDoc && strlen($spDoc) === 11 ? substr($spDoc, 0, 3) . '.' . substr($spDoc, 3, 3) . '.' . substr($spDoc, 6, 3) . '-' . substr($spDoc, 9, 2) : ($spDoc ?? '') }}"
+                                                    data-passport="{{ $sp->passport_number ?? '' }}"
+                                                    data-passport-expiry="{{ $sp->passport_expiry ? $sp->passport_expiry->format('d/m/Y') : '' }}"
                                                     data-birth="{{ $sp->birth_date->format('d/m/Y') }}"
                                                     data-email="{{ $sp->email }}"
                                                     data-phone="{{ $sp->phone }}">
-                                                {{ $sp->full_name }} ({{ $spDocMasked }})
+                                                {{ $spLabel }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -84,33 +93,74 @@
                                     <input type="text" name="passengers[{{ $i }}][full_name]" id="passengers_{{ $i }}_full_name"
                                            value="{{ old("passengers.{$i}.full_name") }}"
                                            data-validate="name"
+                                           maxlength="255"
                                            class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                            required>
                                     <span class="error-msg"></span>
                                 </div>
 
                                 <div>
-                                    @if($order->isMercosul())
-                                        <label for="passengers_{{ $i }}_document" class="block text-sm font-medium text-gray-700 mb-1">CPF</label>
-                                        <input type="text" name="passengers[{{ $i }}][document]" id="passengers_{{ $i }}_document"
-                                               value="{{ old("passengers.{$i}.document") }}"
-                                               placeholder="000.000.000-00"
-                                               inputmode="numeric"
-                                               maxlength="14"
-                                               data-mask="cpf"
-                                               data-validate="cpf"
-                                               class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
-                                               required>
-                                        <span class="error-msg"></span>
-                                    @else
-                                        <label for="passengers_{{ $i }}_document" class="block text-sm font-medium text-gray-700 mb-1">Documento (CPF/Passaporte)</label>
-                                        <input type="text" name="passengers[{{ $i }}][document]" id="passengers_{{ $i }}_document"
-                                               value="{{ old("passengers.{$i}.document") }}"
-                                               data-validate="required"
-                                               class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
-                                               required>
-                                        <span class="error-msg"></span>
-                                    @endif
+                                    <label for="passengers_{{ $i }}_nationality" class="block text-sm font-medium text-gray-700 mb-1">Nacionalidade</label>
+                                    <select name="passengers[{{ $i }}][nationality]" id="passengers_{{ $i }}_nationality"
+                                            class="nationality-select v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
+                                            data-index="{{ $i }}" required>
+                                        <option value="BR" {{ old("passengers.{$i}.nationality", 'BR') === 'BR' ? 'selected' : '' }}>Brasil</option>
+                                        <option value="AR" {{ old("passengers.{$i}.nationality") === 'AR' ? 'selected' : '' }}>Argentina</option>
+                                        <option value="UY" {{ old("passengers.{$i}.nationality") === 'UY' ? 'selected' : '' }}>Uruguai</option>
+                                        <option value="PY" {{ old("passengers.{$i}.nationality") === 'PY' ? 'selected' : '' }}>Paraguai</option>
+                                        <option value="CL" {{ old("passengers.{$i}.nationality") === 'CL' ? 'selected' : '' }}>Chile</option>
+                                        <option value="CO" {{ old("passengers.{$i}.nationality") === 'CO' ? 'selected' : '' }}>Colômbia</option>
+                                        <option value="PE" {{ old("passengers.{$i}.nationality") === 'PE' ? 'selected' : '' }}>Peru</option>
+                                        <option value="BO" {{ old("passengers.{$i}.nationality") === 'BO' ? 'selected' : '' }}>Bolívia</option>
+                                        <option value="EC" {{ old("passengers.{$i}.nationality") === 'EC' ? 'selected' : '' }}>Equador</option>
+                                        <option value="VE" {{ old("passengers.{$i}.nationality") === 'VE' ? 'selected' : '' }}>Venezuela</option>
+                                        <option value="US" {{ old("passengers.{$i}.nationality") === 'US' ? 'selected' : '' }}>Estados Unidos</option>
+                                        <option value="PT" {{ old("passengers.{$i}.nationality") === 'PT' ? 'selected' : '' }}>Portugal</option>
+                                        <option value="ES" {{ old("passengers.{$i}.nationality") === 'ES' ? 'selected' : '' }}>Espanha</option>
+                                        <option value="IT" {{ old("passengers.{$i}.nationality") === 'IT' ? 'selected' : '' }}>Itália</option>
+                                        <option value="DE" {{ old("passengers.{$i}.nationality") === 'DE' ? 'selected' : '' }}>Alemanha</option>
+                                        <option value="FR" {{ old("passengers.{$i}.nationality") === 'FR' ? 'selected' : '' }}>França</option>
+                                        <option value="GB" {{ old("passengers.{$i}.nationality") === 'GB' ? 'selected' : '' }}>Reino Unido</option>
+                                        <option value="JP" {{ old("passengers.{$i}.nationality") === 'JP' ? 'selected' : '' }}>Japão</option>
+                                        <option value="XX" {{ old("passengers.{$i}.nationality") === 'XX' ? 'selected' : '' }}>Outro</option>
+                                    </select>
+                                    <span class="error-msg"></span>
+                                </div>
+
+                                <div id="passengers_{{ $i }}_cpf_wrapper">
+                                    <label for="passengers_{{ $i }}_document" class="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                                    <input type="text" name="passengers[{{ $i }}][document]" id="passengers_{{ $i }}_document"
+                                           value="{{ old("passengers.{$i}.document") }}"
+                                           placeholder="000.000.000-00"
+                                           inputmode="numeric"
+                                           maxlength="14"
+                                           data-mask="cpf"
+                                           data-validate="cpf"
+                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
+                                           required>
+                                    <span class="error-msg"></span>
+                                </div>
+
+                                <div id="passengers_{{ $i }}_passport_wrapper" class="hidden">
+                                    <label for="passengers_{{ $i }}_passport_number" class="block text-sm font-medium text-gray-700 mb-1">Passaporte</label>
+                                    <input type="text" name="passengers[{{ $i }}][passport_number]" id="passengers_{{ $i }}_passport_number"
+                                           value="{{ old("passengers.{$i}.passport_number") }}"
+                                           placeholder="Nº do passaporte"
+                                           maxlength="50"
+                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
+                                    <span class="error-msg"></span>
+                                </div>
+
+                                <div id="passengers_{{ $i }}_passport_expiry_wrapper" class="hidden">
+                                    <label for="passengers_{{ $i }}_passport_expiry" class="block text-sm font-medium text-gray-700 mb-1">Validade do passaporte</label>
+                                    <input type="text" name="passengers[{{ $i }}][passport_expiry]" id="passengers_{{ $i }}_passport_expiry"
+                                           value="{{ old("passengers.{$i}.passport_expiry") }}"
+                                           placeholder="dd/mm/aaaa"
+                                           inputmode="numeric"
+                                           maxlength="10"
+                                           data-mask="date"
+                                           class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
+                                    <span class="error-msg"></span>
                                 </div>
 
                                 <div>
@@ -132,6 +182,7 @@
                                     <input type="email" name="passengers[{{ $i }}][email]" id="passengers_{{ $i }}_email"
                                            value="{{ old("passengers.{$i}.email") }}"
                                            data-validate="email"
+                                           maxlength="255"
                                            class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                            required>
                                     <span class="error-msg"></span>
@@ -141,6 +192,10 @@
                                     <label for="passengers_{{ $i }}_phone" class="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
                                     <input type="tel" name="passengers[{{ $i }}][phone]" id="passengers_{{ $i }}_phone"
                                            value="{{ old("passengers.{$i}.phone") }}"
+                                           placeholder="(00) 00000-0000"
+                                           inputmode="numeric"
+                                           maxlength="15"
+                                           data-mask="phone"
                                            data-validate="phone"
                                            class="v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                            required>
@@ -891,6 +946,79 @@
             });
         });
 
+        const isMercosul = @json($order->isMercosul());
+
+        function updatePassengerFields(index) {
+            const natSelect = document.getElementById('passengers_' + index + '_nationality');
+            if (!natSelect) return;
+            const nationality = natSelect.value;
+            const isBR = nationality === 'BR';
+            const needsPassport = !isBR || !isMercosul;
+
+            const cpfWrapper = document.getElementById('passengers_' + index + '_cpf_wrapper');
+            const passportWrapper = document.getElementById('passengers_' + index + '_passport_wrapper');
+            const passportExpiryWrapper = document.getElementById('passengers_' + index + '_passport_expiry_wrapper');
+            const cpfInput = document.getElementById('passengers_' + index + '_document');
+            const passportInput = document.getElementById('passengers_' + index + '_passport_number');
+            const passportExpiryInput = document.getElementById('passengers_' + index + '_passport_expiry');
+
+            if (isBR) {
+                cpfWrapper.classList.remove('hidden');
+                cpfInput.required = true;
+                cpfInput.setAttribute('data-validate', 'cpf');
+                cpfInput.setAttribute('data-mask', 'cpf');
+            } else {
+                cpfWrapper.classList.add('hidden');
+                cpfInput.required = false;
+                cpfInput.removeAttribute('data-validate');
+                cpfInput.removeAttribute('data-mask');
+                cpfInput.value = '';
+                cpfInput.classList.remove('input-error');
+                const cpfErr = cpfInput.nextElementSibling;
+                if (cpfErr && cpfErr.classList.contains('error-msg')) {
+                    cpfErr.textContent = '';
+                    cpfErr.classList.remove('visible');
+                }
+            }
+
+            if (needsPassport) {
+                passportWrapper.classList.remove('hidden');
+                passportExpiryWrapper.classList.remove('hidden');
+                passportInput.required = true;
+                passportExpiryInput.required = true;
+                passportInput.setAttribute('data-validate', 'required');
+                passportExpiryInput.setAttribute('data-validate', 'passport-expiry');
+            } else {
+                passportWrapper.classList.add('hidden');
+                passportExpiryWrapper.classList.add('hidden');
+                passportInput.required = false;
+                passportExpiryInput.required = false;
+                passportInput.removeAttribute('data-validate');
+                passportExpiryInput.removeAttribute('data-validate');
+                passportInput.value = '';
+                passportExpiryInput.value = '';
+                passportInput.classList.remove('input-error');
+                passportExpiryInput.classList.remove('input-error');
+                [passportInput, passportExpiryInput].forEach(function(inp) {
+                    var err = inp.nextElementSibling;
+                    if (err && err.classList.contains('error-msg')) {
+                        err.textContent = '';
+                        err.classList.remove('visible');
+                    }
+                });
+            }
+        }
+
+        document.querySelectorAll('.nationality-select').forEach(function (sel) {
+            sel.addEventListener('change', function () {
+                updatePassengerFields(this.dataset.index);
+            });
+        });
+
+        for (var pi = 0; pi < {{ $order->passengers_count }}; pi++) {
+            updatePassengerFields(pi);
+        }
+
         (function setupSavedPassengers() {
             const selects = document.querySelectorAll('.saved-passenger-select');
             if (!selects.length) return;
@@ -910,13 +1038,31 @@
                 document.getElementById(prefix + 'birth_date').value = option.dataset.birth || '';
                 document.getElementById(prefix + 'email').value = option.dataset.email || '';
                 document.getElementById(prefix + 'phone').value = option.dataset.phone || '';
+
+                var natSelect = document.getElementById(prefix + 'nationality');
+                var nat = option.dataset.nationality || 'BR';
+                if (natSelect) {
+                    natSelect.value = nat;
+                    natSelect.dispatchEvent(new Event('change'));
+                }
+
+                var passportInput = document.getElementById(prefix + 'passport_number');
+                var passportExpiryInput = document.getElementById(prefix + 'passport_expiry');
+                if (passportInput) passportInput.value = option.dataset.passport || '';
+                if (passportExpiryInput) passportExpiryInput.value = option.dataset.passportExpiry || '';
             }
 
             function clearPassengerFields(index) {
                 const prefix = 'passengers_' + index + '_';
-                ['full_name', 'document', 'birth_date', 'email', 'phone'].forEach(function (field) {
-                    document.getElementById(prefix + field).value = '';
+                ['full_name', 'document', 'birth_date', 'email', 'phone', 'passport_number', 'passport_expiry'].forEach(function (field) {
+                    var el = document.getElementById(prefix + field);
+                    if (el) el.value = '';
                 });
+                var natSelect = document.getElementById(prefix + 'nationality');
+                if (natSelect) {
+                    natSelect.value = 'BR';
+                    natSelect.dispatchEvent(new Event('change'));
+                }
             }
 
             function syncDisabledOptions() {
@@ -972,9 +1118,12 @@
                 const nameInput = document.getElementById('passengers_' + idx + '_full_name');
                 const emailInput = document.getElementById('passengers_' + idx + '_email');
                 const docInput = document.getElementById('passengers_' + idx + '_document');
+                const natSelect = document.getElementById('passengers_' + idx + '_nationality');
                 if (nameInput) document.getElementById('payer_name').value = nameInput.value;
                 if (emailInput) document.getElementById('payer_email').value = emailInput.value;
-                if (docInput) document.getElementById('payer_document').value = docInput.value;
+                if (natSelect && natSelect.value === 'BR' && docInput && docInput.value) {
+                    document.getElementById('payer_document').value = docInput.value;
+                }
             });
         }
 
@@ -1011,6 +1160,20 @@
                     if (hint) { hint.textContent = 'Erro ao buscar CEP. Preencha manualmente.'; hint.classList.remove('hidden'); }
                 });
         }
+
+        document.querySelectorAll('[data-mask="phone"]').forEach(input => {
+            input.addEventListener('input', function () {
+                let v = this.value.replace(/\D/g, '').slice(0, 11);
+                if (v.length > 6) {
+                    v = '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
+                } else if (v.length > 2) {
+                    v = '(' + v.slice(0, 2) + ') ' + v.slice(2);
+                } else if (v.length > 0) {
+                    v = '(' + v;
+                }
+                this.value = v;
+            });
+        });
 
         document.querySelectorAll('[data-mask="cpf"]').forEach(input => {
             input.addEventListener('input', function () {
@@ -1077,13 +1240,17 @@
                             if (month < 1 || month > 12) error = 'Mês inválido.';
                             else if (day < 1 || day > 31) error = 'Dia inválido.';
                             else if (year < 1900 || year > now) error = 'Ano inválido.';
+                            else {
+                                const birthDate = new Date(year, month - 1, day);
+                                if (birthDate >= new Date()) error = 'A data de nascimento não pode ser futura.';
+                            }
                         }
                         break;
                     case 'email':
                         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) error = 'E-mail inválido.';
                         break;
                     case 'phone':
-                        if (val.replace(/\D/g, '').length < 8) error = 'Telefone inválido (mín. 8 dígitos).';
+                        if (val.replace(/\D/g, '').length < 10) error = 'Telefone inválido. Informe DDD + número.';
                         break;
                     case 'card':
                         if (val.replace(/\D/g, '').length < 13) error = 'Número do cartão inválido.';
@@ -1101,6 +1268,20 @@
                             const y = parseInt(val);
                             const currentYear = new Date().getFullYear() % 100;
                             if (y < currentYear || y > currentYear + 15) error = 'Ano inválido.';
+                        }
+                        break;
+                    case 'passport-expiry':
+                        if (!/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
+                            error = 'Data incompleta. Use o formato dd/mm/aaaa.';
+                        } else {
+                            const pe = val.split('/');
+                            const peDay = parseInt(pe[0]), peMonth = parseInt(pe[1]), peYear = parseInt(pe[2]);
+                            if (peMonth < 1 || peMonth > 12) error = 'Mês inválido.';
+                            else if (peDay < 1 || peDay > 31) error = 'Dia inválido.';
+                            else {
+                                const peDate = new Date(peYear, peMonth - 1, peDay);
+                                if (peDate <= new Date()) error = 'A validade do passaporte deve ser uma data futura.';
+                            }
                         }
                         break;
                     case 'cep':
@@ -1130,6 +1311,7 @@
 
         document.querySelectorAll('.v-input').forEach(input => {
             input.addEventListener('blur', function () {
+                if (this.closest('.hidden')) return;
                 validateField(this);
             });
         });
@@ -1154,6 +1336,7 @@
             let firstInvalid = null;
 
             inputs.forEach(input => {
+                if (input.closest('.hidden')) return;
                 if (!validateField(input) && !firstInvalid) {
                     firstInvalid = input;
                 }

@@ -85,55 +85,48 @@
     <script>
         (function() {
             var callbackUrl = @json(route('checkout.payment-callback', $order->token));
-
-            @if($pixExpiresAt)
-            var expiresAt = new Date(@json($pixExpiresAt->toIso8601String()));
-            var countdownEl = document.getElementById('countdown');
-            var countdownContainer = document.getElementById('countdown-container');
-
-            function updateCountdown() {
-                var now = new Date();
-                var diff = expiresAt - now;
-
-                if (diff <= 0) {
-                    if (countdownEl) countdownEl.textContent = '00:00';
-                    if (countdownEl) countdownEl.classList.remove('text-amber-600');
-                    if (countdownEl) countdownEl.classList.add('text-red-600');
-                    setTimeout(function() { window.location.reload(); }, 2000);
-                    return;
-                }
-
-                var minutes = Math.floor(diff / 60000);
-                var seconds = Math.floor((diff % 60000) / 1000);
-                var display = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-
-                if (countdownEl) countdownEl.textContent = display;
-
-                if (diff < 120000) {
-                    if (countdownEl) countdownEl.classList.remove('text-amber-600');
-                    if (countdownEl) countdownEl.classList.add('text-red-600');
-                }
-
-                setTimeout(updateCountdown, 1000);
-            }
-            updateCountdown();
-            @endif
-
             var attempts = 0;
             var maxAttempts = 120;
-            var checking = false;
+            var autoTimer = null;
+            var autoChecking = false;
+            var manualChecking = false;
 
-            function checkPayment() {
-                if (checking) return;
+            function showExpired() {
+                var container = document.querySelector('.bg-white.rounded-lg.shadow');
+                if (!container) return;
+                container.innerHTML =
+                    '<div class="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">' +
+                        '<svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>' +
+                        '</svg>' +
+                    '</div>' +
+                    '<h2 class="text-2xl font-bold text-gray-800 mb-2">Pagamento expirado</h2>' +
+                    '<p class="text-gray-500 mb-6">O tempo para realizar o pagamento expirou. Solicite um novo link de pagamento.</p>';
+            }
+
+            function doCheckPayment(isManual) {
+                if (isManual) {
+                    if (manualChecking) return;
+                    clearTimeout(autoTimer);
+                    manualChecking = true;
+                } else {
+                    if (autoChecking || manualChecking) return;
+                    autoChecking = true;
+                }
+
                 if (attempts >= maxAttempts) {
                     document.getElementById('status-msg').textContent = 'Tempo de verificação esgotado. Clique em "Verificar pagamento".';
+                    autoChecking = false;
+                    manualChecking = false;
                     return;
                 }
-                checking = true;
                 attempts++;
 
                 var btn = document.getElementById('btn-verificar');
-                if (btn) btn.disabled = true;
+                if (isManual && btn) {
+                    btn.disabled = true;
+                    btn.textContent = 'Verificando...';
+                }
 
                 fetch(callbackUrl, { redirect: 'follow', credentials: 'same-origin' })
                     .then(function(resp) {
@@ -144,30 +137,43 @@
                         return resp.text();
                     })
                     .then(function(html) {
-                        checking = false;
-                        if (btn) btn.disabled = false;
+                        autoChecking = false;
+                        manualChecking = false;
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = 'Verificar pagamento';
+                        }
                         if (html === null) return;
-                        if (!html) { setTimeout(checkPayment, 5000); return; }
+                        if (!html) { scheduleAutoCheck(); return; }
                         if (html.includes('tracking_code') || html.includes('Acompanhar pedido')) {
                             window.location.href = callbackUrl;
                             return;
                         }
                         if (html.includes('Pagamento expirado') || html.includes('cancelado')) {
-                            window.location.reload();
+                            showExpired();
                             return;
                         }
-                        setTimeout(checkPayment, 5000);
+                        scheduleAutoCheck();
                     })
                     .catch(function() {
-                        checking = false;
-                        if (btn) btn.disabled = false;
-                        setTimeout(checkPayment, 5000);
+                        autoChecking = false;
+                        manualChecking = false;
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = 'Verificar pagamento';
+                        }
+                        scheduleAutoCheck();
                     });
+            }
+
+            function scheduleAutoCheck() {
+                clearTimeout(autoTimer);
+                autoTimer = setTimeout(function() { doCheckPayment(false); }, 5000);
             }
 
             document.getElementById('btn-verificar').addEventListener('click', function() {
                 document.getElementById('status-msg').textContent = 'Verificando...';
-                checkPayment();
+                doCheckPayment(true);
             });
 
             var btnCopiar = document.getElementById('btn-copiar');
@@ -179,7 +185,38 @@
                 });
             }
 
-            setTimeout(checkPayment, 5000);
+            @if($pixExpiresAt)
+            var expiresAt = new Date(@json($pixExpiresAt->toIso8601String()));
+            var countdownEl = document.getElementById('countdown');
+
+            function updateCountdown() {
+                var now = new Date();
+                var diff = expiresAt - now;
+
+                if (diff <= 0) {
+                    if (countdownEl) countdownEl.textContent = '00:00';
+                    if (countdownEl) countdownEl.classList.remove('text-amber-600');
+                    if (countdownEl) countdownEl.classList.add('text-red-600');
+                    clearTimeout(autoTimer);
+                    setTimeout(showExpired, 2000);
+                    return;
+                }
+
+                var minutes = Math.floor(diff / 60000);
+                var seconds = Math.floor((diff % 60000) / 1000);
+                if (countdownEl) countdownEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+
+                if (diff < 120000) {
+                    if (countdownEl) countdownEl.classList.remove('text-amber-600');
+                    if (countdownEl) countdownEl.classList.add('text-red-600');
+                }
+
+                setTimeout(updateCountdown, 1000);
+            }
+            updateCountdown();
+            @endif
+
+            scheduleAutoCheck();
         })();
     </script>
     @endpush

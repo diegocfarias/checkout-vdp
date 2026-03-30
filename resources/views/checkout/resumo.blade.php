@@ -151,7 +151,24 @@
     </div>
 
     <div class="mt-4 flex items-center justify-between">
-        <a href="{{ route('search.home') }}" class="text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1">
+        @php
+            $backUrl = route('search.home');
+            if ($order->flightSearch) {
+                $fs = $order->flightSearch;
+                $backUrl = route('search.results', array_filter([
+                    'departure' => $fs->departure_iata,
+                    'arrival' => $fs->arrival_iata,
+                    'outbound_date' => $fs->outbound_date?->format('Y-m-d'),
+                    'inbound_date' => $fs->inbound_date?->format('Y-m-d'),
+                    'trip_type' => $fs->trip_type,
+                    'cabin' => $fs->cabin,
+                    'adults' => $fs->adults,
+                    'children' => $fs->children,
+                    'infants' => $fs->infants,
+                ]));
+            }
+        @endphp
+        <a href="{{ $backUrl }}" class="text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
             Voltar para busca
         </a>

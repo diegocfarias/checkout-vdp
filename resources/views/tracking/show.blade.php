@@ -64,6 +64,10 @@
                         <p class="text-xs text-gray-400 text-center">Use o localizador para realizar o check-in no site da companhia aérea.</p>
                     </div>
                 @endif
+            @elseif($currentStatus === 'awaiting_payment')
+                <div class="bg-yellow-50 rounded-lg p-3">
+                    <p class="text-sm text-yellow-700">Seu pagamento ainda não foi confirmado. Se você já pagou, aguarde a confirmação.</p>
+                </div>
             @elseif($currentStatus === 'cancelled')
                 <div class="bg-red-50 rounded-lg p-3">
                     @php $waNum = \App\Models\Setting::get('whatsapp_number'); @endphp
@@ -77,6 +81,73 @@
                 </div>
             @endif
         </div>
+
+        {{-- PIX pendente --}}
+        @php
+            $pixPayment = ($order->payments ?? collect())->first(fn($p) => $p->payment_method === 'pix' && $p->status === 'pending');
+            $pixCode = null;
+            $pixQr = null;
+            $pixExpired = false;
+            if ($pixPayment) {
+                $pixExpired = $pixPayment->isExpired();
+                if ($pixPayment->gateway_response) {
+                    $resp = $pixPayment->gateway_response;
+                    $pd = $resp['payment'] ?? $resp;
+                    $pixCode = $pd['pix_emv'] ?? $pd['copy_paste'] ?? $resp['pix_copy_paste'] ?? $pixPayment->payment_url ?? null;
+                    $pixQr = $pd['pix_qrcode'] ?? null;
+                    if ($pixCode && str_starts_with($pixCode, 'http')) $pixCode = null;
+                }
+            }
+        @endphp
+
+        @if($pixPayment && $pixCode && in_array($currentStatus, ['awaiting_payment', 'pending']))
+            <div id="pix-payment-section" class="bg-white rounded-xl shadow-sm border {{ $pixExpired ? 'border-red-200' : 'border-emerald-200' }} p-6">
+                @if($pixExpired)
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <h3 class="font-semibold text-red-700">PIX expirado</h3>
+                    </div>
+                    <p class="text-sm text-gray-500">O tempo para pagamento via PIX expirou.</p>
+                @else
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            </div>
+                            <h3 class="font-semibold text-gray-800">Pagar com PIX</h3>
+                        </div>
+                        @if($pixPayment->expires_at)
+                            <div class="text-right">
+                                <p class="text-xs text-gray-400">Expira em</p>
+                                <span id="pix-countdown" class="text-sm font-bold font-mono text-amber-600"></span>
+                            </div>
+                        @endif
+                    </div>
+
+                    @if($pixQr)
+                        <div class="hidden sm:flex justify-center mb-4">
+                            <img src="data:image/png;base64,{{ $pixQr }}" alt="QR Code PIX" class="w-48 h-48 rounded-lg border border-gray-200">
+                        </div>
+                        <p class="hidden sm:block text-center text-xs text-gray-400 mb-4">Escaneie o QR Code com o app do seu banco</p>
+                    @endif
+
+                    <p class="text-sm text-gray-600 mb-2">Código PIX copia e cola:</p>
+                    <div class="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+                        <code id="pix-code" class="text-xs text-gray-700 break-all select-all leading-relaxed block">{{ $pixCode }}</code>
+                    </div>
+
+                    <button type="button" id="btn-copy-pix"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                        <span id="copy-text">Copiar código PIX</span>
+                    </button>
+
+                    <p class="text-xs text-gray-400 mt-3 text-center" id="pix-status-msg">Verificando pagamento automaticamente...</p>
+                @endif
+            </div>
+        @endif
 
         {{-- Voos --}}
         @if($outbound || $inbound)
@@ -189,4 +260,106 @@
             </p>
         </div>
     </div>
+
+    @if(isset($pixPayment) && $pixCode && !$pixExpired && in_array($currentStatus, ['awaiting_payment', 'pending']))
+    <script>
+        (function() {
+            var btnCopy = document.getElementById('btn-copy-pix');
+            var copyText = document.getElementById('copy-text');
+            if (btnCopy) {
+                btnCopy.addEventListener('click', function() {
+                    var code = document.getElementById('pix-code').innerText;
+                    navigator.clipboard.writeText(code).then(function() {
+                        copyText.textContent = 'Copiado!';
+                        btnCopy.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                        btnCopy.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                        setTimeout(function() {
+                            copyText.textContent = 'Copiar código PIX';
+                            btnCopy.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                            btnCopy.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                        }, 2000);
+                    });
+                });
+            }
+
+            var callbackUrl = @json(route('checkout.payment-callback', $order->token));
+            var attempts = 0;
+            var maxAttempts = 120;
+            var autoTimer = null;
+            var autoChecking = false;
+            var statusMsg = document.getElementById('pix-status-msg');
+
+            function showPixExpired() {
+                var pixSection = document.getElementById('pix-payment-section');
+                if (pixSection) {
+                    pixSection.innerHTML =
+                        '<div class="text-center py-4">' +
+                            '<p class="text-red-600 font-semibold">PIX expirado</p>' +
+                            '<p class="text-sm text-gray-500 mt-1">O tempo para pagamento via PIX expirou.</p>' +
+                        '</div>';
+                }
+            }
+
+            @if($pixPayment->expires_at)
+            var expiresAt = new Date(@json($pixPayment->expires_at->toIso8601String()));
+            var countdownEl = document.getElementById('pix-countdown');
+
+            function updateCountdown() {
+                var now = new Date();
+                var diff = expiresAt - now;
+                if (diff <= 0) {
+                    if (countdownEl) countdownEl.textContent = '00:00';
+                    if (countdownEl) countdownEl.classList.replace('text-amber-600', 'text-red-600');
+                    clearTimeout(autoTimer);
+                    setTimeout(showPixExpired, 2000);
+                    return;
+                }
+                var minutes = Math.floor(diff / 60000);
+                var seconds = Math.floor((diff % 60000) / 1000);
+                if (countdownEl) countdownEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+                if (diff < 120000 && countdownEl) countdownEl.classList.replace('text-amber-600', 'text-red-600');
+                setTimeout(updateCountdown, 1000);
+            }
+            updateCountdown();
+            @endif
+
+            function checkPayment() {
+                if (autoChecking) return;
+                if (attempts >= maxAttempts) return;
+                autoChecking = true;
+                attempts++;
+
+                fetch(callbackUrl, { redirect: 'follow', credentials: 'same-origin' })
+                    .then(function(resp) {
+                        if (resp.redirected) { window.location.href = resp.url; return null; }
+                        return resp.text();
+                    })
+                    .then(function(html) {
+                        autoChecking = false;
+                        if (html === null) return;
+                        if (html && (html.includes('Pagamento confirmado') || html.includes('awaiting_emission') || html.includes('completed'))) {
+                            window.location.reload();
+                            return;
+                        }
+                        if (html && (html.includes('Pagamento expirado') || html.includes('cancelado'))) {
+                            showPixExpired();
+                            return;
+                        }
+                        scheduleAutoCheck();
+                    })
+                    .catch(function() {
+                        autoChecking = false;
+                        scheduleAutoCheck();
+                    });
+            }
+
+            function scheduleAutoCheck() {
+                clearTimeout(autoTimer);
+                autoTimer = setTimeout(checkPayment, 5000);
+            }
+
+            scheduleAutoCheck();
+        })();
+    </script>
+    @endif
 @endsection

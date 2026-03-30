@@ -271,16 +271,29 @@
         return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     }
 
+    var popularIatas = ['GRU','CGH','GIG','SDU','BSB','CNF','SSA','REC','FOR','CWB','POA','VCP'];
+
     function searchAirports(airports, term) {
         var q = normalizeStr(term);
-        var results = [];
-        for (var i = 0; i < airports.length && results.length < 15; i++) {
+        var byIata = [], byDesc = [], byTag = [];
+        for (var i = 0; i < airports.length; i++) {
             var a = airports[i];
-            if (normalizeStr(a.c).indexOf(q) !== -1 || normalizeStr(a.d).indexOf(q) !== -1) {
-                results.push(a); continue;
-            }
+            var nc = normalizeStr(a.c);
+            if (nc === q) { byIata.unshift(a); continue; }
+            if (nc.indexOf(q) === 0) { byIata.push(a); continue; }
+            if (normalizeStr(a.d).indexOf(q) !== -1) { byDesc.push(a); continue; }
             for (var j = 0; j < a.t.length; j++) {
-                if (normalizeStr(a.t[j]).indexOf(q) !== -1) { results.push(a); break; }
+                if (normalizeStr(a.t[j]).indexOf(q) !== -1) { byTag.push(a); break; }
+            }
+        }
+        return byIata.concat(byDesc, byTag).slice(0, 20);
+    }
+
+    function getPopularAirports(airports) {
+        var results = [];
+        for (var p = 0; p < popularIatas.length; p++) {
+            for (var i = 0; i < airports.length; i++) {
+                if (airports[i].c === popularIatas[p]) { results.push(airports[i]); break; }
             }
         }
         return results;
@@ -292,36 +305,83 @@
         debounceTimers[id] = setTimeout(fn, delay);
     }
 
+    function renderDropdown(dropdown, items, input, hidden) {
+        if (items.length === 0) {
+            dropdown.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">Nenhum resultado</div>';
+            dropdown.classList.remove('hidden');
+            return;
+        }
+        dropdown.innerHTML = '';
+        items.forEach(function(item) {
+            var div = document.createElement('div');
+            div.className = 'px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors';
+            div.innerHTML = '<span class="font-semibold text-gray-800">' + item.c + '</span> <span class="text-gray-500">' + item.d.replace(' (' + item.c + ')', '') + '</span>';
+            div.addEventListener('click', function() {
+                input.value = item.d;
+                hidden.value = item.c;
+                dropdown.classList.add('hidden');
+            });
+            dropdown.appendChild(div);
+        });
+        dropdown.classList.remove('hidden');
+    }
+
     function setupAutocomplete(inputId, hiddenId, dropdownId) {
         var input = document.getElementById(inputId);
         var hidden = document.getElementById(hiddenId);
         var dropdown = document.getElementById(dropdownId);
-        input.addEventListener('focus', function() { loadAirports(function(){}); });
+        input.addEventListener('focus', function() {
+            loadAirports(function(airports) {
+                if (!input.value.trim()) {
+                    var popular = getPopularAirports(airports);
+                    if (popular.length > 0) {
+                        dropdown.innerHTML = '<div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Mais buscados</div>';
+                        popular.forEach(function(item) {
+                            var div = document.createElement('div');
+                            div.className = 'px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors';
+                            div.innerHTML = '<span class="font-semibold text-gray-800">' + item.c + '</span> <span class="text-gray-500">' + item.d.replace(' (' + item.c + ')', '') + '</span>';
+                            div.addEventListener('click', function() {
+                                input.value = item.d;
+                                hidden.value = item.c;
+                                dropdown.classList.add('hidden');
+                            });
+                            dropdown.appendChild(div);
+                        });
+                        dropdown.classList.remove('hidden');
+                    }
+                }
+            });
+        });
         input.addEventListener('input', function() {
             var term = input.value.trim();
             hidden.value = '';
-            if (term.length < 2) { dropdown.classList.add('hidden'); return; }
+            if (term.length < 2) {
+                loadAirports(function(airports) {
+                    var popular = getPopularAirports(airports);
+                    if (popular.length > 0 && !term) {
+                        dropdown.innerHTML = '<div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Mais buscados</div>';
+                        popular.forEach(function(item) {
+                            var div = document.createElement('div');
+                            div.className = 'px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors';
+                            div.innerHTML = '<span class="font-semibold text-gray-800">' + item.c + '</span> <span class="text-gray-500">' + item.d.replace(' (' + item.c + ')', '') + '</span>';
+                            div.addEventListener('click', function() {
+                                input.value = item.d;
+                                hidden.value = item.c;
+                                dropdown.classList.add('hidden');
+                            });
+                            dropdown.appendChild(div);
+                        });
+                        dropdown.classList.remove('hidden');
+                    } else {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+                return;
+            }
             debounce(inputId, function() {
                 loadAirports(function(airports) {
                     var results = searchAirports(airports, term);
-                    if (results.length === 0) {
-                        dropdown.innerHTML = '<div class="px-4 py-3 text-sm text-gray-400">Nenhum resultado</div>';
-                        dropdown.classList.remove('hidden');
-                        return;
-                    }
-                    dropdown.innerHTML = '';
-                    results.forEach(function(item) {
-                        var div = document.createElement('div');
-                        div.className = 'px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors';
-                        div.innerHTML = '<span class="font-semibold text-gray-800">' + item.c + '</span> <span class="text-gray-500">' + item.d.replace(' (' + item.c + ')', '') + '</span>';
-                        div.addEventListener('click', function() {
-                            input.value = item.d;
-                            hidden.value = item.c;
-                            dropdown.classList.add('hidden');
-                        });
-                        dropdown.appendChild(div);
-                    });
-                    dropdown.classList.remove('hidden');
+                    renderDropdown(dropdown, results, input, hidden);
                 });
             }, 150);
         });
@@ -359,6 +419,11 @@
     };
     window.changePax = function(type, delta) {
         pax[type] = Math.max(type === 'adults' ? 1 : 0, Math.min(9, pax[type] + delta));
+        if (pax.infants > pax.adults) {
+            pax.infants = pax.adults;
+            document.getElementById('pax-infants').textContent = pax.infants;
+            document.getElementById('input-infants').value = pax.infants;
+        }
         document.getElementById('pax-' + type).textContent = pax[type];
         document.getElementById('input-' + type).value = pax[type];
         updatePaxLabel();
@@ -833,8 +898,6 @@
                 dpOutbound = date;
                 dpInbound = null;
                 switchedToInbound = true;
-            } else if (sameDay(date, dpOutbound)) {
-                return;
             } else {
                 dpInbound = date;
                 dpHover = null;
@@ -1022,6 +1085,9 @@
         }
         if (!document.getElementById('arrival-iata').value) {
             e.preventDefault(); alert('Selecione o aeroporto de destino.'); return;
+        }
+        if (document.getElementById('departure-iata').value === document.getElementById('arrival-iata').value) {
+            e.preventDefault(); alert('O destino deve ser diferente da origem.'); return;
         }
         if (!document.getElementById('outbound-date').value) {
             e.preventDefault(); alert('Selecione a data de ida.'); return;
