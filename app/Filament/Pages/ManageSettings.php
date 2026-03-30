@@ -130,28 +130,31 @@ class ManageSettings extends Page
                         Select::make('provider_gol')
                             ->label('Fornecedor — GOL')
                             ->options([
+                                'disabled' => 'Desativado',
                                 'vdp' => 'VDP (API atual)',
                                 'latam_crawler' => 'LATAM Crawler',
                             ])
-                            ->helperText('Qual API usar para buscar voos GOL.')
+                            ->helperText('Qual API usar para buscar voos GOL. Desativado = não pesquisa.')
                             ->default('vdp'),
 
                         Select::make('provider_azul')
                             ->label('Fornecedor — Azul')
                             ->options([
+                                'disabled' => 'Desativado',
                                 'vdp' => 'VDP (API atual)',
                                 'latam_crawler' => 'LATAM Crawler',
                             ])
-                            ->helperText('Qual API usar para buscar voos Azul.')
+                            ->helperText('Qual API usar para buscar voos Azul. Desativado = não pesquisa.')
                             ->default('vdp'),
 
                         Select::make('provider_latam')
                             ->label('Fornecedor — LATAM')
                             ->options([
+                                'disabled' => 'Desativado',
                                 'vdp' => 'VDP (API atual)',
                                 'latam_crawler' => 'LATAM Crawler',
                             ])
-                            ->helperText('Qual API usar para buscar voos LATAM.')
+                            ->helperText('Qual API usar para buscar voos LATAM. Desativado = não pesquisa.')
                             ->default('latam_crawler'),
 
                         TextInput::make('vdp_timeout')

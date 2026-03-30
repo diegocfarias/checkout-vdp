@@ -251,6 +251,10 @@ class VdpFlightService
             $normalized = $this->normalizeCia($cia);
             $provider = $this->getProviderForCia($normalized);
 
+            if ($provider === 'disabled') {
+                return ['outbound' => [], 'inbound' => []];
+            }
+
             return $this->callForProvider($provider, $params);
         }
 
@@ -259,7 +263,9 @@ class VdpFlightService
 
         foreach ($allCias as $c) {
             $provider = $this->getProviderForCia($c);
-            if ($provider === 'latam_crawler') {
+            if ($provider === 'disabled') {
+                continue;
+            } elseif ($provider === 'latam_crawler') {
                 $crawlerCias[] = $c;
             } else {
                 $vdpCias[] = $c;
