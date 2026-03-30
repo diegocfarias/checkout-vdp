@@ -87,9 +87,65 @@ class VdpFlightService
         $pricingVersion = Setting::get('pricing_version', '0');
         $cacheKey = 'vdp_search:' . $pricingVersion . ':' . md5(json_encode($params));
 
-        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($params) {
+        $results = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($params) {
             return $this->callApi($params);
         });
+
+        $this->cacheDirectionPrices($params, $results, $pricingVersion);
+
+        return $results;
+    }
+
+    /**
+     * Cacheia preço mínimo por direção (outbound e inbound separados)
+     * com chave simplificada para lookup do calendário.
+     */
+    private function cacheDirectionPrices(array $params, array $results, string $pricingVersion): void
+    {
+        $ttl = now()->addMinutes(30);
+        $basePax = [
+            'adults' => $params['adults'] ?? 1,
+            'children' => $params['children'] ?? 0,
+            'infants' => $params['infants'] ?? 0,
+            'cabin' => $params['cabin'] ?? 'EC',
+        ];
+
+        $outbound = $results['outbound'] ?? [];
+        if (! empty($outbound) && ! empty($params['outbound_date'])) {
+            $minOb = null;
+            foreach ($outbound as $ob) {
+                $price = $this->calculateFlightPrice($ob);
+                if ($minOb === null || $price < $minOb) {
+                    $minOb = $price;
+                }
+            }
+            if ($minOb !== null) {
+                $obKey = $this->directionPriceKey($pricingVersion, $params['departure'] ?? '', $params['arrival'] ?? '', $params['outbound_date'], $basePax);
+                Cache::put($obKey, round($minOb, 2), $ttl);
+            }
+        }
+
+        $inbound = $results['inbound'] ?? [];
+        if (! empty($inbound) && ! empty($params['inbound_date'])) {
+            $minIb = null;
+            foreach ($inbound as $ib) {
+                $price = $this->calculateFlightPrice($ib);
+                if ($minIb === null || $price < $minIb) {
+                    $minIb = $price;
+                }
+            }
+            if ($minIb !== null) {
+                $ibKey = $this->directionPriceKey($pricingVersion, $params['arrival'] ?? '', $params['departure'] ?? '', $params['inbound_date'], $basePax);
+                Cache::put($ibKey, round($minIb, 2), $ttl);
+            }
+        }
+    }
+
+    private function directionPriceKey(string $version, string $departure, string $arrival, string $date, array $pax): string
+    {
+        return 'vdp_dir_price:' . $version . ':' . md5(json_encode([
+            $departure, $arrival, $date, $pax['cabin'], $pax['adults'], $pax['children'], $pax['infants'],
+        ]));
     }
 
     /**
@@ -110,6 +166,7 @@ class VdpFlightService
     /**
      * Retorna o menor preço total (ida + volta se roundtrip) a partir do cache.
      * Não faz chamada à API — apenas lê o cache existente.
+     * Faz fallback para cache de preço por direção se a busca completa não existir.
      */
     public function getMinPriceFromCache(array $params): ?float
     {
@@ -117,43 +174,51 @@ class VdpFlightService
         $cacheKey = 'vdp_search:' . $pricingVersion . ':' . md5(json_encode($params));
 
         $results = Cache::get($cacheKey);
-        if (! $results) {
-            return null;
-        }
 
-        $outbound = $results['outbound'] ?? [];
-        $inbound = $results['inbound'] ?? [];
+        if ($results) {
+            $outbound = $results['outbound'] ?? [];
+            $inbound = $results['inbound'] ?? [];
 
-        if (empty($outbound)) {
-            return null;
-        }
+            if (! empty($outbound)) {
+                $minOb = null;
+                foreach ($outbound as $ob) {
+                    $price = $this->calculateFlightPrice($ob);
+                    if ($minOb === null || $price < $minOb) {
+                        $minOb = $price;
+                    }
+                }
 
-        $minOb = null;
-        foreach ($outbound as $ob) {
-            $price = $this->calculateFlightPrice($ob);
-            if ($minOb === null || $price < $minOb) {
-                $minOb = $price;
-            }
-        }
+                if ($minOb !== null) {
+                    if (! empty($params['inbound_date']) && ! empty($inbound)) {
+                        $minIb = null;
+                        foreach ($inbound as $ib) {
+                            $price = $this->calculateFlightPrice($ib);
+                            if ($minIb === null || $price < $minIb) {
+                                $minIb = $price;
+                            }
+                        }
+                        if ($minIb !== null) {
+                            return round($minOb + $minIb, 2);
+                        }
+                    }
 
-        if ($minOb === null) {
-            return null;
-        }
-
-        if (! empty($params['inbound_date']) && ! empty($inbound)) {
-            $minIb = null;
-            foreach ($inbound as $ib) {
-                $price = $this->calculateFlightPrice($ib);
-                if ($minIb === null || $price < $minIb) {
-                    $minIb = $price;
+                    return round($minOb, 2);
                 }
             }
-            if ($minIb !== null) {
-                return round($minOb + $minIb, 2);
-            }
         }
 
-        return round($minOb, 2);
+        if (! empty($params['outbound_date'])) {
+            $dirKey = $this->directionPriceKey($pricingVersion, $params['departure'] ?? '', $params['arrival'] ?? '', $params['outbound_date'], [
+                'adults' => $params['adults'] ?? 1,
+                'children' => $params['children'] ?? 0,
+                'infants' => $params['infants'] ?? 0,
+                'cabin' => $params['cabin'] ?? 'EC',
+            ]);
+
+            return Cache::get($dirKey);
+        }
+
+        return null;
     }
 
     /**
