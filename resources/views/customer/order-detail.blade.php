@@ -259,7 +259,10 @@
         </div>
 
         @php
-            $total = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0));
+            $payingPax = $order->total_adults + $order->total_children;
+            if ($payingPax < 1) $payingPax = 1;
+            $totalPerPax = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0));
+            $total = $totalPerPax * $payingPax;
             $finalTotal = $total - (float)($order->discount_amount ?? 0);
         @endphp
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-2">

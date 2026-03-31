@@ -75,7 +75,9 @@ class OrderResource extends Resource
                     ->label('Valor')
                     ->getStateUsing(function (Order $record) {
                         $record->loadMissing('flights');
-                        $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0));
+                        $payingPax = $record->total_adults + $record->total_children;
+                        if ($payingPax < 1) $payingPax = 1;
+                        $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0)) * $payingPax;
                         $total -= (float) ($record->discount_amount ?? 0);
 
                         return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';
@@ -297,7 +299,9 @@ class OrderResource extends Resource
                             ->label('Valor total')
                             ->getStateUsing(function (Order $record) {
                                 $record->loadMissing('flights');
-                                $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0));
+                                $payingPax = $record->total_adults + $record->total_children;
+                                if ($payingPax < 1) $payingPax = 1;
+                                $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0)) * $payingPax;
                                 $total -= (float) ($record->discount_amount ?? 0);
 
                                 return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';

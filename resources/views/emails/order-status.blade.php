@@ -7,10 +7,13 @@
     $firstName = $passenger ? explode(' ', trim($passenger->full_name))[0] : 'Cliente';
     $flightSearch = $order->flightSearch;
 
-    $totalPrice = 0;
+    $payingPax = $order->total_adults + $order->total_children;
+    if ($payingPax < 1) $payingPax = 1;
+    $totalPricePerPax = 0;
     foreach ($order->flights as $f) {
-        $totalPrice += (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0);
+        $totalPricePerPax += (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0);
     }
+    $totalPrice = $totalPricePerPax * $payingPax;
 
     $paymentMethod = $payment->payment_method ?? ($payment && $payment->gateway === 'abacatepay' ? 'pix' : null);
     $isPix = $payment && $paymentMethod === 'pix';

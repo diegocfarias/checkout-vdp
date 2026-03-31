@@ -344,13 +344,16 @@ class AppMaxService implements PaymentGatewayInterface
     {
         $amountCents = $this->toCents($amountDecimal);
 
+        $payingPax = $order->total_adults + $order->total_children;
+        if ($payingPax < 1) $payingPax = 1;
+
         $products = [];
         foreach ($order->flights as $flight) {
             $unitValue = $this->toCents((float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0));
             $products[] = [
                 'sku' => 'FLIGHT-' . ($flight->id ?? $order->id),
                 'name' => trim(($flight->cia ?? 'Voo') . ' ' . ($flight->departure_location ?? '') . ' → ' . ($flight->arrival_location ?? '')),
-                'quantity' => 1,
+                'quantity' => $payingPax,
                 'unit_value' => $unitValue,
                 'type' => 'physical',
             ];

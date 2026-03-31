@@ -506,10 +506,15 @@ class OrderCheckoutController extends Controller
 
     private function calculateBaseTotal(Order $order): float
     {
+        $payingPax = $order->total_adults + $order->total_children;
+        if ($payingPax < 1) {
+            $payingPax = 1;
+        }
+
         $total = 0;
         foreach ($order->flights as $flight) {
-            $total += (float) ($flight->money_price ?? 0);
-            $total += (float) ($flight->tax ?? 0);
+            $perPax = (float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0);
+            $total += $perPax * $payingPax;
         }
 
         return round($total, 2);
@@ -530,10 +535,16 @@ class OrderCheckoutController extends Controller
             return null;
         }
 
-        $oldTotal = 0;
-        foreach ($order->flights as $f) {
-            $oldTotal += (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0);
+        $payingPax = $order->total_adults + $order->total_children;
+        if ($payingPax < 1) {
+            $payingPax = 1;
         }
+
+        $oldTotalPerPax = 0;
+        foreach ($order->flights as $f) {
+            $oldTotalPerPax += (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0);
+        }
+        $oldTotal = $oldTotalPerPax * $payingPax;
 
         $baseParams = [
             'departure' => $flightSearch->departure_iata,
@@ -568,11 +579,13 @@ class OrderCheckoutController extends Controller
                 return null;
             }
 
-            $newTotal = $this->vdpService->calculateFlightPrice($freshOb);
+            $newTotalPerPax = $this->vdpService->calculateFlightPrice($freshOb);
 
             if ($freshIb) {
-                $newTotal += $this->vdpService->calculateFlightPrice($freshIb);
+                $newTotalPerPax += $this->vdpService->calculateFlightPrice($freshIb);
             }
+
+            $newTotal = $newTotalPerPax * $payingPax;
 
             if (abs($newTotal - $oldTotal) >= 0.01) {
                 $obFlight->update([

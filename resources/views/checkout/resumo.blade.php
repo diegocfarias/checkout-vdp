@@ -94,22 +94,27 @@
         @endif
 
         @php
-            $subtotalPassagens = 0;
-            $subtotalTaxas = 0;
+            $payingPax = $order->total_adults + $order->total_children;
+            if ($payingPax < 1) $payingPax = 1;
+
+            $subtotalPassagensPorPax = 0;
+            $subtotalTaxasPorPax = 0;
             foreach ($order->flights ?? [] as $flight) {
-                $subtotalPassagens += (float) ($flight->money_price ?? 0);
-                $subtotalTaxas += (float) ($flight->tax ?? 0);
+                $subtotalPassagensPorPax += (float) ($flight->money_price ?? 0);
+                $subtotalTaxasPorPax += (float) ($flight->tax ?? 0);
             }
+            $subtotalPassagens = $subtotalPassagensPorPax * $payingPax;
+            $subtotalTaxas = $subtotalTaxasPorPax * $payingPax;
             $orderTotal = $subtotalPassagens + $subtotalTaxas;
         @endphp
 
         <div class="pt-4 border-t border-gray-200 space-y-2">
             <div class="flex justify-between text-gray-600">
-                <span>Passagens</span>
+                <span>Passagens ({{ $payingPax }}x)</span>
                 <span>R$ {{ number_format($subtotalPassagens, 2, ',', '.') }}</span>
             </div>
             <div class="flex justify-between text-gray-600">
-                <span>Taxas</span>
+                <span>Taxas ({{ $payingPax }}x)</span>
                 <span>R$ {{ number_format($subtotalTaxas, 2, ',', '.') }}</span>
             </div>
             @if($order->discount_amount > 0 && $order->coupon)
