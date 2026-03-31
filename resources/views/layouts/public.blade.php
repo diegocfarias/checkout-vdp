@@ -57,7 +57,7 @@
     <header class="bg-white sticky top-0 z-40 border-b border-gray-100 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
             <a href="{{ route('search.home') }}" class="shrink-0">
-                <img src="/images/logo-vdp.png" alt="Voe de Primeira" class="h-8">
+                <img src="/images/logo-vdp.png?v={{ filemtime(public_path('images/logo-vdp.png')) }}" alt="Voe de Primeira" class="h-8">
             </a>
 
             {{-- Desktop nav --}}
@@ -264,7 +264,7 @@
         <div class="max-w-6xl mx-auto px-6 py-10">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 <div>
-                    <img src="/images/logo-vdp.png" alt="Voe de Primeira" class="h-8 mb-4">
+                    <img src="/images/logo-vdp.png?v={{ filemtime(public_path('images/logo-vdp.png')) }}" alt="Voe de Primeira" class="h-8 mb-4">
                     <p class="text-sm text-gray-500 leading-relaxed">Passagens aéreas com preços exclusivos usando milhas. Emissão rápida e segura.</p>
                 </div>
 
