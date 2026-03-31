@@ -30,6 +30,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('Voe de Primeira')
+            ->brandLogo(asset('images/logo-vdp.png'))
+            ->brandLogoHeight('2rem')
             ->colors([
                 'primary' => Color::Emerald,
                 'danger' => Color::Red,

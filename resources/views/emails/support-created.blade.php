@@ -10,17 +10,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; background-color: #f0fdf4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0fdf4; padding: 40px 16px;">
+<body style="margin: 0; padding: 0; background-color: #f5f6f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f6f8; padding: 40px 16px;">
         <tr>
             <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
 
                     {{-- Header --}}
                     <tr>
-                        <td style="background: linear-gradient(135deg, #064e3b 0%, #111827 100%); padding: 32px 24px; text-align: center; border-radius: 16px 16px 0 0;">
+                        <td style="background-color: #ffffff; padding: 32px 24px 24px; text-align: center; border-radius: 16px 16px 0 0; border-bottom: 2px solid #d4a843;">
                             <img src="{{ asset('images/logo-vdp.png') }}" alt="Voe de Primeira" style="height: 36px; margin-bottom: 16px;">
-                            <p style="margin: 0; font-size: 13px; color: #a7f3d0; letter-spacing: 0.5px;">ATENDIMENTO</p>
+                            <p style="margin: 0; font-size: 13px; color: #6b7280; letter-spacing: 0.5px; font-weight: 600;">ATENDIMENTO</p>
                         </td>
                     </tr>
 
@@ -115,16 +115,16 @@
 
                     {{-- Footer --}}
                     <tr>
-                        <td style="background: linear-gradient(135deg, #064e3b 0%, #111827 100%); padding: 24px; text-align: center; border-radius: 0 0 16px 16px;">
-                            <p style="margin: 0 0 8px; font-size: 13px; color: #a7f3d0; font-weight: 500;">
+                        <td style="background-color: #f9fafb; padding: 24px; text-align: center; border-radius: 0 0 16px 16px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 8px; font-size: 13px; color: #374151; font-weight: 500;">
                                 Voe de Primeira
                             </p>
-                            <p style="margin: 0; font-size: 11px; color: #6b7280;">
+                            <p style="margin: 0; font-size: 11px; color: #9ca3af;">
                                 &copy; {{ date('Y') }} &middot; Todos os direitos reservados
                             </p>
                             @if($whatsappNumber)
                             <p style="margin: 8px 0 0; font-size: 12px;">
-                                <a href="https://wa.me/{{ $whatsappNumber }}" style="color: #6ee7b7; text-decoration: none; font-weight: 500;">Falar no WhatsApp</a>
+                                <a href="https://wa.me/{{ $whatsappNumber }}" style="color: #059669; text-decoration: none; font-weight: 500;">Falar no WhatsApp</a>
                             </p>
                             @endif
                         </td>
