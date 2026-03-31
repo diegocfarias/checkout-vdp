@@ -34,6 +34,8 @@
         : '';
 
     $totalPax = ($params['adults'] ?? 1) + ($params['children'] ?? 0);
+    $totalAllPax = round($totalPrice * $totalPax, 2);
+    $pixAllPax = $pixOn ? round($pixPrice * $totalPax, 2) : $totalAllPax;
 
     $parseTax = function($val) {
         $val = trim((string)($val ?? '0'));
@@ -62,7 +64,7 @@
         {{-- Coluna esquerda: voos --}}
         <div class="flex-1 min-w-0">
             {{-- Preço mobile --}}
-            <div class="lg:hidden sticky top-14 z-10 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 rounded-t-xl shadow-sm">
+            <div class="lg:hidden sticky top-16 z-10 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 rounded-t-xl shadow-sm">
                 <div class="whitespace-nowrap">
                     @if($pixOn)
                         <p class="text-[11px] text-gray-400 line-through">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
@@ -74,6 +76,9 @@
                         <p class="text-lg font-bold text-gray-900">R$ {{ number_format($totalPrice, 2, ',', '.') }}</p>
                     @endif
                     <p class="text-[11px] text-gray-400">Por adulto{{ $hasInbound ? ', ida e volta' : '' }}</p>
+                    @if($totalPax > 1)
+                        <p class="text-[11px] text-gray-500 font-medium">Total ({{ $totalPax }}x): R$ {{ number_format($pixOn ? $pixAllPax : $totalAllPax, 2, ',', '.') }}</p>
+                    @endif
                 </div>
                 <form action="{{ route('search.select') }}" method="POST" class="group-form" data-group="{{ $groupIdx }}">
                     @csrf
@@ -316,9 +321,15 @@
                             <span class="font-medium">-R$ {{ number_format($pixSavings, 2, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between font-bold text-gray-800 pt-1.5 border-t border-gray-100">
-                            <span>Total no Pix</span>
+                            <span>{{ $totalPax > 1 ? 'Total por adulto' : 'Total' }} no Pix</span>
                             <span>R$ {{ number_format($pixPrice, 2, ',', '.') }}</span>
                         </div>
+                        @if($totalPax > 1)
+                        <div class="flex justify-between font-bold text-blue-700 bg-blue-50 -mx-1 px-1 py-1 rounded">
+                            <span>Total ({{ $totalPax }}x)</span>
+                            <span>R$ {{ number_format($pixAllPax, 2, ',', '.') }}</span>
+                        </div>
+                        @endif
                     </div>
 
                     <p class="text-[11px] text-gray-400 mb-4">Ou em até <b class="text-gray-600">{{ \App\Models\Setting::get('max_installments', 12) }}x</b> no cartão de crédito</p>
@@ -335,6 +346,12 @@
                             <span>Valor das taxas</span>
                             <span class="text-gray-700 font-medium">R$ {{ number_format($totalTax, 2, ',', '.') }}</span>
                         </div>
+                        @if($totalPax > 1)
+                        <div class="flex justify-between font-bold text-blue-700 bg-blue-50 -mx-1 px-1 py-1 rounded pt-1.5 border-t border-gray-100">
+                            <span>Total ({{ $totalPax }}x)</span>
+                            <span>R$ {{ number_format($totalAllPax, 2, ',', '.') }}</span>
+                        </div>
+                        @endif
                     </div>
                 @endif
 

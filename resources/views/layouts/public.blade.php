@@ -55,9 +55,9 @@
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
     <header class="bg-white sticky top-0 z-40 border-b border-gray-100 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             <a href="{{ route('search.home') }}" class="shrink-0">
-                <img src="/images/logo-vdp.png?v={{ filemtime(public_path('images/logo-vdp.png')) }}" alt="Voe de Primeira" class="h-8">
+                <img src="/images/logo-vdp.png?v={{ filemtime(public_path('images/logo-vdp.png')) }}" alt="Voe de Primeira" class="h-10 sm:h-12">
             </a>
 
             {{-- Desktop nav --}}
@@ -137,8 +137,8 @@
         </div>
 
         {{-- Mobile sidebar --}}
-        <div id="mobile-sidebar-overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 hidden sm:hidden" style="top:56px"></div>
-        <nav id="mobile-sidebar" class="fixed top-[56px] right-0 bottom-0 w-72 bg-white z-50 transform translate-x-full transition-transform duration-300 ease-in-out sm:hidden overflow-y-auto shadow-2xl">
+        <div id="mobile-sidebar-overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 hidden sm:hidden" style="top:64px"></div>
+        <nav id="mobile-sidebar" class="fixed top-[64px] right-0 bottom-0 w-72 bg-white z-50 transform translate-x-full transition-transform duration-300 ease-in-out sm:hidden overflow-y-auto shadow-2xl">
             <div class="flex flex-col p-4 gap-1">
                 @auth('customer')
                     <div class="flex items-center gap-3 px-3 py-3 mb-2 bg-gray-50 rounded-xl">
@@ -264,7 +264,7 @@
         <div class="max-w-6xl mx-auto px-6 py-10">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 <div>
-                    <img src="/images/logo-vdp.png?v={{ filemtime(public_path('images/logo-vdp.png')) }}" alt="Voe de Primeira" class="h-8 mb-4">
+                    <img src="/images/logo-vdp.png?v={{ filemtime(public_path('images/logo-vdp.png')) }}" alt="Voe de Primeira" class="h-10 sm:h-12 mb-4">
                     <p class="text-sm text-gray-500 leading-relaxed">Passagens aéreas com preços exclusivos usando milhas. Emissão rápida e segura.</p>
                 </div>
 

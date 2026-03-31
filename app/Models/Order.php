@@ -140,9 +140,24 @@ class Order extends Model
 
     public function isMercosul(): bool
     {
+        $dep = $this->departure_iata;
+        $arr = $this->arrival_iata;
+
+        if (empty($dep) || empty($arr)) {
+            $fs = $this->relationLoaded('flightSearch') ? $this->flightSearch : $this->flightSearch()->first();
+            if ($fs) {
+                $dep = $dep ?: $fs->departure_iata;
+                $arr = $arr ?: $fs->arrival_iata;
+            }
+        }
+
+        if (empty($dep) || empty($arr)) {
+            return false;
+        }
+
         $mercosulIatas = config('mercosul_airports');
 
-        return in_array(strtoupper($this->departure_iata), $mercosulIatas, true)
-            && in_array(strtoupper($this->arrival_iata), $mercosulIatas, true);
+        return in_array(strtoupper($dep), $mercosulIatas, true)
+            && in_array(strtoupper($arr), $mercosulIatas, true);
     }
 }

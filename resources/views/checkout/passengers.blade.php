@@ -8,12 +8,17 @@
 
 @section('content')
     @php
-        $subtotalPassagens = 0;
-        $subtotalTaxas = 0;
+        $payingPax = $order->total_adults + $order->total_children;
+        if ($payingPax < 1) $payingPax = 1;
+
+        $subtotalPassagensPorPax = 0;
+        $subtotalTaxasPorPax = 0;
         foreach ($order->flights ?? [] as $flight) {
-            $subtotalPassagens += (float) ($flight->money_price ?? 0);
-            $subtotalTaxas += (float) ($flight->tax ?? 0);
+            $subtotalPassagensPorPax += (float) ($flight->money_price ?? 0);
+            $subtotalTaxasPorPax += (float) ($flight->tax ?? 0);
         }
+        $subtotalPassagens = $subtotalPassagensPorPax * $payingPax;
+        $subtotalTaxas = $subtotalTaxasPorPax * $payingPax;
         $orderTotal = $subtotalPassagens + $subtotalTaxas;
     @endphp
 
@@ -644,6 +649,13 @@
                             </span>
                             <span id="modal-desconto-valor" class="font-semibold"></span>
                         </div>
+                        <div id="modal-wallet-row" class="hidden flex justify-between items-center text-emerald-600 bg-emerald-50 -mx-2 px-2 py-1.5 rounded-lg">
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                Créditos de indicação
+                            </span>
+                            <span id="modal-wallet-valor" class="font-semibold"></span>
+                        </div>
                         <div id="modal-pix-discount-row" class="hidden flex justify-between items-center text-emerald-600 bg-emerald-50 -mx-2 px-2 py-1.5 rounded-lg">
                             <span class="flex items-center gap-1.5">
                                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -717,6 +729,7 @@
         let appliedDiscount = 0;
         let cumulativeWithPix = true;
         const pixDiscountPct = {{ $pixDiscount ?? 0 }};
+        const walletBalance = {{ $walletBalance ?? 0 }};
 
         function atualizarTotalFooter() {
             const footerTotal = document.getElementById('footer-total');
@@ -727,6 +740,8 @@
             const modalDescontoValor = document.getElementById('modal-desconto-valor');
             const modalPixDiscRow = document.getElementById('modal-pix-discount-row');
             const modalPixDiscValor = document.getElementById('modal-pix-discount-valor');
+            const modalWalletRow = document.getElementById('modal-wallet-row');
+            const modalWalletValor = document.getElementById('modal-wallet-valor');
             const baseTotal = parseFloat(footerTotal.dataset.base || 0);
             const totalComDesconto = baseTotal - appliedDiscount;
             const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';
@@ -740,10 +755,24 @@
                 if (modalDescontoRow) modalDescontoRow.classList.add('hidden');
             }
 
+            const walletToggle = document.getElementById('use_wallet_toggle');
+            let walletUsed = 0;
+            if (walletToggle && walletToggle.checked && walletBalance > 0) {
+                walletUsed = Math.min(walletBalance, totalComDesconto);
+            }
+            const totalAfterWallet = totalComDesconto - walletUsed;
+
+            if (walletUsed > 0) {
+                if (modalWalletRow) modalWalletRow.classList.remove('hidden');
+                if (modalWalletValor) modalWalletValor.textContent = '- ' + fmt(walletUsed);
+            } else {
+                if (modalWalletRow) modalWalletRow.classList.add('hidden');
+            }
+
             let pixDiscountVal = 0;
             const canApplyPix = appliedDiscount > 0 ? cumulativeWithPix : true;
             if (isPix && pixDiscountPct > 0 && canApplyPix) {
-                pixDiscountVal = totalComDesconto * (pixDiscountPct / 100);
+                pixDiscountVal = totalAfterWallet * (pixDiscountPct / 100);
                 if (modalPixDiscRow) modalPixDiscRow.classList.remove('hidden');
                 if (modalPixDiscValor) modalPixDiscValor.textContent = '- ' + fmt(pixDiscountVal);
             } else {
@@ -753,12 +782,13 @@
             const footerDiscountInfo = document.getElementById('footer-discount-info');
             const discountParts = [];
             if (appliedDiscount > 0) discountParts.push('Cupom - ' + fmt(appliedDiscount));
+            if (walletUsed > 0) discountParts.push('Créditos - ' + fmt(walletUsed));
             if (isPix && pixDiscountVal > 0) discountParts.push('PIX -' + pixDiscountPct + '%');
 
             if (!isCreditCard) {
-                const totalPix = totalComDesconto - pixDiscountVal;
-                footerTotal.textContent = fmt(totalPix);
-                if (modalTotal) modalTotal.textContent = fmt(totalPix);
+                const totalPix = totalAfterWallet - pixDiscountVal;
+                footerTotal.textContent = fmt(Math.max(totalPix, 0));
+                if (modalTotal) modalTotal.textContent = fmt(Math.max(totalPix, 0));
                 if (modalJurosRow) modalJurosRow.classList.add('hidden');
 
                 if (footerDiscountInfo) {
@@ -776,11 +806,11 @@
             const selectedOption = installmentsSelect?.options[installmentsSelect.selectedIndex];
             const rateDataTotal = selectedOption?.dataset.total ? parseFloat(selectedOption.dataset.total) : baseTotal;
             const rate = baseTotal > 0 ? (rateDataTotal / baseTotal) : 1;
-            const totalComJuros = totalComDesconto * rate;
-            const juros = totalComJuros - totalComDesconto;
+            const totalComJuros = totalAfterWallet * rate;
+            const juros = totalComJuros - totalAfterWallet;
 
-            footerTotal.textContent = fmt(totalComJuros);
-            if (modalTotal) modalTotal.textContent = fmt(totalComJuros);
+            footerTotal.textContent = fmt(Math.max(totalComJuros, 0));
+            if (modalTotal) modalTotal.textContent = fmt(Math.max(totalComJuros, 0));
             if (juros > 0.01) {
                 if (modalJurosRow) modalJurosRow.classList.remove('hidden');
                 if (modalJurosValor) modalJurosValor.textContent = fmt(juros);
@@ -789,8 +819,8 @@
             }
 
             if (footerDiscountInfo) {
-                if (appliedDiscount > 0) {
-                    footerDiscountInfo.textContent = 'Cupom - ' + fmt(appliedDiscount) + ' aplicado';
+                if (discountParts.length > 0) {
+                    footerDiscountInfo.textContent = discountParts.join(' | ') + ' aplicado(s)';
                     footerDiscountInfo.classList.remove('hidden');
                 } else {
                     footerDiscountInfo.classList.add('hidden');
