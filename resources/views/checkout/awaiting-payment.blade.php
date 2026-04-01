@@ -28,6 +28,11 @@
 
                 <h2 class="text-2xl font-bold text-gray-800 mb-2">Aguardando pagamento</h2>
 
+                @if(isset($payment) && $payment->amount)
+                    <p class="text-3xl font-bold text-emerald-600 mb-1">R$ {{ number_format($payment->amount, 2, ',', '.') }}</p>
+                    <p class="text-sm text-gray-500 mb-4">via {{ $payment->payment_method === 'pix' ? 'PIX' : 'Cartão' }}</p>
+                @endif
+
                 @if($pixExpiresAt)
                     <div id="countdown-container" class="mb-4">
                         <p class="text-sm text-gray-500 mb-1">Tempo restante para pagar:</p>

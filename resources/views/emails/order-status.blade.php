@@ -21,6 +21,9 @@
     $pixEmv = $payment ? ($payment->gateway_response['pix_emv'] ?? $payment->payment_url ?? null) : null;
     $pixQr = $payment ? ($payment->gateway_response['pix_qrcode'] ?? null) : null;
     $paymentLabel = $isPix ? 'PIX' : ($isCard ? 'Cartão de Crédito' : 'Pagamento');
+    $paidAmount = $payment ? (float) $payment->amount : null;
+    $pixDiscountPct = (float) \App\Models\Setting::get('pix_discount', 0);
+    $hasPixDiscount = $isPix && $pixDiscountPct > 0 && $paidAmount && $paidAmount < $totalPrice;
 
     $badgeColor = match($newStatus) {
         'awaiting_payment' => '#f59e0b',
@@ -112,9 +115,19 @@
                                 <tr>
                                     <td style="padding: 24px; text-align: center;">
                                         <p style="margin: 0 0 4px; font-size: 12px; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 1px;">Pague via PIX</p>
-                                        <p style="margin: 0 0 16px; font-size: 28px; font-weight: 800; color: #111827;">
-                                            R$ {{ number_format($totalPrice, 2, ',', '.') }}
+                                        @if($hasPixDiscount)
+                                        <p style="margin: 0; font-size: 14px; color: #9ca3af; text-decoration: line-through;">
+                                            R$ {{ number_format($totalPrice - (float) ($order->discount_amount ?? 0), 2, ',', '.') }}
                                         </p>
+                                        @endif
+                                        <p style="margin: 0 0 4px; font-size: 28px; font-weight: 800; color: #111827;">
+                                            R$ {{ number_format($paidAmount ?? $totalPrice, 2, ',', '.') }}
+                                        </p>
+                                        @if($hasPixDiscount)
+                                        <p style="margin: 0 0 12px; font-size: 12px; color: #059669; font-weight: 600;">
+                                            {{ $pixDiscountPct }}% de desconto no PIX
+                                        </p>
+                                        @endif
 
                                         @if($pixQr)
                                         <div style="margin: 0 auto 16px; width: 200px; height: 200px; background-color: #ffffff; border-radius: 12px; padding: 12px; border: 1px solid #e5e7eb;">
@@ -280,11 +293,12 @@
                                     </td>
                                 </tr>
                                 @if($totalPrice > 0)
+                                    @php $displayTotal = $totalPrice; @endphp
                                     @if($order->discount_amount > 0 && $order->coupon)
                                     <tr>
                                         <td style="font-size: 13px; color: #6b7280; padding: 4px 0; border-top: 1px solid #f3f4f6;">Subtotal</td>
                                         <td align="right" style="font-size: 13px; color: #374151; font-weight: 600; padding: 4px 0; border-top: 1px solid #f3f4f6;">
-                                            R$ {{ number_format($totalPrice, 2, ',', '.') }}
+                                            R$ {{ number_format($displayTotal, 2, ',', '.') }}
                                         </td>
                                     </tr>
                                     <tr>
@@ -296,12 +310,24 @@
                                             - R$ {{ number_format($order->discount_amount, 2, ',', '.') }}
                                         </td>
                                     </tr>
-                                    @php $totalPrice -= (float) $order->discount_amount; @endphp
+                                    @php $displayTotal -= (float) $order->discount_amount; @endphp
+                                    @endif
+                                    @if($hasPixDiscount)
+                                    @php $pixSavings = round($displayTotal - $paidAmount, 2); @endphp
+                                    <tr>
+                                        <td style="font-size: 13px; color: #059669; padding: 4px 0;">
+                                            Desconto PIX <span style="font-size: 11px; color: #6ee7b7;">({{ $pixDiscountPct }}%)</span>
+                                        </td>
+                                        <td align="right" style="font-size: 13px; color: #059669; font-weight: 600; padding: 4px 0;">
+                                            - R$ {{ number_format($pixSavings, 2, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                    @php $displayTotal = $paidAmount; @endphp
                                     @endif
                                 <tr>
                                     <td style="font-size: 13px; color: #6b7280; padding: 8px 0 4px; border-top: 1px solid #f3f4f6;">Total</td>
                                     <td align="right" style="font-size: 18px; color: #059669; font-weight: 800; padding: 8px 0 4px; border-top: 1px solid #f3f4f6;">
-                                        R$ {{ number_format($totalPrice, 2, ',', '.') }}
+                                        R$ {{ number_format($paidAmount ?? $displayTotal, 2, ',', '.') }}
                                     </td>
                                 </tr>
                                 @endif
