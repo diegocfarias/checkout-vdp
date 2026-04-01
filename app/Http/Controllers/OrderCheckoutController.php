@@ -51,7 +51,7 @@ class OrderCheckoutController extends Controller
 
     public function showPassengers(string $token)
     {
-        $order = Order::with('flights')
+        $order = Order::with(['flights', 'flightSearch'])
             ->where('token', $token)
             ->pending()
             ->notExpired()
@@ -89,6 +89,7 @@ class OrderCheckoutController extends Controller
             'order' => $order,
             'outbound' => $order->flights->firstWhere('direction', 'outbound'),
             'inbound' => $order->flights->firstWhere('direction', 'inbound'),
+            'isMercosul' => $order->isMercosul(),
             'maxInstallments' => $maxInstallments,
             'interestRates' => $interestRates,
             'pixEnabled' => $pixEnabled,
@@ -108,7 +109,7 @@ class OrderCheckoutController extends Controller
             return response()->view('checkout.not-found', [], 404);
         }
 
-        $order->load('flights');
+        $order->load(['flights', 'flightSearch']);
         $priceConfirmed = $request->input('price_confirmed') === '1';
 
         if (! $priceConfirmed && $order->flight_search_id) {

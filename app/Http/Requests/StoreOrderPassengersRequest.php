@@ -34,6 +34,9 @@ class StoreOrderPassengersRequest extends FormRequest
     public function rules(): array
     {
         $order = $this->route('order');
+        if ($order instanceof Order && ! $order->relationLoaded('flightSearch')) {
+            $order->load('flightSearch');
+        }
         $isMercosul = $order instanceof Order && $order->isMercosul();
 
         $cpfValidation = function (string $attribute, mixed $value, \Closure $fail) {

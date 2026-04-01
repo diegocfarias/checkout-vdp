@@ -976,7 +976,7 @@
             });
         });
 
-        const isMercosul = @json($order->isMercosul());
+        const isMercosul = @json($isMercosul);
 
         function updatePassengerFields(index) {
             const natSelect = document.getElementById('passengers_' + index + '_nationality');

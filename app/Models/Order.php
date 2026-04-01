@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class Order extends Model
@@ -152,12 +153,30 @@ class Order extends Model
         }
 
         if (empty($dep) || empty($arr)) {
+            Log::warning('isMercosul: IATA codes vazios', [
+                'order_id' => $this->id,
+                'departure_iata' => $this->departure_iata,
+                'arrival_iata' => $this->arrival_iata,
+                'flight_search_id' => $this->flight_search_id,
+            ]);
             return false;
         }
 
-        $mercosulIatas = config('mercosul_airports');
+        $mercosulIatas = config('mercosul_airports') ?? [];
 
-        return in_array(strtoupper($dep), $mercosulIatas, true)
-            && in_array(strtoupper($arr), $mercosulIatas, true);
+        $depIn = in_array(strtoupper($dep), $mercosulIatas, true);
+        $arrIn = in_array(strtoupper($arr), $mercosulIatas, true);
+
+        if (! $depIn || ! $arrIn) {
+            Log::debug('isMercosul: aeroporto fora da lista Mercosul', [
+                'order_id' => $this->id,
+                'dep' => $dep,
+                'arr' => $arr,
+                'dep_in_list' => $depIn,
+                'arr_in_list' => $arrIn,
+            ]);
+        }
+
+        return $depIn && $arrIn;
     }
 }
