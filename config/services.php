@@ -92,4 +92,9 @@ return [
         'api_key' => env('LATAM_CRAWLER_API_KEY'),
     ],
 
+    'bds_crawler' => [
+        'url' => env('BDS_CRAWLER_URL'),
+        'api_key' => env('BDS_CRAWLER_API_KEY'),
+    ],
+
 ];

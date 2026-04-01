@@ -77,6 +77,7 @@ class ManageSettings extends Page
             'provider_latam' => Setting::get('provider_latam', 'latam_crawler'),
             'vdp_timeout' => Setting::get('vdp_timeout', 35),
             'crawler_timeout' => Setting::get('crawler_timeout', 35),
+            'bds_crawler_timeout' => Setting::get('bds_crawler_timeout', 30),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -133,6 +134,7 @@ class ManageSettings extends Page
                                 'disabled' => 'Desativado',
                                 'vdp' => 'VDP (API atual)',
                                 'latam_crawler' => 'LATAM Crawler',
+                                'bds_crawler' => 'BDS Crawler',
                             ])
                             ->helperText('Qual API usar para buscar voos GOL. Desativado = não pesquisa.')
                             ->default('vdp'),
@@ -143,6 +145,7 @@ class ManageSettings extends Page
                                 'disabled' => 'Desativado',
                                 'vdp' => 'VDP (API atual)',
                                 'latam_crawler' => 'LATAM Crawler',
+                                'bds_crawler' => 'BDS Crawler',
                             ])
                             ->helperText('Qual API usar para buscar voos Azul. Desativado = não pesquisa.')
                             ->default('vdp'),
@@ -153,6 +156,7 @@ class ManageSettings extends Page
                                 'disabled' => 'Desativado',
                                 'vdp' => 'VDP (API atual)',
                                 'latam_crawler' => 'LATAM Crawler',
+                                'bds_crawler' => 'BDS Crawler',
                             ])
                             ->helperText('Qual API usar para buscar voos LATAM. Desativado = não pesquisa.')
                             ->default('latam_crawler'),
@@ -173,6 +177,15 @@ class ManageSettings extends Page
                             ->minValue(5)
                             ->maxValue(120)
                             ->default(35)
+                            ->suffix('s'),
+
+                        TextInput::make('bds_crawler_timeout')
+                            ->label('Timeout — BDS Crawler (segundos)')
+                            ->helperText('Tempo máximo de espera para a API BDS Crawler responder.')
+                            ->numeric()
+                            ->minValue(5)
+                            ->maxValue(120)
+                            ->default(30)
                             ->suffix('s'),
                     ]),
 
@@ -556,6 +569,7 @@ class ManageSettings extends Page
         Setting::set('provider_latam', $data['provider_latam'] ?? 'latam_crawler', 'string');
         Setting::set('vdp_timeout', (int) ($data['vdp_timeout'] ?? 35), 'integer');
         Setting::set('crawler_timeout', (int) ($data['crawler_timeout'] ?? 35), 'integer');
+        Setting::set('bds_crawler_timeout', (int) ($data['bds_crawler_timeout'] ?? 30), 'integer');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {

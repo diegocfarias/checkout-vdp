@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 class VdpFlightService
 {
     private ?LatamCrawlerService $crawlerService = null;
+    private ?BdsCrawlerService $bdsCrawlerService = null;
 
     private function getCrawlerService(): LatamCrawlerService
     {
@@ -18,6 +19,15 @@ class VdpFlightService
         }
 
         return $this->crawlerService;
+    }
+
+    private function getBdsCrawlerService(): BdsCrawlerService
+    {
+        if (! $this->bdsCrawlerService) {
+            $this->bdsCrawlerService = app(BdsCrawlerService::class);
+        }
+
+        return $this->bdsCrawlerService;
     }
 
     private function getProviderForCia(string $cia): string
@@ -240,7 +250,7 @@ class VdpFlightService
 
     /**
      * Roteia a busca para os fornecedores configurados e mescla resultados.
-     * VDP e Crawler rodam em paralelo quando ambos estão ativos.
+     * VDP, LATAM Crawler e BDS Crawler rodam em paralelo quando multiplos estao ativos.
      */
     private function fetchFromProviders(array $params): array
     {
@@ -255,11 +265,16 @@ class VdpFlightService
                 return ['outbound' => [], 'inbound' => []];
             }
 
+            if ($provider === 'bds_crawler') {
+                return $this->getBdsCrawlerService()->searchFlights($params, [strtoupper($normalized)]);
+            }
+
             return $this->callForProvider($provider, $params);
         }
 
         $vdpCias = [];
         $crawlerCias = [];
+        $bdsCias = [];
 
         foreach ($allCias as $c) {
             $provider = $this->getProviderForCia($c);
@@ -267,6 +282,8 @@ class VdpFlightService
                 continue;
             } elseif ($provider === 'latam_crawler') {
                 $crawlerCias[] = $c;
+            } elseif ($provider === 'bds_crawler') {
+                $bdsCias[] = $c;
             } else {
                 $vdpCias[] = $c;
             }
@@ -274,9 +291,11 @@ class VdpFlightService
 
         $needVdp = ! empty($vdpCias);
         $needCrawler = ! empty($crawlerCias);
+        $needBds = ! empty($bdsCias);
+        $providerCount = ($needVdp ? 1 : 0) + ($needCrawler ? 1 : 0) + ($needBds ? 1 : 0);
 
-        if ($needVdp && $needCrawler) {
-            return $this->fetchParallel($params, $vdpCias);
+        if ($providerCount > 1) {
+            return $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
         }
 
         if ($needVdp) {
@@ -284,7 +303,6 @@ class VdpFlightService
                 return $this->callApi($params);
             } catch (\Throwable $e) {
                 Log::warning('VDP API: falha na busca', ['error' => $e->getMessage()]);
-
                 return ['outbound' => [], 'inbound' => []];
             }
         }
@@ -294,7 +312,15 @@ class VdpFlightService
                 return $this->getCrawlerService()->searchFlights($params);
             } catch (\Throwable $e) {
                 Log::warning('LatamCrawler: falha na busca', ['error' => $e->getMessage()]);
+                return ['outbound' => [], 'inbound' => []];
+            }
+        }
 
+        if ($needBds) {
+            try {
+                return $this->getBdsCrawlerService()->searchFlights($params, array_map('strtoupper', $bdsCias));
+            } catch (\Throwable $e) {
+                Log::warning('BdsCrawler: falha na busca', ['error' => $e->getMessage()]);
                 return ['outbound' => [], 'inbound' => []];
             }
         }
@@ -303,18 +329,25 @@ class VdpFlightService
     }
 
     /**
-     * Executa VDP e Crawler em paralelo via Http::pool() (curl_multi).
+     * Executa provedores em paralelo via Http::pool() (curl_multi).
+     * BDS Crawler roda como uma unica chamada (suporta multi-cia).
      */
-    private function fetchParallel(array $params, array $vdpCias): array
+    private function fetchParallel(array $params, array $vdpCias, array $crawlerCias = [], array $bdsCias = []): array
     {
         $vdpUrl = rtrim(config('services.vdp.url'), '/') . '/api/search/flights';
         $crawlerUrl = rtrim(config('services.latam_crawler.url', ''), '/');
         $crawlerKey = config('services.latam_crawler.api_key', '');
+        $bdsUrl = rtrim(config('services.bds_crawler.url', ''), '/');
+        $bdsKey = config('services.bds_crawler.api_key', '');
         $crawlerService = $this->getCrawlerService();
 
         $cabin = $params['cabin'] ?? 'EC';
         $crawlerCabin = $crawlerService->mapCabin($cabin);
         $hasInbound = ! empty($params['inbound_date']);
+
+        $needVdp = ! empty($vdpCias);
+        $needCrawler = ! empty($crawlerCias);
+        $needBds = ! empty($bdsCias);
 
         $crawlerBaseQuery = [
             'adt' => $params['adults'] ?? 1,
@@ -325,68 +358,126 @@ class VdpFlightService
 
         $vdpTimeout = $this->getVdpTimeout();
         $crawlerTimeout = $this->getCrawlerTimeout();
+        $bdsTimeout = $this->getBdsTimeout();
 
-        $responses = Http::pool(function ($pool) use ($vdpUrl, $params, $crawlerUrl, $crawlerKey, $crawlerBaseQuery, $hasInbound, $vdpTimeout, $crawlerTimeout) {
-            $pool->as('vdp')
-                ->acceptJson()
-                ->timeout($vdpTimeout)
-                ->post($vdpUrl, $params);
+        $responses = Http::pool(function ($pool) use (
+            $needVdp, $vdpUrl, $params, $vdpTimeout,
+            $needCrawler, $crawlerUrl, $crawlerKey, $crawlerBaseQuery, $crawlerTimeout,
+            $needBds, $bdsUrl, $bdsKey, $bdsTimeout, $bdsCias, $cabin,
+            $hasInbound,
+        ) {
+            if ($needVdp) {
+                $pool->as('vdp')
+                    ->acceptJson()
+                    ->timeout($vdpTimeout)
+                    ->post($vdpUrl, $params);
+            }
 
-            $pool->as('crawler_ob')
-                ->withHeaders(['X-API-KEY' => $crawlerKey])
-                ->acceptJson()
-                ->timeout($crawlerTimeout)
-                ->get("{$crawlerUrl}/v1/miles", array_merge($crawlerBaseQuery, [
-                    'ori' => $params['departure'] ?? '',
-                    'dst' => $params['arrival'] ?? '',
-                    'outbound_date' => $params['outbound_date'] ?? '',
-                ]));
-
-            if ($hasInbound) {
-                $pool->as('crawler_ib')
+            if ($needCrawler) {
+                $pool->as('crawler_ob')
                     ->withHeaders(['X-API-KEY' => $crawlerKey])
                     ->acceptJson()
                     ->timeout($crawlerTimeout)
                     ->get("{$crawlerUrl}/v1/miles", array_merge($crawlerBaseQuery, [
-                        'ori' => $params['arrival'] ?? '',
-                        'dst' => $params['departure'] ?? '',
-                        'outbound_date' => $params['inbound_date'],
+                        'ori' => $params['departure'] ?? '',
+                        'dst' => $params['arrival'] ?? '',
+                        'outbound_date' => $params['outbound_date'] ?? '',
                     ]));
+
+                if ($hasInbound) {
+                    $pool->as('crawler_ib')
+                        ->withHeaders(['X-API-KEY' => $crawlerKey])
+                        ->acceptJson()
+                        ->timeout($crawlerTimeout)
+                        ->get("{$crawlerUrl}/v1/miles", array_merge($crawlerBaseQuery, [
+                            'ori' => $params['arrival'] ?? '',
+                            'dst' => $params['departure'] ?? '',
+                            'outbound_date' => $params['inbound_date'],
+                        ]));
+                }
+            }
+
+            if ($needBds) {
+                $bdsQuery = [
+                    'origin' => $params['departure'] ?? '',
+                    'destination' => $params['arrival'] ?? '',
+                    'outbound_date' => $params['outbound_date'] ?? '',
+                    'adults' => $params['adults'] ?? 1,
+                    'children' => $params['children'] ?? 0,
+                    'infants' => $params['infants'] ?? 0,
+                    'cabin' => $cabin,
+                    'airlines' => implode(',', array_map('strtoupper', $bdsCias)),
+                ];
+                if ($hasInbound) {
+                    $bdsQuery['inbound_date'] = $params['inbound_date'];
+                }
+
+                $bdsHeaders = ['Accept' => 'application/json'];
+                if (! empty($bdsKey)) {
+                    $bdsHeaders['X-API-KEY'] = $bdsKey;
+                }
+
+                $pool->as('bds')
+                    ->withHeaders($bdsHeaders)
+                    ->timeout($bdsTimeout)
+                    ->get("{$bdsUrl}/api/search", $bdsQuery);
             }
         });
 
         $outbound = [];
         $inbound = [];
 
-        $vdpResponse = $responses['vdp'] ?? null;
-        if ($vdpResponse && ! ($vdpResponse instanceof \Throwable) && $vdpResponse->successful()) {
-            $vdpData = $vdpResponse->json();
-            $outbound = $this->filterByCias($vdpData['outbound'] ?? [], $vdpCias);
-            $inbound = $this->filterByCias($vdpData['inbound'] ?? [], $vdpCias);
-        } elseif ($vdpResponse instanceof \Throwable) {
-            Log::warning('VDP API: falha na busca paralela', ['error' => $vdpResponse->getMessage()]);
-        } elseif ($vdpResponse && $vdpResponse->failed()) {
-            Log::warning('VDP API: erro na busca paralela', ['status' => $vdpResponse->status()]);
+        if ($needVdp) {
+            $vdpResponse = $responses['vdp'] ?? null;
+            if ($vdpResponse && ! ($vdpResponse instanceof \Throwable) && $vdpResponse->successful()) {
+                $vdpData = $vdpResponse->json();
+                $outbound = $this->filterByCias($vdpData['outbound'] ?? [], $vdpCias);
+                $inbound = $this->filterByCias($vdpData['inbound'] ?? [], $vdpCias);
+            } elseif ($vdpResponse instanceof \Throwable) {
+                Log::warning('VDP API: falha na busca paralela', ['error' => $vdpResponse->getMessage()]);
+            } elseif ($vdpResponse && $vdpResponse->failed()) {
+                Log::warning('VDP API: erro na busca paralela', ['status' => $vdpResponse->status()]);
+            }
         }
 
-        $crawlerOb = $crawlerService->transformResponse($responses['crawler_ob'] ?? null, $cabin);
-        $outbound = array_merge($outbound, $crawlerOb);
+        if ($needCrawler) {
+            $crawlerOb = $crawlerService->transformResponse($responses['crawler_ob'] ?? null, $cabin);
+            $outbound = array_merge($outbound, $crawlerOb);
 
-        if ($hasInbound) {
-            $crawlerIb = $crawlerService->transformResponse($responses['crawler_ib'] ?? null, $cabin);
-            $inbound = array_merge($inbound, $crawlerIb);
+            if ($hasInbound) {
+                $crawlerIb = $crawlerService->transformResponse($responses['crawler_ib'] ?? null, $cabin);
+                $inbound = array_merge($inbound, $crawlerIb);
+            }
+        }
+
+        if ($needBds) {
+            $bdsResponse = $responses['bds'] ?? null;
+            if ($bdsResponse && ! ($bdsResponse instanceof \Throwable) && $bdsResponse->successful()) {
+                $bdsData = $bdsResponse->json();
+                $outbound = array_merge($outbound, $bdsData['outbound'] ?? []);
+                $inbound = array_merge($inbound, $bdsData['inbound'] ?? []);
+            } elseif ($bdsResponse instanceof \Throwable) {
+                Log::warning('BdsCrawler: falha na busca paralela', ['error' => $bdsResponse->getMessage()]);
+            } elseif ($bdsResponse && $bdsResponse->failed()) {
+                Log::warning('BdsCrawler: erro na busca paralela', ['status' => $bdsResponse->status()]);
+            }
         }
 
         return ['outbound' => $outbound, 'inbound' => $inbound];
     }
 
     /**
-     * Chama o fornecedor correto para um único provider.
+     * Chama o fornecedor correto para um unico provider.
      */
     private function callForProvider(string $provider, array $params): array
     {
         if ($provider === 'latam_crawler') {
             return $this->getCrawlerService()->searchFlights($params);
+        }
+
+        if ($provider === 'bds_crawler') {
+            $cia = strtoupper($this->normalizeCia($params['cia'] ?? ''));
+            return $this->getBdsCrawlerService()->searchFlights($params, $cia ? [$cia] : null);
         }
 
         return $this->callApi($params);
@@ -488,6 +579,11 @@ class VdpFlightService
     private function getCrawlerTimeout(): int
     {
         return (int) Setting::get('crawler_timeout', 35);
+    }
+
+    private function getBdsTimeout(): int
+    {
+        return (int) Setting::get('bds_crawler_timeout', 30);
     }
 
     private function callApi(array $params): array
