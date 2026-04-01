@@ -761,6 +761,8 @@ class VdpFlightService
 
     /**
      * Revalida ida e volta roteando para o fornecedor configurado de cada cia.
+     * Usa fetchSingleProvider (mesmo caminho da busca) para garantir consistencia.
+     * Se o provider falhar ou retornar vazio, retorna os dados originais (nao bloqueia).
      *
      * @return array{outbound: ?array, inbound: ?array}
      */
@@ -770,74 +772,119 @@ class VdpFlightService
         ?array $ibOriginal = null,
     ): array {
         try {
-            [$obProvider, $obParams] = $this->resolveRevalidationParams($baseParams, $obOriginal);
+            [$obProvider, $obAirlines] = $this->resolveRevalidationSource($obOriginal);
 
             Log::info('Revalidating flights', [
                 'ob_provider' => $obProvider,
-                'ob_cia' => $obParams['cia'] ?? 'all',
+                'ob_airlines' => $obAirlines,
                 'ob_unique_id' => $obOriginal['unique_id'] ?? '',
+                'ob_flight_number' => $obOriginal['flight_number'] ?? '',
             ]);
 
-            $obResults = $this->callForProvider($obProvider, $obParams);
+            $obResults = $this->fetchSingleProvider($baseParams, $obProvider, $obAirlines);
+            $obFlights = $obResults['outbound'] ?? [];
+
+            Log::info('Revalidation: outbound provider response', [
+                'provider' => $obProvider,
+                'airlines' => $obAirlines,
+                'outbound_count' => count($obFlights),
+                'inbound_count' => count($obResults['inbound'] ?? []),
+            ]);
+
+            if (empty($obFlights)) {
+                Log::warning('Revalidation: provider returned empty outbound, using original data', [
+                    'provider' => $obProvider,
+                    'airlines' => $obAirlines,
+                ]);
+
+                return ['outbound' => $obOriginal, 'inbound' => $ibOriginal];
+            }
+
             $freshOb = $this->findFlight(
-                $obResults['outbound'] ?? [],
+                $obFlights,
                 $obOriginal['unique_id'] ?? '',
                 $obOriginal['flight_number'] ?? '',
                 $obOriginal['departure_time'] ?? '',
             );
 
+            if ($freshOb) {
+                Log::info('Revalidation: outbound flight matched', [
+                    'flight_number' => $freshOb['flight_number'] ?? '',
+                    'unique_id_match' => ($freshOb['unique_id'] ?? '') === ($obOriginal['unique_id'] ?? ''),
+                ]);
+            }
+
             $freshIb = null;
             if ($ibOriginal) {
-                [$ibProvider, $ibParams] = $this->resolveRevalidationParams($baseParams, $ibOriginal);
+                [$ibProvider, $ibAirlines] = $this->resolveRevalidationSource($ibOriginal);
                 $sameSource = $obProvider === $ibProvider
-                    && strtolower($obParams['cia'] ?? '') === strtolower($ibParams['cia'] ?? '');
+                    && strtolower($obAirlines) === strtolower($ibAirlines);
 
                 if ($sameSource) {
-                    $freshIb = $this->findFlight(
-                        $obResults['inbound'] ?? [],
-                        $ibOriginal['unique_id'] ?? '',
-                        $ibOriginal['flight_number'] ?? '',
-                        $ibOriginal['departure_time'] ?? '',
-                    );
+                    $ibFlights = $obResults['inbound'] ?? [];
                 } else {
-                    $ibResults = $this->callForProvider($ibProvider, $ibParams);
-                    $freshIb = $this->findFlight(
-                        $ibResults['inbound'] ?? [],
-                        $ibOriginal['unique_id'] ?? '',
-                        $ibOriginal['flight_number'] ?? '',
-                        $ibOriginal['departure_time'] ?? '',
-                    );
+                    $ibResults = $this->fetchSingleProvider($baseParams, $ibProvider, $ibAirlines);
+                    $ibFlights = $ibResults['inbound'] ?? [];
+
+                    Log::info('Revalidation: inbound provider response (separate call)', [
+                        'provider' => $ibProvider,
+                        'airlines' => $ibAirlines,
+                        'inbound_count' => count($ibFlights),
+                    ]);
+                }
+
+                if (empty($ibFlights)) {
+                    Log::warning('Revalidation: provider returned empty inbound, using original data', [
+                        'provider' => $ibProvider,
+                        'airlines' => $ibAirlines,
+                    ]);
+
+                    return ['outbound' => $freshOb ?? $obOriginal, 'inbound' => $ibOriginal];
+                }
+
+                $freshIb = $this->findFlight(
+                    $ibFlights,
+                    $ibOriginal['unique_id'] ?? '',
+                    $ibOriginal['flight_number'] ?? '',
+                    $ibOriginal['departure_time'] ?? '',
+                );
+
+                if ($freshIb) {
+                    Log::info('Revalidation: inbound flight matched', [
+                        'flight_number' => $freshIb['flight_number'] ?? '',
+                        'unique_id_match' => ($freshIb['unique_id'] ?? '') === ($ibOriginal['unique_id'] ?? ''),
+                    ]);
                 }
             }
 
             return ['outbound' => $freshOb, 'inbound' => $freshIb];
         } catch (\Throwable $e) {
-            Log::warning('VDP: falha ao revalidar par de voos', [
+            Log::warning('Revalidation: exception caught, using original data', [
                 'ob_unique_id' => $obOriginal['unique_id'] ?? '',
                 'error' => $e->getMessage(),
             ]);
 
-            return ['outbound' => null, 'inbound' => null];
+            return ['outbound' => $obOriginal, 'inbound' => $ibOriginal];
         }
     }
 
     /**
-     * Determina provider e params corretos para revalidação,
-     * usando _source_provider/_source_airlines quando disponíveis.
+     * Determina provider e airlines para revalidacao.
+     * Retorna [provider, airlines] como strings separadas para uso com fetchSingleProvider.
      */
-    private function resolveRevalidationParams(array $baseParams, array $flightData): array
+    private function resolveRevalidationSource(array $flightData): array
     {
         $sourceProvider = $flightData['_source_provider'] ?? null;
         $sourceAirlines = $flightData['_source_airlines'] ?? null;
 
         if ($sourceProvider && $sourceAirlines) {
-            $cia = strtolower($sourceAirlines);
-            return [$sourceProvider, array_merge($baseParams, ['cia' => $cia])];
+            return [$sourceProvider, $sourceAirlines];
         }
 
         $operator = $flightData['operator'] ?? 'all';
         $provider = $this->getProviderForCia($operator);
-        return [$provider, array_merge($baseParams, ['cia' => strtolower($operator)])];
+
+        return [$provider, strtoupper($operator)];
     }
 
     private function getVdpTimeout(): int
