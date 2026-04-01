@@ -175,24 +175,39 @@ class EmissionQueue extends Page implements HasTable
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn (OrderEmission $record) => $record->status === 'assigned' && $record->issuer_id === auth()->id())
-                    ->form([
-                        TextInput::make('loc')
-                            ->label('Localizador (LOC)')
-                            ->required()
-                            ->maxLength(20)
-                            ->placeholder('Ex: ABC123'),
+                    ->form(function (OrderEmission $record): array {
+                        $record->order->loadMissing('flights');
+                        $fields = [];
 
-                        TextInput::make('miles_cost_per_thousand')
-                            ->label('Valor do milheiro (R$)')
-                            ->numeric()
-                            ->minValue(0.01)
-                            ->step(0.01)
-                            ->required()
-                            ->prefix('R$')
-                            ->placeholder('Ex: 25.00'),
-                    ])
+                        foreach ($record->order->flights as $flight) {
+                            $dir = $flight->direction === 'outbound' ? 'Ida' : 'Volta';
+                            $cia = strtoupper($flight->cia ?? $flight->operator ?? '');
+                            $pType = $flight->pricing_type ?? '';
+                            $badge = $pType === 'convencional' ? ' (Conv.)' : ($pType === 'milhas' ? ' (Milhas)' : '');
+                            $label = "{$dir} — {$cia}{$badge}";
+
+                            $fields[] = TextInput::make('loc_' . $flight->id)
+                                ->label("LOC {$label}")
+                                ->required()
+                                ->maxLength(20)
+                                ->placeholder('Ex: ABC123')
+                                ->extraInputAttributes(['style' => 'text-transform: uppercase']);
+
+                            $fields[] = TextInput::make('miles_cost_' . $flight->id)
+                                ->label("Custo milheiro {$label}")
+                                ->numeric()
+                                ->minValue(0)
+                                ->step(0.01)
+                                ->required()
+                                ->prefix('R$')
+                                ->placeholder('Ex: 25.00')
+                                ->helperText($pType === 'convencional' ? 'Convencional — informe 0 se não aplicável' : '');
+                        }
+
+                        return $fields;
+                    })
                     ->action(function (OrderEmission $record, array $data): void {
-                        $this->completeEmission($record, $data['loc'], (float) $data['miles_cost_per_thousand']);
+                        $this->completeEmission($record, $data);
                     }),
 
                 Actions\Action::make('view_detail')
@@ -296,43 +311,61 @@ class EmissionQueue extends Page implements HasTable
             ->send();
     }
 
-    private function completeEmission(OrderEmission $emission, string $loc, float $milesCost): void
+    private function completeEmission(OrderEmission $emission, array $data): void
     {
         $now = now();
         $duration = $emission->calculateDuration();
         $emissionValue = (float) Setting::get('emission_value_per_order', 0);
+
+        $order = $emission->order;
+        $order->loadMissing('flights');
+
+        $locs = [];
+        $totalMilesCost = 0;
+        $locNotes = [];
+
+        foreach ($order->flights as $flight) {
+            $loc = strtoupper(trim($data['loc_' . $flight->id] ?? ''));
+            $milesCost = (float) ($data['miles_cost_' . $flight->id] ?? 0);
+
+            if ($loc) {
+                $flight->update(['loc' => $loc]);
+                $locs[] = $loc;
+            }
+
+            if ($milesCost > 0) {
+                $totalMilesCost = max($totalMilesCost, $milesCost);
+            }
+
+            $dir = $flight->direction === 'outbound' ? 'Ida' : 'Volta';
+            $locNotes[] = "{$dir}: {$loc}" . ($milesCost > 0 ? " (R\${$milesCost}/mil)" : '');
+        }
 
         $emission->update([
             'status' => 'completed',
             'completed_at' => $now,
             'duration_seconds' => $duration ?? $emission->assigned_at?->diffInSeconds($now),
             'emission_value' => $emissionValue,
-            'miles_cost_per_thousand' => $milesCost,
+            'miles_cost_per_thousand' => $totalMilesCost,
         ]);
 
-        $order = $emission->order;
-        $order->loadMissing('flights');
-
-        $locUpper = strtoupper(trim($loc));
-        foreach ($order->flights as $flight) {
-            $flight->update(['loc' => $locUpper]);
-        }
+        $locDisplay = implode(' / ', array_unique($locs));
 
         $order->update([
             'status' => 'completed',
-            'loc' => $locUpper,
+            'loc' => $locDisplay,
         ]);
 
         OrderEmissionLog::create([
             'order_emission_id' => $emission->id,
             'action' => 'completed',
             'user_id' => auth()->id(),
-            'notes' => "LOC: {$loc}",
+            'notes' => implode(' | ', $locNotes),
         ]);
 
         Notification::make()
             ->title('Emissão concluída!')
-            ->body("Localizador: {$loc}")
+            ->body("Localizador: {$locDisplay}")
             ->success()
             ->send();
     }
