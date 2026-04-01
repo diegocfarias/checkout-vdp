@@ -454,6 +454,20 @@
     }
 
     // ========================================
+    // DEDUP (multi-provider: keep cheapest)
+    // ========================================
+    function deduplicateFlights(flights) {
+        var best = {};
+        flights.forEach(function(f) {
+            var key = (f.flight_number || '') + '|' + (f.departure_time || '');
+            if (!best[key] || f.calculated_price < best[key].calculated_price) {
+                best[key] = f;
+            }
+        });
+        return Object.values(best);
+    }
+
+    // ========================================
     // PATRIA MERGE
     // ========================================
     function mergeWithPatria(regular, patria) {
@@ -1226,8 +1240,8 @@
     }
 
     function rebuildAndRender() {
-        var ob = mergeWithPatria(allOutbound.slice(), patriaOutbound);
-        var ib = mergeWithPatria(allInbound.slice(), patriaInbound);
+        var ob = deduplicateFlights(mergeWithPatria(allOutbound.slice(), patriaOutbound));
+        var ib = deduplicateFlights(mergeWithPatria(allInbound.slice(), patriaInbound));
 
         groupsData = buildGroups(ob, CONFIG.isRoundtrip ? ib : []);
 

@@ -30,12 +30,24 @@ class VdpFlightService
         return $this->bdsCrawlerService;
     }
 
+    private function getProvidersForCia(string $cia): array
+    {
+        $normalized = $this->normalizeCia(strtolower(trim($cia)));
+        $default = $normalized === 'latam' ? ['latam_crawler'] : ['vdp'];
+        $value = Setting::get("provider_{$normalized}", $default);
+
+        if (is_string($value)) {
+            return $value === 'disabled' || $value === '' ? [] : [$value];
+        }
+
+        return is_array($value) ? array_values($value) : [];
+    }
+
     private function getProviderForCia(string $cia): string
     {
-        $cia = strtolower(trim($cia));
-        $normalized = $this->normalizeCia($cia);
+        $providers = $this->getProvidersForCia($cia);
 
-        return Setting::get("provider_{$normalized}", $normalized === 'latam' ? 'latam_crawler' : 'vdp');
+        return $providers[0] ?? 'disabled';
     }
 
     public function searchAndFilter(array $payload): array
@@ -259,17 +271,29 @@ class VdpFlightService
 
         if ($cia !== 'all') {
             $normalized = $this->normalizeCia($cia);
-            $provider = $this->getProviderForCia($normalized);
+            $providers = $this->getProvidersForCia($normalized);
 
-            if ($provider === 'disabled') {
+            if (empty($providers)) {
                 return ['outbound' => [], 'inbound' => []];
             }
 
-            if ($provider === 'bds_crawler') {
-                return $this->getBdsCrawlerService()->searchFlights($params, [strtoupper($normalized)]);
+            if (count($providers) === 1) {
+                if ($providers[0] === 'bds_crawler') {
+                    return $this->getBdsCrawlerService()->searchFlights($params, [strtoupper($normalized)]);
+                }
+                return $this->callForProvider($providers[0], $params);
             }
 
-            return $this->callForProvider($provider, $params);
+            $vdpCias = [];
+            $crawlerCias = [];
+            $bdsCias = [];
+            foreach ($providers as $p) {
+                if ($p === 'vdp') { $vdpCias[] = $normalized; }
+                elseif ($p === 'latam_crawler') { $crawlerCias[] = $normalized; }
+                elseif ($p === 'bds_crawler') { $bdsCias[] = $normalized; }
+            }
+
+            return $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
         }
 
         $vdpCias = [];
@@ -277,17 +301,22 @@ class VdpFlightService
         $bdsCias = [];
 
         foreach ($allCias as $c) {
-            $provider = $this->getProviderForCia($c);
-            if ($provider === 'disabled') {
-                continue;
-            } elseif ($provider === 'latam_crawler') {
-                $crawlerCias[] = $c;
-            } elseif ($provider === 'bds_crawler') {
-                $bdsCias[] = $c;
-            } else {
-                $vdpCias[] = $c;
+            $providers = $this->getProvidersForCia($c);
+
+            foreach ($providers as $provider) {
+                if ($provider === 'latam_crawler') {
+                    $crawlerCias[] = $c;
+                } elseif ($provider === 'bds_crawler') {
+                    $bdsCias[] = $c;
+                } elseif ($provider === 'vdp') {
+                    $vdpCias[] = $c;
+                }
             }
         }
+
+        $vdpCias = array_unique($vdpCias);
+        $crawlerCias = array_unique($crawlerCias);
+        $bdsCias = array_unique($bdsCias);
 
         $patriaEnabled = (bool) Setting::get('bds_patria_enabled', false);
         if ($patriaEnabled) {
@@ -580,20 +609,20 @@ class VdpFlightService
         $vdpCias = [];
 
         foreach ($allCias as $c) {
-            $provider = $this->getProviderForCia($c);
-            if ($provider === 'disabled') {
-                continue;
-            }
+            $providers = $this->getProvidersForCia($c);
 
-            if ($provider === 'vdp') {
-                $vdpCias[] = $c;
-            } elseif ($provider === 'latam_crawler') {
-                $slots[] = ['provider' => 'latam_crawler', 'airlines' => strtoupper($c), 'patria' => false];
-            } elseif ($provider === 'bds_crawler') {
-                $slots[] = ['provider' => 'bds_crawler', 'airlines' => strtoupper($c), 'patria' => false];
+            foreach ($providers as $provider) {
+                if ($provider === 'vdp') {
+                    $vdpCias[] = $c;
+                } elseif ($provider === 'latam_crawler') {
+                    $slots[] = ['provider' => 'latam_crawler', 'airlines' => strtoupper($c), 'patria' => false];
+                } elseif ($provider === 'bds_crawler') {
+                    $slots[] = ['provider' => 'bds_crawler', 'airlines' => strtoupper($c), 'patria' => false];
+                }
             }
         }
 
+        $vdpCias = array_unique($vdpCias);
         if (! empty($vdpCias)) {
             $slots[] = ['provider' => 'vdp', 'airlines' => implode(',', array_map('strtoupper', $vdpCias)), 'patria' => false];
         }

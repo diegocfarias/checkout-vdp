@@ -72,9 +72,9 @@ class ManageSettings extends Page
             'showcase_sort_mode' => Setting::get('showcase_sort_mode', 'manual'),
             'calendar_prices_enabled' => Setting::get('calendar_prices_enabled', true),
             'calendar_prices_months' => Setting::get('calendar_prices_months', 3),
-            'provider_gol' => Setting::get('provider_gol', 'vdp'),
-            'provider_azul' => Setting::get('provider_azul', 'vdp'),
-            'provider_latam' => Setting::get('provider_latam', 'latam_crawler'),
+            'provider_gol' => self::normalizeProviderSetting(Setting::get('provider_gol', ['vdp'])),
+            'provider_azul' => self::normalizeProviderSetting(Setting::get('provider_azul', ['vdp'])),
+            'provider_latam' => self::normalizeProviderSetting(Setting::get('provider_latam', ['latam_crawler'])),
             'vdp_timeout' => Setting::get('vdp_timeout', 35),
             'crawler_timeout' => Setting::get('crawler_timeout', 35),
             'bds_crawler_timeout' => Setting::get('bds_crawler_timeout', 60),
@@ -130,37 +130,37 @@ class ManageSettings extends Page
                             ->suffix('meses'),
 
                         Select::make('provider_gol')
-                            ->label('Fornecedor — GOL')
+                            ->label('Fornecedores — GOL')
+                            ->multiple()
                             ->options([
-                                'disabled' => 'Desativado',
                                 'vdp' => 'VDP (API atual)',
                                 'latam_crawler' => 'LATAM Crawler',
                                 'bds_crawler' => 'BDS Crawler',
                             ])
-                            ->helperText('Qual API usar para buscar voos GOL. Desativado = não pesquisa.')
-                            ->default('vdp'),
+                            ->helperText('Selecione um ou mais. Buscas em paralelo, retorna o melhor preço. Vazio = desativado.')
+                            ->default(['vdp']),
 
                         Select::make('provider_azul')
-                            ->label('Fornecedor — Azul')
+                            ->label('Fornecedores — Azul')
+                            ->multiple()
                             ->options([
-                                'disabled' => 'Desativado',
                                 'vdp' => 'VDP (API atual)',
                                 'latam_crawler' => 'LATAM Crawler',
                                 'bds_crawler' => 'BDS Crawler',
                             ])
-                            ->helperText('Qual API usar para buscar voos Azul. Desativado = não pesquisa.')
-                            ->default('vdp'),
+                            ->helperText('Selecione um ou mais. Buscas em paralelo, retorna o melhor preço. Vazio = desativado.')
+                            ->default(['vdp']),
 
                         Select::make('provider_latam')
-                            ->label('Fornecedor — LATAM')
+                            ->label('Fornecedores — LATAM')
+                            ->multiple()
                             ->options([
-                                'disabled' => 'Desativado',
                                 'vdp' => 'VDP (API atual)',
                                 'latam_crawler' => 'LATAM Crawler',
                                 'bds_crawler' => 'BDS Crawler',
                             ])
-                            ->helperText('Qual API usar para buscar voos LATAM. Desativado = não pesquisa.')
-                            ->default('latam_crawler'),
+                            ->helperText('Selecione um ou mais. Buscas em paralelo, retorna o melhor preço. Vazio = desativado.')
+                            ->default(['latam_crawler']),
 
                         TextInput::make('vdp_timeout')
                             ->label('Timeout — VDP (segundos)')
@@ -570,9 +570,9 @@ class ManageSettings extends Page
         Setting::set('showcase_sort_mode', $data['showcase_sort_mode'] ?? 'manual', 'string');
         Setting::set('calendar_prices_enabled', (bool) ($data['calendar_prices_enabled'] ?? true), 'boolean');
         Setting::set('calendar_prices_months', (int) ($data['calendar_prices_months'] ?? 3), 'integer');
-        Setting::set('provider_gol', $data['provider_gol'] ?? 'vdp', 'string');
-        Setting::set('provider_azul', $data['provider_azul'] ?? 'vdp', 'string');
-        Setting::set('provider_latam', $data['provider_latam'] ?? 'latam_crawler', 'string');
+        Setting::set('provider_gol', $data['provider_gol'] ?? [], 'json');
+        Setting::set('provider_azul', $data['provider_azul'] ?? [], 'json');
+        Setting::set('provider_latam', $data['provider_latam'] ?? [], 'json');
         Setting::set('vdp_timeout', (int) ($data['vdp_timeout'] ?? 35), 'integer');
         Setting::set('crawler_timeout', (int) ($data['crawler_timeout'] ?? 35), 'integer');
         Setting::set('bds_crawler_timeout', (int) ($data['bds_crawler_timeout'] ?? 60), 'integer');
@@ -591,5 +591,18 @@ class ManageSettings extends Page
             ->title('Configurações salvas com sucesso!')
             ->success()
             ->send();
+    }
+
+    private static function normalizeProviderSetting(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            return $value === 'disabled' || $value === '' ? [] : [$value];
+        }
+
+        return [];
     }
 }
