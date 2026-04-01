@@ -9,6 +9,8 @@
  */
 return [
     // ===== BRASIL =====
+    // Códigos multi-aeroporto
+    'RIO', 'SAO', 'BHZ',
     // Acre
     'RBR', 'CZS', 'FEJ', 'TRQ',
     // Alagoas
@@ -82,6 +84,7 @@ return [
     'PMW', 'AUX', 'GRP', 'PNB',
 
     // ===== ARGENTINA =====
+    'BUE',
     'ARR', 'BHI', 'BRC', 'AEP', 'EPA', 'EZE', 'CTC', 'CVH', 'CRR', 'CLX',
     'CRD', 'COC', 'COR', 'CSZ', 'CNQ', 'CUT', 'UZU', 'EHL', 'FTE', 'EMX',
     'ELO', 'EQS', 'FMA', 'GPO', 'GNR', 'VGS', 'GGS', 'OYA', 'GHU', 'IGB',
