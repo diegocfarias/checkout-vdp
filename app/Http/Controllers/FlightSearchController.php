@@ -404,59 +404,66 @@ class FlightSearchController extends Controller
         $inboundData = $request->input('inbound') ? json_decode($request->input('inbound'), true) : null;
         $confirmed = $request->input('confirmed') === '1';
 
-        $oldObPrice = $this->parseFlightPrice($outboundData);
-        $oldIbPrice = $inboundData ? $this->parseFlightPrice($inboundData) : 0;
-        $oldTotal = round($oldObPrice + $oldIbPrice, 2);
+        if ($confirmed) {
+            $outboundData = $this->sanitizeFlight($outboundData);
+            if ($inboundData) {
+                $inboundData = $this->sanitizeFlight($inboundData);
+            }
+        } else {
+            $oldObPrice = $this->parseFlightPrice($outboundData);
+            $oldIbPrice = $inboundData ? $this->parseFlightPrice($inboundData) : 0;
+            $oldTotal = round($oldObPrice + $oldIbPrice, 2);
 
-        $baseParams = [
-            'departure' => $flightSearch->departure_iata,
-            'arrival' => $flightSearch->arrival_iata,
-            'outbound_date' => $flightSearch->outbound_date instanceof \Carbon\Carbon
-                ? $flightSearch->outbound_date->format('Y-m-d')
-                : $flightSearch->outbound_date,
-            'inbound_date' => $flightSearch->inbound_date
-                ? ($flightSearch->inbound_date instanceof \Carbon\Carbon
-                    ? $flightSearch->inbound_date->format('Y-m-d')
-                    : $flightSearch->inbound_date)
-                : null,
-            'adults' => $flightSearch->adults,
-            'children' => $flightSearch->children,
-            'infants' => $flightSearch->infants,
-            'cabin' => $flightSearch->cabin,
-        ];
+            $baseParams = [
+                'departure' => $flightSearch->departure_iata,
+                'arrival' => $flightSearch->arrival_iata,
+                'outbound_date' => $flightSearch->outbound_date instanceof \Carbon\Carbon
+                    ? $flightSearch->outbound_date->format('Y-m-d')
+                    : $flightSearch->outbound_date,
+                'inbound_date' => $flightSearch->inbound_date
+                    ? ($flightSearch->inbound_date instanceof \Carbon\Carbon
+                        ? $flightSearch->inbound_date->format('Y-m-d')
+                        : $flightSearch->inbound_date)
+                    : null,
+                'adults' => $flightSearch->adults,
+                'children' => $flightSearch->children,
+                'infants' => $flightSearch->infants,
+                'cabin' => $flightSearch->cabin,
+            ];
 
-        $fresh = $this->vdpService->revalidateFlightPair(
-            $baseParams,
-            $outboundData,
-            $inboundData,
-        );
+            $fresh = $this->vdpService->revalidateFlightPair(
+                $baseParams,
+                $outboundData,
+                $inboundData,
+            );
 
-        if (! $fresh['outbound']) {
-            return back()->with('error', 'O voo de ida selecionado não está mais disponível. Por favor, faça uma nova busca.');
-        }
+            if (! $fresh['outbound']) {
+                return back()->with('error', 'O voo de ida selecionado não está mais disponível. Por favor, faça uma nova busca.');
+            }
 
-        if ($inboundData && ! $fresh['inbound']) {
-            return back()->with('error', 'O voo de volta selecionado não está mais disponível. Por favor, faça uma nova busca.');
-        }
+            if ($inboundData && ! $fresh['inbound']) {
+                return back()->with('error', 'O voo de volta selecionado não está mais disponível. Por favor, faça uma nova busca.');
+            }
 
-        $outboundData = $this->sanitizeFlight($fresh['outbound']);
-        if ($fresh['inbound']) {
-            $inboundData = $this->sanitizeFlight($fresh['inbound']);
-        }
+            $outboundData = $this->sanitizeFlight($fresh['outbound']);
+            if ($fresh['inbound']) {
+                $inboundData = $this->sanitizeFlight($fresh['inbound']);
+            }
 
-        $newObPrice = $this->parseFlightPrice($outboundData);
-        $newIbPrice = $inboundData ? $this->parseFlightPrice($inboundData) : 0;
-        $newTotal = round($newObPrice + $newIbPrice, 2);
+            $newObPrice = $this->parseFlightPrice($outboundData);
+            $newIbPrice = $inboundData ? $this->parseFlightPrice($inboundData) : 0;
+            $newTotal = round($newObPrice + $newIbPrice, 2);
 
-        if (! $confirmed && abs($newTotal - $oldTotal) >= 0.01) {
-            return view('search.price-changed', [
-                'searchId' => $flightSearch->id,
-                'outbound' => $outboundData,
-                'inbound' => $inboundData,
-                'oldTotal' => $oldTotal,
-                'newTotal' => $newTotal,
-                'diff' => round($newTotal - $oldTotal, 2),
-            ]);
+            if (abs($newTotal - $oldTotal) >= 0.01) {
+                return view('search.price-changed', [
+                    'searchId' => $flightSearch->id,
+                    'outbound' => $outboundData,
+                    'inbound' => $inboundData,
+                    'oldTotal' => $oldTotal,
+                    'newTotal' => $newTotal,
+                    'diff' => round($newTotal - $oldTotal, 2),
+                ]);
+            }
         }
 
         $meta = [
