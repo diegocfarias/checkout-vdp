@@ -153,30 +153,21 @@ class Order extends Model
         }
 
         if (empty($dep) || empty($arr)) {
-            Log::warning('isMercosul: IATA codes vazios', [
+            Log::warning('isMercosul: IATA codes vazios, assumindo Mercosul', [
                 'order_id' => $this->id,
-                'departure_iata' => $this->departure_iata,
-                'arrival_iata' => $this->arrival_iata,
                 'flight_search_id' => $this->flight_search_id,
             ]);
-            return false;
+            return true;
         }
 
-        $mercosulIatas = config('mercosul_airports') ?? [];
+        $configPath = config_path('mercosul_airports.php');
+        $mercosulIatas = file_exists($configPath) ? (require $configPath) : [];
 
-        $depIn = in_array(strtoupper($dep), $mercosulIatas, true);
-        $arrIn = in_array(strtoupper($arr), $mercosulIatas, true);
-
-        if (! $depIn || ! $arrIn) {
-            Log::debug('isMercosul: aeroporto fora da lista Mercosul', [
-                'order_id' => $this->id,
-                'dep' => $dep,
-                'arr' => $arr,
-                'dep_in_list' => $depIn,
-                'arr_in_list' => $arrIn,
-            ]);
+        if (empty($mercosulIatas) || ! is_array($mercosulIatas)) {
+            return true;
         }
 
-        return $depIn && $arrIn;
+        return in_array(strtoupper($dep), $mercosulIatas, true)
+            && in_array(strtoupper($arr), $mercosulIatas, true);
     }
 }
