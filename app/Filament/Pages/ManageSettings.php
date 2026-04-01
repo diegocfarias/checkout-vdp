@@ -77,7 +77,7 @@ class ManageSettings extends Page
             'provider_latam' => Setting::get('provider_latam', 'latam_crawler'),
             'vdp_timeout' => Setting::get('vdp_timeout', 35),
             'crawler_timeout' => Setting::get('crawler_timeout', 35),
-            'bds_crawler_timeout' => Setting::get('bds_crawler_timeout', 30),
+            'bds_crawler_timeout' => Setting::get('bds_crawler_timeout', 60),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -185,7 +185,7 @@ class ManageSettings extends Page
                             ->numeric()
                             ->minValue(5)
                             ->maxValue(120)
-                            ->default(30)
+                            ->default(60)
                             ->suffix('s'),
                     ]),
 
@@ -569,7 +569,7 @@ class ManageSettings extends Page
         Setting::set('provider_latam', $data['provider_latam'] ?? 'latam_crawler', 'string');
         Setting::set('vdp_timeout', (int) ($data['vdp_timeout'] ?? 35), 'integer');
         Setting::set('crawler_timeout', (int) ($data['crawler_timeout'] ?? 35), 'integer');
-        Setting::set('bds_crawler_timeout', (int) ($data['bds_crawler_timeout'] ?? 30), 'integer');
+        Setting::set('bds_crawler_timeout', (int) ($data['bds_crawler_timeout'] ?? 60), 'integer');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {

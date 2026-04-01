@@ -583,7 +583,7 @@ class VdpFlightService
 
     private function getBdsTimeout(): int
     {
-        return (int) Setting::get('bds_crawler_timeout', 30);
+        return (int) Setting::get('bds_crawler_timeout', 60);
     }
 
     private function callApi(array $params): array

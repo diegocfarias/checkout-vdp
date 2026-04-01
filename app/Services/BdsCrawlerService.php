@@ -10,7 +10,7 @@ class BdsCrawlerService
 {
     private function getTimeout(): int
     {
-        return (int) Setting::get('bds_crawler_timeout', 30);
+        return (int) Setting::get('bds_crawler_timeout', 60);
     }
 
     /**
