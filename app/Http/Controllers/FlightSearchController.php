@@ -147,7 +147,11 @@ class FlightSearchController extends Controller
             'mixEnabled' => (bool) Setting::get('mix_enabled', true),
             'pixDiscount' => (float) Setting::get('pix_discount', 0),
             'pixEnabled' => ! empty(Setting::get('gateway_pix', config('services.payment.gateway'))),
-            'providerSlots' => $this->vdpService->getActiveProviderSlots(),
+            'providerSlots' => collect($this->vdpService->getActiveProviderSlots())->values()->map(fn ($slot, $i) => [
+                'key' => 's' . $i,
+                'token' => encrypt($slot['provider'] . '|' . $slot['airlines']),
+                'p' => $slot['patria'],
+            ])->all(),
             'maxInstallments' => (int) Setting::get('max_installments', 12),
         ]);
     }
@@ -163,9 +167,20 @@ class FlightSearchController extends Controller
             'children' => 'required|integer|min:0',
             'infants' => 'required|integer|min:0',
             'cabin' => 'required|string|in:EC,EX',
-            'provider' => 'required|string|in:vdp,latam_crawler,bds_crawler',
-            'airlines' => 'required|string',
+            'slot' => 'required|string',
         ]);
+
+        try {
+            $decoded = decrypt($request->input('slot'));
+        } catch (\Throwable $e) {
+            return response()->json(['outbound' => [], 'inbound' => []], 400);
+        }
+
+        [$provider, $airlines] = explode('|', $decoded, 2);
+
+        if (! in_array($provider, ['vdp', 'latam_crawler', 'bds_crawler'], true)) {
+            return response()->json(['outbound' => [], 'inbound' => []], 400);
+        }
 
         $params = [
             'cia' => 'all',
@@ -178,9 +193,6 @@ class FlightSearchController extends Controller
             'infants' => (int) $request->input('infants'),
             'cabin' => $request->input('cabin'),
         ];
-
-        $provider = $request->input('provider');
-        $airlines = $request->input('airlines');
 
         try {
             $results = $this->vdpService->searchSingleProvider($params, $provider, $airlines);
@@ -216,8 +228,6 @@ class FlightSearchController extends Controller
         return response()->json([
             'outbound' => array_values(array_map($addMeta, $results['outbound'] ?? [])),
             'inbound' => array_values(array_map($addMeta, $results['inbound'] ?? [])),
-            'provider' => $provider,
-            'airlines' => $airlines,
         ]);
     }
 

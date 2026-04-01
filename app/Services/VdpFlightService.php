@@ -588,18 +588,18 @@ class VdpFlightService
             if ($provider === 'vdp') {
                 $vdpCias[] = $c;
             } elseif ($provider === 'latam_crawler') {
-                $slots[] = ['key' => 'latam', 'provider' => 'latam_crawler', 'airlines' => strtoupper($c)];
+                $slots[] = ['provider' => 'latam_crawler', 'airlines' => strtoupper($c), 'patria' => false];
             } elseif ($provider === 'bds_crawler') {
-                $slots[] = ['key' => 'bds_' . $c, 'provider' => 'bds_crawler', 'airlines' => strtoupper($c)];
+                $slots[] = ['provider' => 'bds_crawler', 'airlines' => strtoupper($c), 'patria' => false];
             }
         }
 
         if (! empty($vdpCias)) {
-            $slots[] = ['key' => 'vdp', 'provider' => 'vdp', 'airlines' => implode(',', array_map('strtoupper', $vdpCias))];
+            $slots[] = ['provider' => 'vdp', 'airlines' => implode(',', array_map('strtoupper', $vdpCias)), 'patria' => false];
         }
 
         if ((bool) Setting::get('bds_patria_enabled', false)) {
-            $slots[] = ['key' => 'bds_patria', 'provider' => 'bds_crawler', 'airlines' => 'PATRIA'];
+            $slots[] = ['provider' => 'bds_crawler', 'airlines' => 'PATRIA', 'patria' => true];
         }
 
         return $slots;

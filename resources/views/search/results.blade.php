@@ -1192,8 +1192,7 @@
 
         var promises = CONFIG.providerSlots.map(function(slot) {
             var qs = new URLSearchParams(baseParams);
-            qs.set('provider', slot.provider);
-            qs.set('airlines', slot.airlines);
+            qs.set('slot', slot.token);
 
             return fetch('/api/search/provider?' + qs.toString())
                 .then(function(res) {
@@ -1205,7 +1204,7 @@
                     var ob = data.outbound || [];
                     var ib = data.inbound || [];
 
-                    if (slot.key === 'bds_patria') {
+                    if (slot.p) {
                         patriaOutbound = patriaOutbound.concat(ob);
                         patriaInbound = patriaInbound.concat(ib);
                     } else {
