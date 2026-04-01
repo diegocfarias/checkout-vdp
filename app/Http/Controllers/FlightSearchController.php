@@ -221,7 +221,7 @@ class FlightSearchController extends Controller
 
         $obByCiaPrice = [];
         foreach ($outbound as $ob) {
-            $cia = strtoupper($ob['operator'] ?? '');
+            $cia = $this->resolveDisplayCia($ob['operator'] ?? '', $ob['flight_number'] ?? '');
             $price = $this->parseFlightPrice($ob);
             $key = $cia . '|' . number_format($price, 2, '.', '');
             $obByCiaPrice[$key] ??= ['cia' => $cia, 'price' => $price, 'flights' => []];
@@ -251,7 +251,7 @@ class FlightSearchController extends Controller
 
         $ibByCiaPrice = [];
         foreach ($inbound as $ib) {
-            $cia = strtoupper($ib['operator'] ?? '');
+            $cia = $this->resolveDisplayCia($ib['operator'] ?? '', $ib['flight_number'] ?? '');
             $price = $this->parseFlightPrice($ib);
             $key = $cia . '|' . number_format($price, 2, '.', '');
             $ibByCiaPrice[$key] ??= ['cia' => $cia, 'price' => $price, 'flights' => []];
@@ -478,10 +478,12 @@ class FlightSearchController extends Controller
 
     private function buildFlightRow(string $direction, array $data): array
     {
+        $operator = $this->resolveDisplayCia($data['operator'] ?? '', $data['flight_number'] ?? '');
+
         return [
             'direction' => $direction,
-            'cia' => $data['operator'] ?? '',
-            'operator' => $data['operator'] ?? null,
+            'cia' => $operator,
+            'operator' => $operator,
             'flight_number' => $data['flight_number'] ?? null,
             'departure_time' => $data['departure_time'] ?? null,
             'arrival_time' => $data['arrival_time'] ?? null,
@@ -501,5 +503,20 @@ class FlightSearchController extends Controller
             'money_price' => $this->vdpService->calculateBasePrice($data),
             'tax' => $this->vdpService->parseMoneyValue($data['boarding_tax'] ?? '0'),
         ];
+    }
+
+    private function resolveDisplayCia(string $operator, string $flightNumber): string
+    {
+        $upper = strtoupper(trim($operator));
+        if ($upper !== 'PATRIA') {
+            return $operator;
+        }
+
+        $fn = strtoupper(trim($flightNumber));
+        if (str_starts_with($fn, 'G3')) return 'GOL';
+        if (str_starts_with($fn, 'AD')) return 'AZUL';
+        if (str_starts_with($fn, 'LA') || str_starts_with($fn, 'JJ')) return 'LATAM';
+
+        return $operator;
     }
 }

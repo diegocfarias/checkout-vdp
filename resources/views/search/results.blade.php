@@ -437,6 +437,16 @@
         return d.innerHTML;
     }
 
+    function displayCia(operator, flightNumber) {
+        var op = (operator || '').toUpperCase().trim();
+        if (op !== 'PATRIA') return op;
+        var fn = (flightNumber || '').toUpperCase();
+        if (fn.indexOf('G3') === 0) return 'GOL';
+        if (fn.indexOf('AD') === 0) return 'AZUL';
+        if (fn.indexOf('LA') === 0 || fn.indexOf('JJ') === 0) return 'LATAM';
+        return op;
+    }
+
     // ========================================
     // PATRIA MERGE
     // ========================================
@@ -470,7 +480,7 @@
     function buildGroups(outbound, inbound) {
         var obByCiaPrice = {};
         outbound.forEach(function(ob) {
-            var cia = (ob.operator || '').toUpperCase();
+            var cia = displayCia(ob.operator, ob.flight_number);
             var price = ob.calculated_price;
             var key = cia + '|' + price.toFixed(2);
             if (!obByCiaPrice[key]) obByCiaPrice[key] = { cia: cia, price: price, flights: [] };
@@ -498,7 +508,7 @@
 
         var ibByCiaPrice = {};
         inbound.forEach(function(ib) {
-            var cia = (ib.operator || '').toUpperCase();
+            var cia = displayCia(ib.operator, ib.flight_number);
             var price = ib.calculated_price;
             var key = cia + '|' + price.toFixed(2);
             if (!ibByCiaPrice[key]) ibByCiaPrice[key] = { cia: cia, price: price, flights: [] };
@@ -575,7 +585,7 @@
         var conns = flight.connection || [];
         var isDirect = !Array.isArray(conns) || conns.length <= 1;
         var connCount = Array.isArray(conns) ? Math.max(0, conns.length - 1) : 0;
-        var cia = (flight.operator || '').toUpperCase();
+        var cia = displayCia(flight.operator, flight.flight_number);
         var isFirst = fi === 0;
         var isHidden = fi >= collapseAfter;
         var connId = 'conn-' + dir + '-' + gIdx + '-' + fi;
