@@ -263,14 +263,17 @@
             if ($payingPax < 1) $payingPax = 1;
             $totalPerPax = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0));
             $total = $totalPerPax * $payingPax;
-            $finalTotal = $total - (float)($order->discount_amount ?? 0);
+            $finalTotal = $total - (float)($order->discount_amount ?? 0) - (float)($order->wallet_amount_used ?? 0);
+            $hasAnyDiscount = ($order->discount_amount ?? 0) > 0 || ($order->wallet_amount_used ?? 0) > 0;
         @endphp
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-2">
-            @if($order->discount_amount > 0 && $order->coupon)
+            @if($hasAnyDiscount)
                 <div class="flex justify-between text-sm text-gray-600">
                     <span>Subtotal</span>
                     <span>R$ {{ number_format($total, 2, ',', '.') }}</span>
                 </div>
+            @endif
+            @if($order->discount_amount > 0 && $order->coupon)
                 <div class="flex justify-between text-sm text-emerald-600">
                     <span class="flex items-center gap-1.5">
                         Cupom
@@ -281,8 +284,19 @@
                     </span>
                     <span class="font-medium">- R$ {{ number_format($order->discount_amount, 2, ',', '.') }}</span>
                 </div>
+            @elseif($order->discount_amount > 0 && $order->referral_id)
+                <div class="flex justify-between text-sm text-emerald-600">
+                    <span>Desconto indicação</span>
+                    <span class="font-medium">- R$ {{ number_format($order->discount_amount, 2, ',', '.') }}</span>
+                </div>
             @endif
-            <div class="flex justify-between items-center {{ $order->discount_amount > 0 ? 'pt-2 border-t border-gray-100' : '' }}">
+            @if(($order->wallet_amount_used ?? 0) > 0)
+                <div class="flex justify-between text-sm text-emerald-600">
+                    <span>Crédito utilizado</span>
+                    <span class="font-medium">- R$ {{ number_format($order->wallet_amount_used, 2, ',', '.') }}</span>
+                </div>
+            @endif
+            <div class="flex justify-between items-center {{ $hasAnyDiscount ? 'pt-2 border-t border-gray-100' : '' }}">
                 <span class="font-semibold text-gray-800">Total</span>
                 <span class="text-xl font-bold text-gray-900">R$ {{ number_format($finalTotal, 2, ',', '.') }}</span>
             </div>

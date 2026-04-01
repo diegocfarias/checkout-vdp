@@ -23,7 +23,12 @@
     $paymentLabel = $isPix ? 'PIX' : ($isCard ? 'Cartão de Crédito' : 'Pagamento');
     $paidAmount = $payment ? (float) $payment->amount : null;
     $pixDiscountPct = (float) \App\Models\Setting::get('pix_discount', 0);
-    $hasPixDiscount = $isPix && $pixDiscountPct > 0 && $paidAmount && $paidAmount < $totalPrice;
+    $discountAmount = (float) ($order->discount_amount ?? 0);
+    $walletUsed = (float) ($order->wallet_amount_used ?? 0);
+    $totalAfterCoupon = $totalPrice - $discountAmount - $walletUsed;
+    $hasPixDiscount = $isPix && $pixDiscountPct > 0 && $paidAmount && $paidAmount < $totalAfterCoupon;
+    $hasCouponDiscount = $discountAmount > 0 && $order->coupon;
+    $hasReferralDiscount = $discountAmount > 0 && !$order->coupon && $order->referral_id;
 
     $badgeColor = match($newStatus) {
         'awaiting_payment' => '#f59e0b',
@@ -293,24 +298,47 @@
                                     </td>
                                 </tr>
                                 @if($totalPrice > 0)
-                                    @php $displayTotal = $totalPrice; @endphp
-                                    @if($order->discount_amount > 0 && $order->coupon)
+                                    @php $displayTotal = $totalPrice; $hasAnyDiscount = $hasCouponDiscount || $hasReferralDiscount || $walletUsed > 0 || $hasPixDiscount; @endphp
+                                    @if($hasAnyDiscount)
                                     <tr>
                                         <td style="font-size: 13px; color: #6b7280; padding: 4px 0; border-top: 1px solid #f3f4f6;">Subtotal</td>
                                         <td align="right" style="font-size: 13px; color: #374151; font-weight: 600; padding: 4px 0; border-top: 1px solid #f3f4f6;">
                                             R$ {{ number_format($displayTotal, 2, ',', '.') }}
                                         </td>
                                     </tr>
+                                    @endif
+                                    @if($hasCouponDiscount)
                                     <tr>
                                         <td style="font-size: 13px; color: #059669; padding: 4px 0;">
                                             Cupom <strong>{{ $order->coupon->code }}</strong>
                                             <span style="font-size: 11px; color: #6ee7b7;">({{ $order->coupon->type === 'percent' ? $order->coupon->value . '%' : 'R$ ' . number_format($order->coupon->value, 2, ',', '.') }})</span>
                                         </td>
                                         <td align="right" style="font-size: 13px; color: #059669; font-weight: 600; padding: 4px 0;">
-                                            - R$ {{ number_format($order->discount_amount, 2, ',', '.') }}
+                                            - R$ {{ number_format($discountAmount, 2, ',', '.') }}
                                         </td>
                                     </tr>
-                                    @php $displayTotal -= (float) $order->discount_amount; @endphp
+                                    @php $displayTotal -= $discountAmount; @endphp
+                                    @elseif($hasReferralDiscount)
+                                    <tr>
+                                        <td style="font-size: 13px; color: #059669; padding: 4px 0;">
+                                            Desconto indicação
+                                        </td>
+                                        <td align="right" style="font-size: 13px; color: #059669; font-weight: 600; padding: 4px 0;">
+                                            - R$ {{ number_format($discountAmount, 2, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                    @php $displayTotal -= $discountAmount; @endphp
+                                    @endif
+                                    @if($walletUsed > 0)
+                                    <tr>
+                                        <td style="font-size: 13px; color: #059669; padding: 4px 0;">
+                                            Crédito utilizado
+                                        </td>
+                                        <td align="right" style="font-size: 13px; color: #059669; font-weight: 600; padding: 4px 0;">
+                                            - R$ {{ number_format($walletUsed, 2, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                    @php $displayTotal -= $walletUsed; @endphp
                                     @endif
                                     @if($hasPixDiscount)
                                     @php $pixSavings = round($displayTotal - $paidAmount, 2); @endphp

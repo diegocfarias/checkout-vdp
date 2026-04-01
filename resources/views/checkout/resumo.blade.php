@@ -129,6 +129,21 @@
                     <span class="font-medium">- R$ {{ number_format($order->discount_amount, 2, ',', '.') }}</span>
                 </div>
                 @php $orderTotal -= (float) $order->discount_amount; @endphp
+            @elseif($order->discount_amount > 0 && $order->referral_id)
+                <div class="flex justify-between text-emerald-600">
+                    <span class="flex items-center gap-1.5">
+                        Desconto indicação
+                    </span>
+                    <span class="font-medium">- R$ {{ number_format($order->discount_amount, 2, ',', '.') }}</span>
+                </div>
+                @php $orderTotal -= (float) $order->discount_amount; @endphp
+            @endif
+            @if(($order->wallet_amount_used ?? 0) > 0)
+                <div class="flex justify-between text-emerald-600">
+                    <span>Crédito utilizado</span>
+                    <span class="font-medium">- R$ {{ number_format($order->wallet_amount_used, 2, ',', '.') }}</span>
+                </div>
+                @php $orderTotal -= (float) $order->wallet_amount_used; @endphp
             @endif
             <div class="flex justify-between items-center pt-2 border-t border-gray-100">
                 <span class="font-medium text-gray-700">Valor total</span>
