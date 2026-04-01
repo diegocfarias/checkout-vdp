@@ -928,6 +928,11 @@ class VdpFlightService
         return $response->json();
     }
 
+    private static function normalizeFlightNumber(string $fn): string
+    {
+        return strtoupper(preg_replace('/[\s\-]/', '', $fn));
+    }
+
     private function findFlight(array $flights, string $uniqueId, string $flightNumber = '', string $departureTime = ''): ?array
     {
         foreach ($flights as $flight) {
@@ -937,15 +942,18 @@ class VdpFlightService
         }
 
         if ($flightNumber && $departureTime) {
+            $normalizedFn = self::normalizeFlightNumber($flightNumber);
+
             Log::debug('findFlight: unique_id nao encontrado, tentando por flight_number+departure_time', [
                 'unique_id' => $uniqueId,
                 'flight_number' => $flightNumber,
+                'normalized' => $normalizedFn,
                 'departure_time' => $departureTime,
                 'total_flights' => count($flights),
             ]);
 
             foreach ($flights as $flight) {
-                if (($flight['flight_number'] ?? '') === $flightNumber
+                if (self::normalizeFlightNumber($flight['flight_number'] ?? '') === $normalizedFn
                     && ($flight['departure_time'] ?? '') === $departureTime) {
                     return $flight;
                 }

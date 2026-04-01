@@ -1125,9 +1125,19 @@
         }
     });
 
+    var formSubmitting = false;
     document.addEventListener('submit', function(e) {
         var form = e.target.closest('.group-form');
         if (form) {
+            if (formSubmitting) {
+                e.preventDefault();
+                return;
+            }
+            formSubmitting = true;
+            form.querySelectorAll('button[type="submit"]').forEach(function(btn) {
+                btn.disabled = true;
+                btn.textContent = 'Aguarde...';
+            });
             showTravelLoading({
                 title: 'Carregando detalhes do voo...',
                 messages: ['Verificando disponibilidade...', 'Consultando preço atualizado...', 'Preparando seu checkout...'],
