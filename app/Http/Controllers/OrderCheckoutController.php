@@ -627,6 +627,13 @@ class OrderCheckoutController extends Controller
             'departure_time' => $flight->departure_time ?? '',
         ];
 
+        if (! empty($flight->source_provider)) {
+            $data['_source_provider'] = $flight->source_provider;
+            $data['_source_airlines'] = $flight->source_airlines ?? strtoupper($flight->operator ?? 'all');
+
+            return $data;
+        }
+
         $provider = $flight->provider ?? '';
         $pricingType = $flight->pricing_type ?? '';
 

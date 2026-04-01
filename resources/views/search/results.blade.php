@@ -374,6 +374,8 @@
     var PAGE_SIZE = 10;
     var currentSort = 'price';
     var firstResultsRendered = false;
+    var renderTimer = null;
+    var knownGroupKeys = {};
 
     // --- Toggle inline search form ---
     var toggleBtn = document.getElementById('toggle-search-form');
@@ -846,17 +848,6 @@
     function renderGroups() {
         var list = document.getElementById('combinations-list');
 
-        if (currentSort === 'same-cia') {
-            groupsData.sort(function(a, b) {
-                var aSame = a.same_cia ? 0 : 1;
-                var bSame = b.same_cia ? 0 : 1;
-                if (aSame !== bSame) return aSame - bSame;
-                return a.total_price - b.total_price;
-            });
-        } else {
-            groupsData.sort(function(a, b) { return a.total_price - b.total_price; });
-        }
-
         var html = '';
         for (var i = 0; i < groupsData.length; i++) {
             html += renderCard(groupsData[i], i);
@@ -1037,7 +1028,8 @@
             tab.classList.remove('text-gray-600');
             tab.classList.add('text-white', 'bg-blue-600', 'sort-tab-active');
             currentSort = tab.dataset.sort;
-            renderGroups();
+            knownGroupKeys = {};
+            doRender();
         });
     });
 
@@ -1239,11 +1231,131 @@
         });
     }
 
-    function rebuildAndRender() {
+    function groupKey(g) {
+        return (g.airlines || []).slice().sort().join('+') + '|' + g.total_price.toFixed(2);
+    }
+
+    function saveSelectionState() {
+        var state = { radios: {}, conns: {} };
+        document.querySelectorAll('.combination-card').forEach(function(card) {
+            var gIdx = card.dataset.group;
+            ['ob', 'ib'].forEach(function(dir) {
+                var checked = card.querySelector('.' + dir + '-radio:checked');
+                if (checked) state.radios[gIdx + '_' + dir] = checked.value;
+            });
+            card.querySelectorAll('.conn-details').forEach(function(cd) {
+                if (!cd.classList.contains('hidden')) state.conns[cd.id] = true;
+            });
+        });
+        return state;
+    }
+
+    function restoreSelectionState(state) {
+        Object.keys(state.radios).forEach(function(key) {
+            var parts = key.split('_');
+            var gIdx = parts[0], dir = parts[1];
+            var val = state.radios[key];
+            var radio = document.querySelector('input.' + dir + '-radio[data-group="' + gIdx + '"][value="' + val + '"]');
+            if (!radio) return;
+            radio.checked = true;
+
+            var group = groupsData[parseInt(gIdx)];
+            if (!group) return;
+            var flights = dir === 'ob' ? group.outbound_flights : group.inbound_flights;
+            var flight = flights[parseInt(val)];
+
+            document.querySelectorAll('.group-form[data-group="' + gIdx + '"]').forEach(function(form) {
+                var input = form.querySelector(dir === 'ob' ? '.selected-ob' : '.selected-ib');
+                if (input && flight) input.value = JSON.stringify(flight);
+                var provInput = form.querySelector(dir === 'ob' ? '.meta-ob-provider' : '.meta-ib-provider');
+                if (provInput && flight) provInput.value = flight._provider || '';
+                var ptInput = form.querySelector(dir === 'ob' ? '.meta-ob-pricing' : '.meta-ib-pricing');
+                if (ptInput && flight) ptInput.value = flight._pricing_type || '';
+            });
+
+            var container = radio.closest('.space-y-2');
+            if (container) {
+                container.querySelectorAll('.flight-option[data-dir="' + dir + '"]').forEach(function(opt) {
+                    opt.classList.remove('border-blue-400', 'bg-blue-50/60', 'shadow-sm');
+                    opt.classList.add('border-gray-200');
+                    var d = opt.querySelector('.radio-dot');
+                    if (d) { d.classList.remove('border-blue-600'); d.classList.add('border-gray-300'); }
+                    var inner = opt.querySelector('.radio-dot-inner');
+                    if (inner) inner.classList.remove('bg-blue-600');
+                });
+            }
+            var flightOpt = radio.closest('.flight-option');
+            if (flightOpt) {
+                flightOpt.classList.remove('border-gray-200');
+                flightOpt.classList.add('border-blue-400', 'bg-blue-50/60', 'shadow-sm');
+                var dot = flightOpt.querySelector('.radio-dot');
+                if (dot) { dot.classList.remove('border-gray-300'); dot.classList.add('border-blue-600'); }
+                var inner = flightOpt.querySelector('.radio-dot-inner');
+                if (inner) inner.classList.add('bg-blue-600');
+            }
+        });
+        Object.keys(state.conns).forEach(function(connId) {
+            var el = document.getElementById(connId);
+            if (el) el.classList.remove('hidden');
+            document.querySelectorAll('.conn-toggle-btn[data-target="' + connId + '"]').forEach(function(btn) {
+                btn.textContent = btn.textContent.trim().replace('▾', '▴');
+            });
+        });
+    }
+
+    function stableSort(groups) {
+        if (currentSort === 'same-cia') {
+            groups.sort(function(a, b) {
+                var aSame = a.same_cia ? 0 : 1;
+                var bSame = b.same_cia ? 0 : 1;
+                if (aSame !== bSame) return aSame - bSame;
+                return a.total_price - b.total_price;
+            });
+        } else {
+            groups.sort(function(a, b) { return a.total_price - b.total_price; });
+        }
+
+        var known = [];
+        var fresh = [];
+        groups.forEach(function(g) {
+            var k = groupKey(g);
+            if (knownGroupKeys[k] !== undefined) {
+                known.push({ g: g, pos: knownGroupKeys[k] });
+            } else {
+                fresh.push(g);
+            }
+        });
+
+        known.sort(function(a, b) { return a.pos - b.pos; });
+        var result = known.map(function(o) { return o.g; });
+
+        fresh.forEach(function(g) {
+            var price = g.total_price;
+            var inserted = false;
+            for (var i = 0; i < result.length; i++) {
+                if (price < result[i].total_price) {
+                    result.splice(i, 0, g);
+                    inserted = true;
+                    break;
+                }
+            }
+            if (!inserted) result.push(g);
+        });
+
+        knownGroupKeys = {};
+        result.forEach(function(g, i) { knownGroupKeys[groupKey(g)] = i; });
+
+        return result;
+    }
+
+    function doRender() {
         var ob = deduplicateFlights(mergeWithPatria(allOutbound.slice(), patriaOutbound));
         var ib = deduplicateFlights(mergeWithPatria(allInbound.slice(), patriaInbound));
 
+        var selState = saveSelectionState();
+
         groupsData = buildGroups(ob, CONFIG.isRoundtrip ? ib : []);
+        groupsData = stableSort(groupsData);
 
         if (!firstResultsRendered && groupsData.length > 0) {
             firstResultsRendered = true;
@@ -1252,6 +1364,17 @@
         updateAirlineFilters();
         renderProgressBar();
         renderGroups();
+        restoreSelectionState(selState);
+    }
+
+    function rebuildAndRender() {
+        renderProgressBar();
+        if (!firstResultsRendered) {
+            doRender();
+            return;
+        }
+        if (renderTimer) clearTimeout(renderTimer);
+        renderTimer = setTimeout(doRender, 600);
     }
 
     // ========================================

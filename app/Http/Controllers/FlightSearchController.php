@@ -404,6 +404,17 @@ class FlightSearchController extends Controller
         $inboundData = $request->input('inbound') ? json_decode($request->input('inbound'), true) : null;
         $confirmed = $request->input('confirmed') === '1';
 
+        $meta = [
+            'ob_provider' => $request->input('ob_provider', ''),
+            'ob_pricing_type' => $request->input('ob_pricing_type', ''),
+            'ob_source_provider' => $outboundData['_source_provider'] ?? $request->input('ob_source_provider', ''),
+            'ob_source_airlines' => $outboundData['_source_airlines'] ?? $request->input('ob_source_airlines', ''),
+            'ib_provider' => $request->input('ib_provider', ''),
+            'ib_pricing_type' => $request->input('ib_pricing_type', ''),
+            'ib_source_provider' => ($inboundData['_source_provider'] ?? null) ?: $request->input('ib_source_provider', ''),
+            'ib_source_airlines' => ($inboundData['_source_airlines'] ?? null) ?: $request->input('ib_source_airlines', ''),
+        ];
+
         if ($confirmed) {
             $outboundData = $this->sanitizeFlight($outboundData);
             if ($inboundData) {
@@ -462,16 +473,10 @@ class FlightSearchController extends Controller
                     'oldTotal' => $oldTotal,
                     'newTotal' => $newTotal,
                     'diff' => round($newTotal - $oldTotal, 2),
+                    'meta' => $meta,
                 ]);
             }
         }
-
-        $meta = [
-            'ob_provider' => $request->input('ob_provider', ''),
-            'ob_pricing_type' => $request->input('ob_pricing_type', ''),
-            'ib_provider' => $request->input('ib_provider', ''),
-            'ib_pricing_type' => $request->input('ib_pricing_type', ''),
-        ];
 
         return $this->createOrderFromFlights($flightSearch, $outboundData, $inboundData, $request->userAgent(), $meta);
     }
@@ -496,17 +501,18 @@ class FlightSearchController extends Controller
             'expires_at' => now()->addMinutes(Setting::get('order_expiration_minutes', 30)),
         ]);
 
-        $order->flights()->create($this->buildFlightRow('outbound', $outboundData, $meta['ob_provider'] ?? '', $meta['ob_pricing_type'] ?? ''));
+        $order->flights()->create($this->buildFlightRow('outbound', $outboundData, $meta));
 
         if ($inboundData) {
-            $order->flights()->create($this->buildFlightRow('inbound', $inboundData, $meta['ib_provider'] ?? '', $meta['ib_pricing_type'] ?? ''));
+            $order->flights()->create($this->buildFlightRow('inbound', $inboundData, $meta));
         }
 
         return redirect()->route('checkout.show', $order->token);
     }
 
-    private function buildFlightRow(string $direction, array $data, string $provider = '', string $pricingType = ''): array
+    private function buildFlightRow(string $direction, array $data, array $meta = []): array
     {
+        $prefix = $direction === 'outbound' ? 'ob_' : 'ib_';
         $operator = $this->resolveDisplayCia($data['operator'] ?? '', $data['flight_number'] ?? '');
 
         return [
@@ -531,8 +537,10 @@ class FlightSearchController extends Controller
             'miles_price' => $data['price_miles'] ?? '0',
             'money_price' => $this->vdpService->calculateBasePrice($data),
             'tax' => $this->vdpService->parseMoneyValue($data['boarding_tax'] ?? '0'),
-            'provider' => $provider ?: null,
-            'pricing_type' => $pricingType ?: null,
+            'provider' => $meta[$prefix.'provider'] ?? null ?: null,
+            'pricing_type' => $meta[$prefix.'pricing_type'] ?? null ?: null,
+            'source_provider' => $meta[$prefix.'source_provider'] ?? null ?: null,
+            'source_airlines' => $meta[$prefix.'source_airlines'] ?? null ?: null,
         ];
     }
 

@@ -46,6 +46,16 @@
                     <input type="hidden" name="inbound" value="{{ json_encode($inbound, JSON_UNESCAPED_UNICODE) }}">
                 @endif
                 <input type="hidden" name="confirmed" value="1">
+                @if(!empty($meta))
+                    <input type="hidden" name="ob_provider" value="{{ $meta['ob_provider'] ?? '' }}">
+                    <input type="hidden" name="ob_pricing_type" value="{{ $meta['ob_pricing_type'] ?? '' }}">
+                    <input type="hidden" name="ob_source_provider" value="{{ $meta['ob_source_provider'] ?? '' }}">
+                    <input type="hidden" name="ob_source_airlines" value="{{ $meta['ob_source_airlines'] ?? '' }}">
+                    <input type="hidden" name="ib_provider" value="{{ $meta['ib_provider'] ?? '' }}">
+                    <input type="hidden" name="ib_pricing_type" value="{{ $meta['ib_pricing_type'] ?? '' }}">
+                    <input type="hidden" name="ib_source_provider" value="{{ $meta['ib_source_provider'] ?? '' }}">
+                    <input type="hidden" name="ib_source_airlines" value="{{ $meta['ib_source_airlines'] ?? '' }}">
+                @endif
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors">
                     Continuar com o novo preço
                 </button>

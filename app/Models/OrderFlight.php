@@ -33,6 +33,8 @@ class OrderFlight extends Model
         'tax',
         'provider',
         'pricing_type',
+        'source_provider',
+        'source_airlines',
     ];
 
     protected $casts = [
