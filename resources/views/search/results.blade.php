@@ -38,16 +38,18 @@
 
     {{-- Progress bar --}}
     <div id="search-progress" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div class="flex items-center gap-3 mb-2">
+        <div class="flex items-center gap-3 mb-3">
             <div class="relative w-5 h-5" id="progress-spinner">
                 <svg class="animate-spin w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                 </svg>
             </div>
-            <span id="progress-text" class="text-sm font-medium text-gray-700">Buscando voos...</span>
+            <span id="progress-text" class="text-sm font-medium text-gray-700">Buscando os melhores voos...</span>
         </div>
-        <div class="flex flex-wrap gap-2" id="provider-badges"></div>
+        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div id="progress-fill" class="bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+        </div>
     </div>
 
     <div class="flex flex-col lg:flex-row gap-5">
@@ -1098,48 +1100,31 @@
 
     function renderProgressBar() {
         var bar = document.getElementById('search-progress');
-        var badges = document.getElementById('provider-badges');
+        var fill = document.getElementById('progress-fill');
         var text = document.getElementById('progress-text');
         var spinner = document.getElementById('progress-spinner');
+
+        var total = CONFIG.providerSlots.length;
+        var done = 0;
+        CONFIG.providerSlots.forEach(function(s) {
+            if (providerStatus[s.key] === 'done' || providerStatus[s.key] === 'error') done++;
+        });
+        var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        fill.style.width = pct + '%';
 
         var complete = isSearchComplete();
         var totalFlights = allOutbound.length + allInbound.length + patriaOutbound.length + patriaInbound.length;
 
         if (complete) {
+            fill.style.width = '100%';
+            fill.classList.remove('bg-blue-600');
+            fill.classList.add('bg-emerald-500');
             text.textContent = 'Busca completa — ' + totalFlights + ' voo' + (totalFlights !== 1 ? 's' : '') + ' encontrado' + (totalFlights !== 1 ? 's' : '');
             spinner.innerHTML = '<svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
             setTimeout(function() { bar.style.opacity = '0'; bar.style.transition = 'opacity 0.5s'; setTimeout(function() { bar.style.display = 'none'; }, 500); }, 3000);
         } else {
-            var loadingNames = [];
-            CONFIG.providerSlots.forEach(function(s) {
-                if (providerStatus[s.key] === 'loading') loadingNames.push(providerLabel(s));
-            });
-            text.textContent = 'Buscando ' + loadingNames.join(', ') + '...';
+            text.textContent = 'Buscando os melhores voos...';
         }
-
-        var html = '';
-        CONFIG.providerSlots.forEach(function(slot) {
-            var status = providerStatus[slot.key] || 'loading';
-            var label = providerLabel(slot);
-            var colorClass, icon;
-            if (status === 'done') {
-                colorClass = 'bg-emerald-100 text-emerald-700';
-                icon = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
-            } else if (status === 'error') {
-                colorClass = 'bg-red-100 text-red-700';
-                icon = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
-            } else {
-                colorClass = 'bg-blue-100 text-blue-700';
-                icon = '<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>';
-            }
-            html += '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ' + colorClass + '">' + icon + ' ' + escHtml(label) + '</span>';
-        });
-        badges.innerHTML = html;
-    }
-
-    function providerLabel(slot) {
-        var map = { 'vdp': 'VDP', 'latam': 'LATAM', 'bds_gol': 'GOL', 'bds_azul': 'AZUL', 'bds_latam': 'LATAM (BDS)', 'bds_patria': 'Convencional' };
-        return map[slot.key] || slot.airlines;
     }
 
     // ========================================
