@@ -570,6 +570,136 @@ class VdpFlightService
     }
 
     /**
+     * Retorna a lista de provedores ativos (com cia e chave) para busca progressiva.
+     * Cada entrada: ['key' => 'bds_gol', 'provider' => 'bds_crawler', 'airlines' => 'GOL']
+     */
+    public function getActiveProviderSlots(): array
+    {
+        $allCias = ['gol', 'azul', 'latam'];
+        $slots = [];
+        $vdpCias = [];
+
+        foreach ($allCias as $c) {
+            $provider = $this->getProviderForCia($c);
+            if ($provider === 'disabled') {
+                continue;
+            }
+
+            if ($provider === 'vdp') {
+                $vdpCias[] = $c;
+            } elseif ($provider === 'latam_crawler') {
+                $slots[] = ['key' => 'latam', 'provider' => 'latam_crawler', 'airlines' => strtoupper($c)];
+            } elseif ($provider === 'bds_crawler') {
+                $slots[] = ['key' => 'bds_' . $c, 'provider' => 'bds_crawler', 'airlines' => strtoupper($c)];
+            }
+        }
+
+        if (! empty($vdpCias)) {
+            $slots[] = ['key' => 'vdp', 'provider' => 'vdp', 'airlines' => implode(',', array_map('strtoupper', $vdpCias))];
+        }
+
+        if ((bool) Setting::get('bds_patria_enabled', false)) {
+            $slots[] = ['key' => 'bds_patria', 'provider' => 'bds_crawler', 'airlines' => 'PATRIA'];
+        }
+
+        return $slots;
+    }
+
+    /**
+     * Busca voos de UM unico provedor com cache individual.
+     */
+    public function searchSingleProvider(array $params, string $provider, string $airlines): array
+    {
+        $pricingVersion = Setting::get('pricing_version', '0');
+        $cacheKey = 'vdp_prov:' . $pricingVersion . ':' . $provider . ':' . strtolower($airlines) . ':' . md5(json_encode($params));
+
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($params, $provider, $airlines) {
+            return $this->fetchSingleProvider($params, $provider, $airlines);
+        });
+    }
+
+    private function fetchSingleProvider(array $params, string $provider, string $airlines): array
+    {
+        try {
+            if ($provider === 'vdp') {
+                $result = $this->callApi($params);
+                $airlineList = array_map('trim', explode(',', strtolower($airlines)));
+                return [
+                    'outbound' => $this->filterByCias($result['outbound'] ?? [], $airlineList),
+                    'inbound' => $this->filterByCias($result['inbound'] ?? [], $airlineList),
+                ];
+            }
+
+            if ($provider === 'latam_crawler') {
+                return $this->getCrawlerService()->searchFlights($params);
+            }
+
+            if ($provider === 'bds_crawler') {
+                $ciaList = array_map('trim', explode(',', strtoupper($airlines)));
+                $bdsUrl = rtrim(config('services.bds_crawler.url', ''), '/');
+                $bdsKey = config('services.bds_crawler.api_key', '');
+                $bdsTimeout = $this->getBdsTimeout();
+
+                $headers = ['Accept' => 'application/json'];
+                if (! empty($bdsKey)) {
+                    $headers['X-API-KEY'] = $bdsKey;
+                }
+
+                $query = [
+                    'origin' => $params['departure'] ?? '',
+                    'destination' => $params['arrival'] ?? '',
+                    'outbound_date' => $params['outbound_date'] ?? '',
+                    'adults' => $params['adults'] ?? 1,
+                    'children' => $params['children'] ?? 0,
+                    'infants' => $params['infants'] ?? 0,
+                    'cabin' => $params['cabin'] ?? 'EC',
+                    'airlines' => implode(',', $ciaList),
+                ];
+                if (! empty($params['inbound_date'])) {
+                    $query['inbound_date'] = $params['inbound_date'];
+                }
+
+                $response = Http::withHeaders($headers)
+                    ->timeout($bdsTimeout)
+                    ->get("{$bdsUrl}/api/search", $query);
+
+                if ($response->failed()) {
+                    Log::warning("BDS single provider failed", ['status' => $response->status(), 'airlines' => $airlines]);
+                    return ['outbound' => [], 'inbound' => []];
+                }
+
+                $data = $response->json();
+                return [
+                    'outbound' => $data['outbound'] ?? [],
+                    'inbound' => $data['inbound'] ?? [],
+                ];
+            }
+
+            return ['outbound' => [], 'inbound' => []];
+        } catch (\Throwable $e) {
+            Log::warning("Single provider search failed [{$provider}/{$airlines}]", ['error' => $e->getMessage()]);
+            return ['outbound' => [], 'inbound' => []];
+        }
+    }
+
+    /**
+     * Retorna configs de pricing para o frontend JS poder calcular precos.
+     */
+    public function getPricingConfig(): array
+    {
+        return [
+            'miles_enabled' => (bool) Setting::get('pricing_miles_enabled', false),
+            'pct_enabled' => (bool) Setting::get('pricing_pct_enabled', false),
+            'miles_gol' => (float) Setting::get('pricing_miles_gol', 30),
+            'miles_azul' => (float) Setting::get('pricing_miles_azul', 30),
+            'miles_latam' => (float) Setting::get('pricing_miles_latam', 30),
+            'pct_gol' => (float) Setting::get('pricing_pct_gol', 100),
+            'pct_azul' => (float) Setting::get('pricing_pct_azul', 100),
+            'pct_latam' => (float) Setting::get('pricing_pct_latam', 100),
+        ];
+    }
+
+    /**
      * Busca voos direto na API (sem cache) para revalidação de preço.
      * Roteia para o fornecedor configurado.
      */

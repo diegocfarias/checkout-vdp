@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Setting;
 use App\Models\ShowcaseRoute;
 use App\Services\VdpFlightService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -137,89 +138,79 @@ class FlightSearchController extends Controller
             'user_agent' => substr($request->userAgent() ?? '', 0, 255),
         ]);
 
-        $params = [
-            'cia' => 'all',
-            'departure' => strtoupper($validated['departure']),
-            'arrival' => strtoupper($validated['arrival']),
-            'outbound_date' => $validated['outbound_date'],
-            'inbound_date' => $validated['trip_type'] === 'roundtrip' ? ($validated['inbound_date'] ?? null) : null,
-            'adults' => (int) $validated['adults'],
-            'children' => (int) $validated['children'],
-            'infants' => (int) $validated['infants'],
-            'cabin' => $validated['cabin'],
-        ];
-
-        try {
-            $results = $this->vdpService->searchFlights($params);
-        } catch (\RuntimeException $e) {
-            Log::warning('FlightSearch: nenhum voo encontrado', [
-                'search_id' => $flightSearch->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            $flightSearch->update(['results_count' => 0]);
-
-            return view('search.results', [
-                'search' => $flightSearch,
-                'groups' => [],
-                'airlines' => [],
-                'params' => $validated,
-                'isRoundtrip' => $validated['trip_type'] === 'roundtrip',
-                'mixEnabled' => Setting::get('mix_enabled', true),
-                'pixDiscount' => (float) Setting::get('pix_discount', 0),
-                'pixEnabled' => ! empty(Setting::get('gateway_pix', config('services.payment.gateway'))),
-            ]);
-        }
-
-        $outbound = $results['outbound'] ?? [];
-        $inbound = $results['inbound'] ?? [];
-
-        if (is_array($outbound) && ! isset($outbound[0]) && ! empty($outbound)) {
-            $outbound = array_values($outbound);
-        }
-        if (is_array($inbound) && ! isset($inbound[0]) && ! empty($inbound)) {
-            $inbound = array_values($inbound);
-        }
-
         $isRoundtrip = $validated['trip_type'] === 'roundtrip';
-
-        if ($isRoundtrip && count($inbound) === 0) {
-            $flightSearch->update(['results_count' => 0]);
-
-            return view('search.results', [
-                'search' => $flightSearch,
-                'groups' => [],
-                'airlines' => [],
-                'params' => $validated,
-                'isRoundtrip' => true,
-                'mixEnabled' => Setting::get('mix_enabled', true),
-                'pixDiscount' => (float) Setting::get('pix_discount', 0),
-                'pixEnabled' => ! empty(Setting::get('gateway_pix', config('services.payment.gateway'))),
-            ]);
-        }
-
-        $groups = $this->buildGroups($outbound, $isRoundtrip ? $inbound : []);
-
-        $airlines = collect($groups)
-            ->pluck('airlines')
-            ->flatten()
-            ->unique()
-            ->filter()
-            ->sort()
-            ->values()
-            ->all();
-
-        $flightSearch->update(['results_count' => count($groups)]);
 
         return view('search.results', [
             'search' => $flightSearch,
-            'groups' => $groups,
-            'airlines' => $airlines,
             'params' => $validated,
             'isRoundtrip' => $isRoundtrip,
-            'mixEnabled' => Setting::get('mix_enabled', true),
+            'mixEnabled' => (bool) Setting::get('mix_enabled', true),
             'pixDiscount' => (float) Setting::get('pix_discount', 0),
             'pixEnabled' => ! empty(Setting::get('gateway_pix', config('services.payment.gateway'))),
+            'providerSlots' => $this->vdpService->getActiveProviderSlots(),
+            'maxInstallments' => (int) Setting::get('max_installments', 12),
+        ]);
+    }
+
+    public function searchByProvider(Request $request): JsonResponse
+    {
+        $request->validate([
+            'departure' => 'required|string|size:3',
+            'arrival' => 'required|string|size:3',
+            'outbound_date' => 'required|date',
+            'inbound_date' => 'nullable|date',
+            'adults' => 'required|integer|min:1',
+            'children' => 'required|integer|min:0',
+            'infants' => 'required|integer|min:0',
+            'cabin' => 'required|string|in:EC,EX',
+            'provider' => 'required|string|in:vdp,latam_crawler,bds_crawler',
+            'airlines' => 'required|string',
+        ]);
+
+        $params = [
+            'cia' => 'all',
+            'departure' => strtoupper($request->input('departure')),
+            'arrival' => strtoupper($request->input('arrival')),
+            'outbound_date' => $request->input('outbound_date'),
+            'inbound_date' => $request->input('inbound_date'),
+            'adults' => (int) $request->input('adults'),
+            'children' => (int) $request->input('children'),
+            'infants' => (int) $request->input('infants'),
+            'cabin' => $request->input('cabin'),
+        ];
+
+        $provider = $request->input('provider');
+        $airlines = $request->input('airlines');
+
+        try {
+            $results = $this->vdpService->searchSingleProvider($params, $provider, $airlines);
+        } catch (\Throwable $e) {
+            Log::warning('searchByProvider failed', [
+                'provider' => $provider,
+                'airlines' => $airlines,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'outbound' => [],
+                'inbound' => [],
+                'provider' => $provider,
+                'airlines' => $airlines,
+            ]);
+        }
+
+        $addPrice = function (array $flight): array {
+            $flight = $this->sanitizeFlight($flight);
+            $flight['calculated_price'] = round($this->vdpService->calculateFlightPrice($flight), 2);
+
+            return $flight;
+        };
+
+        return response()->json([
+            'outbound' => array_values(array_map($addPrice, $results['outbound'] ?? [])),
+            'inbound' => array_values(array_map($addPrice, $results['inbound'] ?? [])),
+            'provider' => $provider,
+            'airlines' => $airlines,
         ]);
     }
 
