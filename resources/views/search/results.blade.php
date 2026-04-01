@@ -1038,7 +1038,7 @@
             return;
         }
 
-        // Flight option selection
+        // Flight option selection + toggle connections
         var flightOpt = e.target.closest('.flight-option');
         if (flightOpt && !e.target.closest('.conn-toggle-btn')) {
             var gIdx = parseInt(flightOpt.dataset.group);
@@ -1046,6 +1046,19 @@
             var radio = flightOpt.querySelector('input[type="radio"]');
             if (!radio || e.target.tagName === 'INPUT') return;
             radio.checked = true;
+
+            // Toggle connection details on click anywhere in the flight option
+            var connToggle = flightOpt.querySelector('.conn-toggle-btn');
+            if (connToggle) {
+                var target = document.getElementById(connToggle.dataset.target);
+                if (target) {
+                    var isHidden = target.classList.contains('hidden');
+                    target.classList.toggle('hidden');
+                    connToggle.textContent = isHidden
+                        ? connToggle.textContent.trim().replace('▾', '▴')
+                        : connToggle.textContent.trim().replace('▴', '▾');
+                }
+            }
 
             var group = groupsData[gIdx];
             if (!group) return;
