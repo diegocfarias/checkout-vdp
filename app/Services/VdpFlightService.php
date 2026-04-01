@@ -289,12 +289,17 @@ class VdpFlightService
             }
         }
 
+        $patriaEnabled = (bool) Setting::get('bds_patria_enabled', false);
+        if ($patriaEnabled) {
+            $bdsCias[] = 'patria';
+        }
+
         $needVdp = ! empty($vdpCias);
         $needCrawler = ! empty($crawlerCias);
         $needBds = ! empty($bdsCias);
         $providerCount = ($needVdp ? 1 : 0) + ($needCrawler ? 1 : 0) + ($needBds ? 1 : 0);
 
-        if ($providerCount > 1) {
+        if ($providerCount > 1 || count($bdsCias) > 1) {
             return $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
         }
 
@@ -317,15 +322,12 @@ class VdpFlightService
         }
 
         if ($needBds) {
-            if (count($bdsCias) === 1) {
-                try {
-                    return $this->getBdsCrawlerService()->searchFlights($params, array_map('strtoupper', $bdsCias));
-                } catch (\Throwable $e) {
-                    Log::warning('BdsCrawler: falha na busca', ['error' => $e->getMessage()]);
-                    return ['outbound' => [], 'inbound' => []];
-                }
+            try {
+                return $this->getBdsCrawlerService()->searchFlights($params, array_map('strtoupper', $bdsCias));
+            } catch (\Throwable $e) {
+                Log::warning('BdsCrawler: falha na busca', ['error' => $e->getMessage()]);
+                return ['outbound' => [], 'inbound' => []];
             }
-            return $this->fetchParallel($params, [], [], $bdsCias);
         }
 
         return ['outbound' => [], 'inbound' => []];
@@ -456,13 +458,21 @@ class VdpFlightService
             }
         }
 
+        $patriaOutbound = [];
+        $patriaInbound = [];
+
         if ($needBds) {
             foreach ($bdsCias as $cia) {
                 $bdsResponse = $responses['bds_' . $cia] ?? null;
                 if ($bdsResponse && ! ($bdsResponse instanceof \Throwable) && $bdsResponse->successful()) {
                     $bdsData = $bdsResponse->json();
-                    $outbound = array_merge($outbound, $bdsData['outbound'] ?? []);
-                    $inbound = array_merge($inbound, $bdsData['inbound'] ?? []);
+                    if ($cia === 'patria') {
+                        $patriaOutbound = array_merge($patriaOutbound, $bdsData['outbound'] ?? []);
+                        $patriaInbound = array_merge($patriaInbound, $bdsData['inbound'] ?? []);
+                    } else {
+                        $outbound = array_merge($outbound, $bdsData['outbound'] ?? []);
+                        $inbound = array_merge($inbound, $bdsData['inbound'] ?? []);
+                    }
                 } elseif ($bdsResponse instanceof \Throwable) {
                     Log::warning("BdsCrawler [{$cia}]: falha na busca paralela", ['error' => $bdsResponse->getMessage()]);
                 } elseif ($bdsResponse && $bdsResponse->failed()) {
@@ -471,7 +481,63 @@ class VdpFlightService
             }
         }
 
+        if (! empty($patriaOutbound)) {
+            $outbound = $this->mergeWithPatria($outbound, $patriaOutbound);
+        }
+        if (! empty($patriaInbound)) {
+            $inbound = $this->mergeWithPatria($inbound, $patriaInbound);
+        }
+
         return ['outbound' => $outbound, 'inbound' => $inbound];
+    }
+
+    /**
+     * Mescla voos regulares com PATRIA (convencionais).
+     * Se o mesmo voo (flight_number + departure_time) existir em ambos,
+     * mantem o mais barato segundo calculateFlightPrice().
+     * Voos exclusivos PATRIA sao adicionados.
+     * Multiplas tarifas PATRIA do mesmo voo sao deduplicadas (mais barata).
+     */
+    private function mergeWithPatria(array $regularFlights, array $patriaFlights): array
+    {
+        $patriaIndex = [];
+        foreach ($patriaFlights as $pf) {
+            $key = ($pf['flight_number'] ?? '') . '|' . ($pf['departure_time'] ?? '');
+            $price = $this->calculateFlightPrice($pf);
+            if (! isset($patriaIndex[$key]) || $price < $patriaIndex[$key]['price']) {
+                $patriaIndex[$key] = ['flight' => $pf, 'price' => $price];
+            }
+        }
+
+        $usedKeys = [];
+        $merged = [];
+        foreach ($regularFlights as $rf) {
+            $key = ($rf['flight_number'] ?? '') . '|' . ($rf['departure_time'] ?? '');
+            if (isset($patriaIndex[$key])) {
+                $regularPrice = $this->calculateFlightPrice($rf);
+                if ($patriaIndex[$key]['price'] < $regularPrice) {
+                    $merged[] = $patriaIndex[$key]['flight'];
+                    Log::debug('Patria merge: substituindo voo', [
+                        'flight' => $key,
+                        'regular_price' => round($regularPrice, 2),
+                        'patria_price' => round($patriaIndex[$key]['price'], 2),
+                    ]);
+                } else {
+                    $merged[] = $rf;
+                }
+                $usedKeys[$key] = true;
+            } else {
+                $merged[] = $rf;
+            }
+        }
+
+        foreach ($patriaIndex as $key => $entry) {
+            if (! isset($usedKeys[$key])) {
+                $merged[] = $entry['flight'];
+            }
+        }
+
+        return $merged;
     }
 
     /**

@@ -78,6 +78,7 @@ class ManageSettings extends Page
             'vdp_timeout' => Setting::get('vdp_timeout', 35),
             'crawler_timeout' => Setting::get('crawler_timeout', 35),
             'bds_crawler_timeout' => Setting::get('bds_crawler_timeout', 60),
+            'bds_patria_enabled' => Setting::get('bds_patria_enabled', false),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -187,6 +188,11 @@ class ManageSettings extends Page
                             ->maxValue(120)
                             ->default(60)
                             ->suffix('s'),
+
+                        Toggle::make('bds_patria_enabled')
+                            ->label('BDS Patria (voos convencionais)')
+                            ->helperText('Busca voos convencionais via BDS em paralelo. Substitui voos por milhas quando o preço convencional for menor.')
+                            ->default(false),
                     ]),
 
                 Section::make('Precificação')
@@ -570,6 +576,7 @@ class ManageSettings extends Page
         Setting::set('vdp_timeout', (int) ($data['vdp_timeout'] ?? 35), 'integer');
         Setting::set('crawler_timeout', (int) ($data['crawler_timeout'] ?? 35), 'integer');
         Setting::set('bds_crawler_timeout', (int) ($data['bds_crawler_timeout'] ?? 60), 'integer');
+        Setting::set('bds_patria_enabled', (bool) ($data['bds_patria_enabled'] ?? false), 'boolean');
 
         $newPricing = [];
         foreach ($pricingFields as $field) {
