@@ -31,6 +31,8 @@ class OrderFlight extends Model
         'miles_price',
         'money_price',
         'tax',
+        'provider',
+        'pricing_type',
     ];
 
     protected $casts = [

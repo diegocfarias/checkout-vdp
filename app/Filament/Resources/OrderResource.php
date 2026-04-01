@@ -465,6 +465,30 @@ class OrderResource extends Resource
                                     ->color('success')
                                     ->copyable()
                                     ->placeholder('-'),
+                                Infolists\Components\TextEntry::make('provider')
+                                    ->label('Provedor')
+                                    ->badge()
+                                    ->color(fn (?string $state): string => match (true) {
+                                        str_contains($state ?? '', 'VDP') => 'gray',
+                                        str_contains($state ?? '', 'LATAM') => 'info',
+                                        str_contains($state ?? '', 'BDS') => 'warning',
+                                        default => 'gray',
+                                    })
+                                    ->placeholder('-'),
+                                Infolists\Components\TextEntry::make('pricing_type')
+                                    ->label('Tipo')
+                                    ->badge()
+                                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                                        'milhas' => 'Milhas',
+                                        'convencional' => 'Convencional',
+                                        default => $state ?? '-',
+                                    })
+                                    ->color(fn (?string $state): string => match ($state) {
+                                        'milhas' => 'primary',
+                                        'convencional' => 'success',
+                                        default => 'gray',
+                                    })
+                                    ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('connection_details')
                                     ->label('Conexões')
                                     ->columnSpanFull()

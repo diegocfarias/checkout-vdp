@@ -39,14 +39,21 @@
                 @endif
             </div>
 
-            {{-- Airline + cabin --}}
-            <div style="display:flex; align-items:center; gap:6px; margin-bottom:12px;">
+            {{-- Airline + cabin + provider --}}
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
                 <span style="font-size:14px; font-weight:600; color:#374151;">{{ $cia }}</span>
                 @if($flightNum)
                     <span style="font-size:13px; color:#9ca3af;">{{ $flightNum }}</span>
                 @endif
                 <span style="color:#d1d5db;">·</span>
                 <span style="font-size:13px; color:#6b7280;">{{ $cabin }}</span>
+                @if($flight->provider)
+                    <span style="color:#d1d5db;">·</span>
+                    <span style="font-size:11px; font-weight:600; color:#6366f1; background:#eef2ff; padding:2px 8px; border-radius:4px;">{{ $flight->provider }}</span>
+                @endif
+                @if($flight->pricing_type)
+                    <span style="font-size:11px; font-weight:600; color:{{ $flight->pricing_type === 'milhas' ? '#2563eb' : '#059669' }}; background:{{ $flight->pricing_type === 'milhas' ? '#dbeafe' : '#d1fae5' }}; padding:2px 8px; border-radius:4px;">{{ ucfirst($flight->pricing_type) }}</span>
+                @endif
             </div>
 
             {{-- Route: origin -> destination --}}

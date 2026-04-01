@@ -199,16 +199,21 @@ class FlightSearchController extends Controller
             ]);
         }
 
-        $addPrice = function (array $flight): array {
+        $isPatria = strtoupper($airlines) === 'PATRIA';
+        $providerLabel = $this->providerLabel($provider, $airlines);
+
+        $addMeta = function (array $flight) use ($providerLabel, $isPatria): array {
             $flight = $this->sanitizeFlight($flight);
             $flight['calculated_price'] = round($this->vdpService->calculateFlightPrice($flight), 2);
+            $flight['_provider'] = $providerLabel;
+            $flight['_pricing_type'] = $this->resolvePricingType($flight, $isPatria);
 
             return $flight;
         };
 
         return response()->json([
-            'outbound' => array_values(array_map($addPrice, $results['outbound'] ?? [])),
-            'inbound' => array_values(array_map($addPrice, $results['inbound'] ?? [])),
+            'outbound' => array_values(array_map($addMeta, $results['outbound'] ?? [])),
+            'inbound' => array_values(array_map($addMeta, $results['inbound'] ?? [])),
             'provider' => $provider,
             'airlines' => $airlines,
         ]);
@@ -444,10 +449,17 @@ class FlightSearchController extends Controller
             ]);
         }
 
-        return $this->createOrderFromFlights($flightSearch, $outboundData, $inboundData, $request->userAgent());
+        $meta = [
+            'ob_provider' => $request->input('ob_provider', ''),
+            'ob_pricing_type' => $request->input('ob_pricing_type', ''),
+            'ib_provider' => $request->input('ib_provider', ''),
+            'ib_pricing_type' => $request->input('ib_pricing_type', ''),
+        ];
+
+        return $this->createOrderFromFlights($flightSearch, $outboundData, $inboundData, $request->userAgent(), $meta);
     }
 
-    private function createOrderFromFlights(FlightSearch $flightSearch, array $outboundData, ?array $inboundData, ?string $userAgent = null)
+    private function createOrderFromFlights(FlightSearch $flightSearch, array $outboundData, ?array $inboundData, ?string $userAgent = null, array $meta = [])
     {
         $deviceType = 'desktop';
         if ($userAgent && preg_match('/Mobile|Android|iPhone|iPad|iPod/i', $userAgent)) {
@@ -467,16 +479,16 @@ class FlightSearchController extends Controller
             'expires_at' => now()->addMinutes(Setting::get('order_expiration_minutes', 30)),
         ]);
 
-        $order->flights()->create($this->buildFlightRow('outbound', $outboundData));
+        $order->flights()->create($this->buildFlightRow('outbound', $outboundData, $meta['ob_provider'] ?? '', $meta['ob_pricing_type'] ?? ''));
 
         if ($inboundData) {
-            $order->flights()->create($this->buildFlightRow('inbound', $inboundData));
+            $order->flights()->create($this->buildFlightRow('inbound', $inboundData, $meta['ib_provider'] ?? '', $meta['ib_pricing_type'] ?? ''));
         }
 
         return redirect()->route('checkout.show', $order->token);
     }
 
-    private function buildFlightRow(string $direction, array $data): array
+    private function buildFlightRow(string $direction, array $data, string $provider = '', string $pricingType = ''): array
     {
         $operator = $this->resolveDisplayCia($data['operator'] ?? '', $data['flight_number'] ?? '');
 
@@ -502,6 +514,8 @@ class FlightSearchController extends Controller
             'miles_price' => $data['price_miles'] ?? '0',
             'money_price' => $this->vdpService->calculateBasePrice($data),
             'tax' => $this->vdpService->parseMoneyValue($data['boarding_tax'] ?? '0'),
+            'provider' => $provider ?: null,
+            'pricing_type' => $pricingType ?: null,
         ];
     }
 
@@ -518,5 +532,27 @@ class FlightSearchController extends Controller
         if (str_starts_with($fn, 'LA') || str_starts_with($fn, 'JJ')) return 'LATAM';
 
         return $operator;
+    }
+
+    private function providerLabel(string $provider, string $airlines): string
+    {
+        return match ($provider) {
+            'vdp' => 'VDP',
+            'latam_crawler' => 'LATAM Crawler',
+            'bds_crawler' => strtoupper($airlines) === 'PATRIA' ? 'BDS Convencional' : 'BDS Crawler',
+            default => $provider,
+        };
+    }
+
+    private function resolvePricingType(array $flight, bool $isPatria): string
+    {
+        if ($isPatria) {
+            return 'convencional';
+        }
+
+        $raw = $flight['price_miles'] ?? null;
+        $miles = (float) str_replace(['.', ','], ['', '.'], trim((string) $raw));
+
+        return $miles > 0 ? 'milhas' : 'convencional';
     }
 }

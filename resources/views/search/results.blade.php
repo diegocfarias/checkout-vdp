@@ -673,8 +673,10 @@
         var ibPeriodsStr = (group.inbound_periods || []).join(',');
         var airlinesStr = airlines.map(function(a) { return a.toLowerCase(); }).join(',');
 
-        var obJson = JSON.stringify(obFlights[0] || {});
-        var ibJson = hasInbound ? JSON.stringify(ibFlights[0] || {}) : '';
+        var obFirst = obFlights[0] || {};
+        var ibFirst = hasInbound ? (ibFlights[0] || {}) : {};
+        var obJson = JSON.stringify(obFirst);
+        var ibJson = hasInbound ? JSON.stringify(ibFirst) : '';
 
         var html = '<div class="combination-card bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 animate-fadeInUp"'
             + ' data-airlines="' + escHtml(airlinesStr) + '"'
@@ -712,9 +714,13 @@
         html += '<form action="' + escHtml(CONFIG.selectUrl) + '" method="POST" class="group-form" data-group="' + gIdx + '">'
             + '<input type="hidden" name="_token" value="' + escHtml(CONFIG.csrfToken) + '">'
             + '<input type="hidden" name="search_id" value="' + escHtml(CONFIG.searchId) + '">'
-            + '<input type="hidden" name="outbound" class="selected-ob" value=\'' + obJson.replace(/'/g, '&#39;') + '\'>';
+            + '<input type="hidden" name="outbound" class="selected-ob" value=\'' + obJson.replace(/'/g, '&#39;') + '\'>'
+            + '<input type="hidden" name="ob_provider" class="meta-ob-provider" value="' + escHtml(obFirst._provider || '') + '">'
+            + '<input type="hidden" name="ob_pricing_type" class="meta-ob-pricing" value="' + escHtml(obFirst._pricing_type || '') + '">';
         if (hasInbound) {
-            html += '<input type="hidden" name="inbound" class="selected-ib" value=\'' + ibJson.replace(/'/g, '&#39;') + '\'>';
+            html += '<input type="hidden" name="inbound" class="selected-ib" value=\'' + ibJson.replace(/'/g, '&#39;') + '\'>'
+                + '<input type="hidden" name="ib_provider" class="meta-ib-provider" value="' + escHtml(ibFirst._provider || '') + '">'
+                + '<input type="hidden" name="ib_pricing_type" class="meta-ib-pricing" value="' + escHtml(ibFirst._pricing_type || '') + '">';
         }
         html += '<button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-xl transition-colors text-sm">Comprar</button>'
             + '</form></div>';
@@ -799,9 +805,13 @@
         html += '<form action="' + escHtml(CONFIG.selectUrl) + '" method="POST" class="group-form w-full" data-group="' + gIdx + '">'
             + '<input type="hidden" name="_token" value="' + escHtml(CONFIG.csrfToken) + '">'
             + '<input type="hidden" name="search_id" value="' + escHtml(CONFIG.searchId) + '">'
-            + '<input type="hidden" name="outbound" class="selected-ob" value=\'' + obJson.replace(/'/g, '&#39;') + '\'>';
+            + '<input type="hidden" name="outbound" class="selected-ob" value=\'' + obJson.replace(/'/g, '&#39;') + '\'>'
+            + '<input type="hidden" name="ob_provider" class="meta-ob-provider" value="' + escHtml(obFirst._provider || '') + '">'
+            + '<input type="hidden" name="ob_pricing_type" class="meta-ob-pricing" value="' + escHtml(obFirst._pricing_type || '') + '">';
         if (hasInbound) {
-            html += '<input type="hidden" name="inbound" class="selected-ib" value=\'' + ibJson.replace(/'/g, '&#39;') + '\'>';
+            html += '<input type="hidden" name="inbound" class="selected-ib" value=\'' + ibJson.replace(/'/g, '&#39;') + '\'>'
+                + '<input type="hidden" name="ib_provider" class="meta-ib-provider" value="' + escHtml(ibFirst._provider || '') + '">'
+                + '<input type="hidden" name="ib_pricing_type" class="meta-ib-pricing" value="' + escHtml(ibFirst._pricing_type || '') + '">';
         }
         html += '<button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm">Comprar</button>'
             + '</form></div></div>';
@@ -1079,6 +1089,10 @@
             document.querySelectorAll('.group-form[data-group="' + gIdx + '"]').forEach(function(form) {
                 var input = form.querySelector(dir === 'ob' ? '.selected-ob' : '.selected-ib');
                 if (input) input.value = JSON.stringify(flight);
+                var provInput = form.querySelector(dir === 'ob' ? '.meta-ob-provider' : '.meta-ib-provider');
+                if (provInput) provInput.value = flight._provider || '';
+                var ptInput = form.querySelector(dir === 'ob' ? '.meta-ob-pricing' : '.meta-ib-pricing');
+                if (ptInput) ptInput.value = flight._pricing_type || '';
             });
 
             flightOpt.closest('.space-y-2').querySelectorAll('.flight-option[data-dir="' + dir + '"]').forEach(function(opt) {
