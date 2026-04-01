@@ -743,22 +743,20 @@ class VdpFlightService
         ?string $ibCia = null,
     ): array {
         $obProvider = $this->getProviderForCia($obCia);
-        $obParams = array_merge($baseParams, ['cia' => strtolower($obCia)]);
-
-        $sameCia = $ibCia && strtolower($obCia) === strtolower($ibCia);
+        $obNorm = $this->normalizeCia($obCia);
 
         try {
-            $obResults = $this->callForProvider($obProvider, $obParams);
+            $obResults = $this->getCachedOrFresh($baseParams, $obProvider, $obNorm);
             $freshOb = $this->findByUniqueId($obResults['outbound'] ?? [], $obUniqueId);
 
             $freshIb = null;
             if ($ibUniqueId && $ibCia) {
-                if ($sameCia) {
+                $ibNorm = $this->normalizeCia($ibCia);
+                if (strtolower($obCia) === strtolower($ibCia)) {
                     $freshIb = $this->findByUniqueId($obResults['inbound'] ?? [], $ibUniqueId);
                 } else {
                     $ibProvider = $this->getProviderForCia($ibCia);
-                    $ibParams = array_merge($baseParams, ['cia' => strtolower($ibCia)]);
-                    $ibResults = $this->callForProvider($ibProvider, $ibParams);
+                    $ibResults = $this->getCachedOrFresh($baseParams, $ibProvider, $ibNorm);
                     $freshIb = $this->findByUniqueId($ibResults['inbound'] ?? [], $ibUniqueId);
                 }
             }
@@ -773,6 +771,35 @@ class VdpFlightService
 
             return ['outbound' => null, 'inbound' => null];
         }
+    }
+
+    private function getCachedOrFresh(array $baseParams, string $provider, string $cia): array
+    {
+        $pricingVersion = Setting::get('pricing_version', '0');
+
+        $cacheParams = [
+            'cia' => 'all',
+            'departure' => strtoupper($baseParams['departure'] ?? ''),
+            'arrival' => strtoupper($baseParams['arrival'] ?? ''),
+            'outbound_date' => $baseParams['outbound_date'] ?? '',
+            'inbound_date' => $baseParams['inbound_date'] ?? null,
+            'adults' => (int) ($baseParams['adults'] ?? 1),
+            'children' => (int) ($baseParams['children'] ?? 0),
+            'infants' => (int) ($baseParams['infants'] ?? 0),
+            'cabin' => $baseParams['cabin'] ?? 'EC',
+        ];
+        $cacheKey = 'vdp_prov:' . $pricingVersion . ':' . $provider . ':' . strtolower($cia) . ':' . md5(json_encode($cacheParams));
+
+        $cached = Cache::get($cacheKey);
+        if ($cached) {
+            return $cached;
+        }
+
+        Log::info('Revalidate cache miss, fetching fresh', ['provider' => $provider, 'cia' => $cia]);
+
+        $params = array_merge($baseParams, ['cia' => strtolower($cia)]);
+
+        return $this->callForProvider($provider, $params);
     }
 
     private function getVdpTimeout(): int
