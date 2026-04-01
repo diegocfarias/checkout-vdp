@@ -983,7 +983,7 @@
             if (!natSelect) return;
             const nationality = natSelect.value;
             const isBR = nationality === 'BR';
-            const needsPassport = !isBR || !isMercosul;
+            const needsPassport = !isBR && !isMercosul;
 
             const cpfWrapper = document.getElementById('passengers_' + index + '_cpf_wrapper');
             const passportWrapper = document.getElementById('passengers_' + index + '_passport_wrapper');
