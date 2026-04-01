@@ -6,6 +6,12 @@
 
 @section('content')
 <div class="space-y-6 pb-8">
+    @if(session('error'))
+        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium">
+            {{ session('error') }}
+        </div>
+    @endif
+
     {{-- Resumo da busca --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div class="flex flex-wrap items-center gap-3 text-sm text-gray-600">

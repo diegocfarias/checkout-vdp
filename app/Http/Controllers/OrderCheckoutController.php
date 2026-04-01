@@ -566,10 +566,8 @@ class OrderCheckoutController extends Controller
         try {
             $fresh = $this->vdpService->revalidateFlightPair(
                 $baseParams,
-                $obFlight->unique_id,
-                $obFlight->operator ?? 'all',
-                $ibFlight?->unique_id,
-                $ibFlight?->operator,
+                $this->buildRevalidationData($obFlight),
+                $ibFlight ? $this->buildRevalidationData($ibFlight) : null,
             );
 
             $freshOb = $fresh['outbound'];
@@ -619,4 +617,32 @@ class OrderCheckoutController extends Controller
         return null;
     }
 
+    private function buildRevalidationData($flight): array
+    {
+        $data = [
+            'unique_id' => $flight->unique_id,
+            'operator' => $flight->operator ?? 'all',
+            'flight_number' => $flight->flight_number ?? '',
+            'departure_time' => $flight->departure_time ?? '',
+        ];
+
+        $provider = $flight->provider ?? '';
+        $pricingType = $flight->pricing_type ?? '';
+
+        if (str_contains($provider, 'BDS') && $pricingType === 'convencional') {
+            $data['_source_provider'] = 'bds_crawler';
+            $data['_source_airlines'] = 'PATRIA';
+        } elseif (str_contains($provider, 'BDS')) {
+            $data['_source_provider'] = 'bds_crawler';
+            $data['_source_airlines'] = strtoupper($flight->operator ?? 'all');
+        } elseif (str_contains($provider, 'LATAM Crawler')) {
+            $data['_source_provider'] = 'latam_crawler';
+            $data['_source_airlines'] = strtoupper($flight->operator ?? 'LATAM');
+        } elseif (str_contains($provider, 'VDP')) {
+            $data['_source_provider'] = 'vdp';
+            $data['_source_airlines'] = strtoupper($flight->operator ?? 'all');
+        }
+
+        return $data;
+    }
 }

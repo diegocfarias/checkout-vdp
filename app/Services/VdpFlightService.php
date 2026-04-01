@@ -737,35 +737,54 @@ class VdpFlightService
      */
     public function revalidateFlightPair(
         array $baseParams,
-        string $obUniqueId,
-        string $obCia,
-        ?string $ibUniqueId = null,
-        ?string $ibCia = null,
+        array $obOriginal,
+        ?array $ibOriginal = null,
     ): array {
-        $obProvider = $this->getProviderForCia($obCia);
-        $obNorm = $this->normalizeCia($obCia);
-
         try {
-            $obResults = $this->getCachedOrFresh($baseParams, $obProvider, $obNorm);
-            $freshOb = $this->findByUniqueId($obResults['outbound'] ?? [], $obUniqueId);
+            [$obProvider, $obParams] = $this->resolveRevalidationParams($baseParams, $obOriginal);
+
+            Log::info('Revalidating flights', [
+                'ob_provider' => $obProvider,
+                'ob_cia' => $obParams['cia'] ?? 'all',
+                'ob_unique_id' => $obOriginal['unique_id'] ?? '',
+            ]);
+
+            $obResults = $this->callForProvider($obProvider, $obParams);
+            $freshOb = $this->findFlight(
+                $obResults['outbound'] ?? [],
+                $obOriginal['unique_id'] ?? '',
+                $obOriginal['flight_number'] ?? '',
+                $obOriginal['departure_time'] ?? '',
+            );
 
             $freshIb = null;
-            if ($ibUniqueId && $ibCia) {
-                $ibNorm = $this->normalizeCia($ibCia);
-                if (strtolower($obCia) === strtolower($ibCia)) {
-                    $freshIb = $this->findByUniqueId($obResults['inbound'] ?? [], $ibUniqueId);
+            if ($ibOriginal) {
+                [$ibProvider, $ibParams] = $this->resolveRevalidationParams($baseParams, $ibOriginal);
+                $sameSource = $obProvider === $ibProvider
+                    && strtolower($obParams['cia'] ?? '') === strtolower($ibParams['cia'] ?? '');
+
+                if ($sameSource) {
+                    $freshIb = $this->findFlight(
+                        $obResults['inbound'] ?? [],
+                        $ibOriginal['unique_id'] ?? '',
+                        $ibOriginal['flight_number'] ?? '',
+                        $ibOriginal['departure_time'] ?? '',
+                    );
                 } else {
-                    $ibProvider = $this->getProviderForCia($ibCia);
-                    $ibResults = $this->getCachedOrFresh($baseParams, $ibProvider, $ibNorm);
-                    $freshIb = $this->findByUniqueId($ibResults['inbound'] ?? [], $ibUniqueId);
+                    $ibResults = $this->callForProvider($ibProvider, $ibParams);
+                    $freshIb = $this->findFlight(
+                        $ibResults['inbound'] ?? [],
+                        $ibOriginal['unique_id'] ?? '',
+                        $ibOriginal['flight_number'] ?? '',
+                        $ibOriginal['departure_time'] ?? '',
+                    );
                 }
             }
 
             return ['outbound' => $freshOb, 'inbound' => $freshIb];
         } catch (\Throwable $e) {
             Log::warning('VDP: falha ao revalidar par de voos', [
-                'ob_unique_id' => $obUniqueId,
-                'ib_unique_id' => $ibUniqueId,
+                'ob_unique_id' => $obOriginal['unique_id'] ?? '',
                 'error' => $e->getMessage(),
             ]);
 
@@ -773,33 +792,23 @@ class VdpFlightService
         }
     }
 
-    private function getCachedOrFresh(array $baseParams, string $provider, string $cia): array
+    /**
+     * Determina provider e params corretos para revalidação,
+     * usando _source_provider/_source_airlines quando disponíveis.
+     */
+    private function resolveRevalidationParams(array $baseParams, array $flightData): array
     {
-        $pricingVersion = Setting::get('pricing_version', '0');
+        $sourceProvider = $flightData['_source_provider'] ?? null;
+        $sourceAirlines = $flightData['_source_airlines'] ?? null;
 
-        $cacheParams = [
-            'cia' => 'all',
-            'departure' => strtoupper($baseParams['departure'] ?? ''),
-            'arrival' => strtoupper($baseParams['arrival'] ?? ''),
-            'outbound_date' => $baseParams['outbound_date'] ?? '',
-            'inbound_date' => $baseParams['inbound_date'] ?? null,
-            'adults' => (int) ($baseParams['adults'] ?? 1),
-            'children' => (int) ($baseParams['children'] ?? 0),
-            'infants' => (int) ($baseParams['infants'] ?? 0),
-            'cabin' => $baseParams['cabin'] ?? 'EC',
-        ];
-        $cacheKey = 'vdp_prov:' . $pricingVersion . ':' . $provider . ':' . strtolower($cia) . ':' . md5(json_encode($cacheParams));
-
-        $cached = Cache::get($cacheKey);
-        if ($cached) {
-            return $cached;
+        if ($sourceProvider && $sourceAirlines) {
+            $cia = strtolower($sourceAirlines);
+            return [$sourceProvider, array_merge($baseParams, ['cia' => $cia])];
         }
 
-        Log::info('Revalidate cache miss, fetching fresh', ['provider' => $provider, 'cia' => $cia]);
-
-        $params = array_merge($baseParams, ['cia' => strtolower($cia)]);
-
-        return $this->callForProvider($provider, $params);
+        $operator = $flightData['operator'] ?? 'all';
+        $provider = $this->getProviderForCia($operator);
+        return [$provider, array_merge($baseParams, ['cia' => strtolower($operator)])];
     }
 
     private function getVdpTimeout(): int
@@ -843,11 +852,27 @@ class VdpFlightService
         return $response->json();
     }
 
-    private function findByUniqueId(array $flights, string $uniqueId): ?array
+    private function findFlight(array $flights, string $uniqueId, string $flightNumber = '', string $departureTime = ''): ?array
     {
         foreach ($flights as $flight) {
             if (($flight['unique_id'] ?? null) === $uniqueId) {
                 return $flight;
+            }
+        }
+
+        if ($flightNumber && $departureTime) {
+            Log::debug('findFlight: unique_id nao encontrado, tentando por flight_number+departure_time', [
+                'unique_id' => $uniqueId,
+                'flight_number' => $flightNumber,
+                'departure_time' => $departureTime,
+                'total_flights' => count($flights),
+            ]);
+
+            foreach ($flights as $flight) {
+                if (($flight['flight_number'] ?? '') === $flightNumber
+                    && ($flight['departure_time'] ?? '') === $departureTime) {
+                    return $flight;
+                }
             }
         }
 

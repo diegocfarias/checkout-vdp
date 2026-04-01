@@ -202,11 +202,13 @@ class FlightSearchController extends Controller
         $isPatria = strtoupper($airlines) === 'PATRIA';
         $providerLabel = $this->providerLabel($provider, $airlines);
 
-        $addMeta = function (array $flight) use ($providerLabel, $isPatria): array {
+        $addMeta = function (array $flight) use ($provider, $airlines, $providerLabel, $isPatria): array {
             $flight = $this->sanitizeFlight($flight);
             $flight['calculated_price'] = round($this->vdpService->calculateFlightPrice($flight), 2);
             $flight['_provider'] = $providerLabel;
             $flight['_pricing_type'] = $this->resolvePricingType($flight, $isPatria);
+            $flight['_source_provider'] = $provider;
+            $flight['_source_airlines'] = $airlines;
 
             return $flight;
         };
@@ -415,10 +417,8 @@ class FlightSearchController extends Controller
 
         $fresh = $this->vdpService->revalidateFlightPair(
             $baseParams,
-            $outboundData['unique_id'] ?? '',
-            $outboundData['operator'] ?? 'all',
-            $inboundData ? ($inboundData['unique_id'] ?? null) : null,
-            $inboundData ? ($inboundData['operator'] ?? null) : null,
+            $outboundData,
+            $inboundData,
         );
 
         if (! $fresh['outbound']) {
