@@ -78,6 +78,49 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $this->assertSame('1150.00', $service->calculateBasePrice($flight));
     }
 
+    public function test_miles_price_has_priority_over_percentage_pricing(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_miles_enabled' => false,
+            'pricing_pct_enabled' => true,
+            'pricing_miles_gol' => '20',
+            'pricing_pct_gol' => '100',
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $flight = [
+            'operator' => 'GOL',
+            'flight_number' => 'G3-1886',
+            'price_money' => '1.000,00',
+            'price_miles' => '10.000',
+            'boarding_tax' => '50,00',
+        ];
+
+        $this->assertSame(250.0, round($service->calculateFlightPrice($flight), 2));
+        $this->assertSame('200.00', $service->calculateBasePrice($flight));
+    }
+
+    public function test_percentage_pricing_is_used_when_miles_price_is_zero(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_miles_enabled' => true,
+            'pricing_pct_enabled' => true,
+            'pricing_pct_gol' => '100',
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $flight = [
+            'operator' => 'GOL',
+            'flight_number' => 'G3-1886',
+            'price_money' => '1.000,00',
+            'price_miles' => '0',
+            'boarding_tax' => '50,00',
+        ];
+
+        $this->assertSame(2050.0, round($service->calculateFlightPrice($flight), 2));
+        $this->assertSame('2000.00', $service->calculateBasePrice($flight));
+    }
+
     private function directionKey(VdpFlightService $service, string $departure, string $arrival, string $date, array $params): string
     {
         $method = new \ReflectionMethod($service, 'directionPriceKey');

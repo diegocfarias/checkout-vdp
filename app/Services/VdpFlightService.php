@@ -1007,22 +1007,19 @@ class VdpFlightService
         $cia = $this->resolvePricingCia($flight);
         $tax = $this->parseMoneyFloat($flight['boarding_tax'] ?? '0');
 
-        $milesEnabled = Setting::get('pricing_miles_enabled', false);
         $pctEnabled = Setting::get('pricing_pct_enabled', false);
 
-        if ($milesEnabled) {
-            $miles = $this->parseMilesValue($flight['price_miles'] ?? null);
-            if ($miles > 0) {
-                $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
-                $price = ($miles / 1000) * $valorMilheiro + $tax;
+        $miles = $this->parseMilesValue($flight['price_miles'] ?? null);
+        if ($miles > 0) {
+            $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
+            $price = ($miles / 1000) * $valorMilheiro + $tax;
 
-                Log::debug('Pricing: milhas', [
-                    'cia' => $cia, 'miles' => $miles,
-                    'valor_milheiro' => $valorMilheiro, 'tax' => $tax, 'price' => $price,
-                ]);
+            Log::debug('Pricing: milhas', [
+                'cia' => $cia, 'miles' => $miles,
+                'valor_milheiro' => $valorMilheiro, 'tax' => $tax, 'price' => $price,
+            ]);
 
-                return $price;
-            }
+            return $price;
         }
 
         if ($pctEnabled) {
@@ -1051,16 +1048,13 @@ class VdpFlightService
     {
         $cia = $this->resolvePricingCia($flight);
 
-        $milesEnabled = Setting::get('pricing_miles_enabled', false);
         $pctEnabled = Setting::get('pricing_pct_enabled', false);
 
-        if ($milesEnabled) {
-            $miles = $this->parseMilesValue($flight['price_miles'] ?? null);
-            if ($miles > 0) {
-                $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
+        $miles = $this->parseMilesValue($flight['price_miles'] ?? null);
+        if ($miles > 0) {
+            $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
 
-                return number_format(($miles / 1000) * $valorMilheiro, 2, '.', '');
-            }
+            return number_format(($miles / 1000) * $valorMilheiro, 2, '.', '');
         }
 
         if ($pctEnabled) {
