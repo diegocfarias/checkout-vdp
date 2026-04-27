@@ -676,6 +676,66 @@ class VdpFlightService
         });
     }
 
+    public function forgetSearchCaches(array $params): void
+    {
+        $pricingVersion = Setting::get('pricing_version', '0');
+        $cacheParams = $this->providerSearchCacheParams($params);
+        $fullSearchParams = $cacheParams;
+        unset($fullSearchParams['cia']);
+
+        Cache::forget('vdp_search:' . $pricingVersion . ':' . md5(json_encode($cacheParams)));
+        Cache::forget('vdp_search:' . $pricingVersion . ':' . md5(json_encode($fullSearchParams)));
+
+        foreach ($this->getActiveProviderSlots() as $slot) {
+            Cache::forget(
+                'vdp_prov:' . $pricingVersion . ':'
+                . $slot['provider'] . ':'
+                . strtolower($slot['airlines']) . ':'
+                . md5(json_encode($cacheParams))
+            );
+        }
+
+        $basePax = [
+            'adults' => $cacheParams['adults'],
+            'children' => $cacheParams['children'],
+            'infants' => $cacheParams['infants'],
+            'cabin' => $cacheParams['cabin'],
+        ];
+
+        Cache::forget($this->directionPriceKey(
+            $pricingVersion,
+            $cacheParams['departure'],
+            $cacheParams['arrival'],
+            $cacheParams['outbound_date'],
+            $basePax,
+        ));
+
+        if (! empty($cacheParams['inbound_date'])) {
+            Cache::forget($this->directionPriceKey(
+                $pricingVersion,
+                $cacheParams['arrival'],
+                $cacheParams['departure'],
+                $cacheParams['inbound_date'],
+                $basePax,
+            ));
+        }
+    }
+
+    private function providerSearchCacheParams(array $params): array
+    {
+        return [
+            'cia' => 'all',
+            'departure' => strtoupper((string) ($params['departure'] ?? '')),
+            'arrival' => strtoupper((string) ($params['arrival'] ?? '')),
+            'outbound_date' => $params['outbound_date'] ?? null,
+            'inbound_date' => $params['inbound_date'] ?? null,
+            'adults' => (int) ($params['adults'] ?? 1),
+            'children' => (int) ($params['children'] ?? 0),
+            'infants' => (int) ($params['infants'] ?? 0),
+            'cabin' => $params['cabin'] ?? 'EC',
+        ];
+    }
+
     private function fetchSingleProvider(array $params, string $provider, string $airlines): array
     {
         try {

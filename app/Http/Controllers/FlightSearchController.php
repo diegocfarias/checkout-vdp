@@ -461,11 +461,17 @@ class FlightSearchController extends Controller
             );
 
             if (! $fresh['outbound']) {
-                return back()->with('error', 'O voo de ida selecionado não está mais disponível. Por favor, faça uma nova busca.');
+                return $this->redirectUnavailableFlight(
+                    $flightSearch,
+                    'O voo de ida selecionado não está mais disponível.'
+                );
             }
 
             if ($inboundData && ! $fresh['inbound']) {
-                return back()->with('error', 'O voo de volta selecionado não está mais disponível. Por favor, faça uma nova busca.');
+                return $this->redirectUnavailableFlight(
+                    $flightSearch,
+                    'O voo de volta selecionado não está mais disponível.'
+                );
             }
 
             $outboundData = $this->sanitizeFlight($fresh['outbound']);
@@ -491,6 +497,35 @@ class FlightSearchController extends Controller
         }
 
         return $this->createOrderFromFlights($flightSearch, $outboundData, $inboundData, $request->userAgent(), $meta);
+    }
+
+    private function redirectUnavailableFlight(FlightSearch $flightSearch, string $message)
+    {
+        $this->vdpService->forgetSearchCaches($this->searchParamsFromModel($flightSearch));
+
+        return back()->with('search_refresh_modal', [
+            'message' => $message,
+        ]);
+    }
+
+    private function searchParamsFromModel(FlightSearch $flightSearch): array
+    {
+        return [
+            'departure' => $flightSearch->departure_iata,
+            'arrival' => $flightSearch->arrival_iata,
+            'outbound_date' => $flightSearch->outbound_date instanceof \Carbon\Carbon
+                ? $flightSearch->outbound_date->format('Y-m-d')
+                : $flightSearch->outbound_date,
+            'inbound_date' => $flightSearch->inbound_date
+                ? ($flightSearch->inbound_date instanceof \Carbon\Carbon
+                    ? $flightSearch->inbound_date->format('Y-m-d')
+                    : $flightSearch->inbound_date)
+                : null,
+            'adults' => $flightSearch->adults,
+            'children' => $flightSearch->children,
+            'infants' => $flightSearch->infants,
+            'cabin' => $flightSearch->cabin,
+        ];
     }
 
     private function createOrderFromFlights(FlightSearch $flightSearch, array $outboundData, ?array $inboundData, ?string $userAgent = null, array $meta = [])

@@ -5,6 +5,7 @@
 @section('container_class', 'max-w-6xl')
 
 @section('content')
+@php($refreshSearchModal = session('search_refresh_modal'))
 <div class="space-y-6 pb-8">
     @if(session('error'))
         <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium">
@@ -223,6 +224,24 @@
         <span id="mobile-btn-filter-count" class="hidden absolute -top-1 -right-1 text-[10px] font-bold text-white bg-red-500 rounded-full w-5 h-5 flex items-center justify-center leading-none">0</span>
     </button>
 
+    @if($refreshSearchModal)
+    <div id="refresh-search-modal" class="fixed inset-0 z-[70] flex items-center justify-center px-4 py-8 bg-gray-900/50 backdrop-blur-sm">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 text-center animate-fadeInUp">
+            <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            </div>
+            <h2 class="text-lg font-bold text-gray-900 mb-2">Disponibilidade alterada</h2>
+            <p class="text-sm text-gray-600 leading-relaxed">
+                {{ $refreshSearchModal['message'] ?? 'O voo selecionado não está mais disponível.' }}
+                Vamos refazer a busca com resultados atualizados.
+            </p>
+            <button type="button" id="refresh-search-btn" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm">
+                Nova busca
+            </button>
+        </div>
+    </div>
+    @endif
+
     {{-- Modal filtros mobile --}}
     <div id="mobile-filters" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="toggleMobileFilters()"></div>
@@ -359,6 +378,7 @@
         maxInstallments: @json($maxInstallments),
         selectUrl: @json(route('search.select')),
         csrfToken: @json(csrf_token()),
+        refreshRequired: @json((bool) $refreshSearchModal),
         obDateFormatted: @json(isset($params['outbound_date']) ? \Carbon\Carbon::parse($params['outbound_date'])->translatedFormat('D, d/m/Y') : ''),
         ibDateFormatted: @json(!empty($params['inbound_date']) ? \Carbon\Carbon::parse($params['inbound_date'])->translatedFormat('D, d/m/Y') : ''),
         totalPax: {{ ($params['adults'] ?? 1) + ($params['children'] ?? 0) }}
@@ -376,6 +396,7 @@
     var firstResultsRendered = false;
     var renderTimer = null;
     var knownGroupKeys = {};
+    var searchStarted = false;
 
     // --- Toggle inline search form ---
     var toggleBtn = document.getElementById('toggle-search-form');
@@ -1220,7 +1241,44 @@
     // ========================================
     // PROGRESSIVE FETCH
     // ========================================
-    function startFetching() {
+    function resetSearchUi() {
+        allOutbound = [];
+        allInbound = [];
+        patriaOutbound = [];
+        patriaInbound = [];
+        groupsData = [];
+        providerStatus = {};
+        currentPage = 1;
+        firstResultsRendered = false;
+        knownGroupKeys = {};
+        if (renderTimer) {
+            clearTimeout(renderTimer);
+            renderTimer = null;
+        }
+
+        document.getElementById('results-count').textContent = 'Buscando...';
+        document.getElementById('combinations-list').innerHTML = '';
+        document.getElementById('no-results-msg').classList.add('hidden');
+        document.getElementById('load-more-wrap').style.display = 'none';
+
+        var bar = document.getElementById('search-progress');
+        var fill = document.getElementById('progress-fill');
+        var text = document.getElementById('progress-text');
+        var spinner = document.getElementById('progress-spinner');
+        bar.style.display = '';
+        bar.style.opacity = '1';
+        bar.style.transition = '';
+        fill.classList.remove('bg-emerald-500');
+        fill.classList.add('bg-blue-600');
+        fill.style.width = '0%';
+        text.textContent = 'Buscando os melhores voos...';
+        spinner.innerHTML = '<svg class="animate-spin w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>';
+    }
+
+    function startFetching(forceFresh) {
+        if (searchStarted) return;
+        searchStarted = true;
+
         CONFIG.providerSlots.forEach(function(slot) {
             providerStatus[slot.key] = 'loading';
         });
@@ -1236,6 +1294,7 @@
             cabin: CONFIG.params.cabin
         };
         if (CONFIG.params.inbound_date) baseParams.inbound_date = CONFIG.params.inbound_date;
+        if (forceFresh) baseParams._refresh = Date.now();
 
         var promises = CONFIG.providerSlots.map(function(slot) {
             var qs = new URLSearchParams(baseParams);
@@ -1449,7 +1508,21 @@
     // INIT
     // ========================================
     bindFilterEvents();
-    startFetching();
+    if (CONFIG.refreshRequired) {
+        document.body.classList.add('overflow-hidden');
+        var refreshModal = document.getElementById('refresh-search-modal');
+        var refreshBtn = document.getElementById('refresh-search-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                if (refreshModal) refreshModal.remove();
+                document.body.classList.remove('overflow-hidden');
+                resetSearchUi();
+                startFetching(true);
+            });
+        }
+    } else {
+        startFetching(false);
+    }
 })();
 </script>
 @endpush

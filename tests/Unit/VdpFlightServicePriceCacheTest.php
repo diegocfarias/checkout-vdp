@@ -155,6 +155,49 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $this->assertSame('20.000', $merged[0]['price_miles']);
     }
 
+    public function test_forget_search_caches_clears_provider_search_and_direction_prices(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_version' => 'test',
+            'provider_gol' => 'bds_crawler',
+            'provider_azul' => 'vdp',
+            'provider_latam' => 'latam_crawler',
+            'bds_patria_enabled' => true,
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $params = [
+            'departure' => 'RIO',
+            'arrival' => 'FOR',
+            'outbound_date' => '2026-05-24',
+            'inbound_date' => '2026-05-30',
+            'adults' => 1,
+            'children' => 0,
+            'infants' => 0,
+            'cabin' => 'EC',
+        ];
+        $providerParams = ['cia' => 'all', ...$params];
+        $fullSearchParams = $providerParams;
+        unset($fullSearchParams['cia']);
+
+        $providerKey = 'vdp_prov:test:bds_crawler:gol:' . md5(json_encode($providerParams));
+        $patriaKey = 'vdp_prov:test:bds_crawler:patria:' . md5(json_encode($providerParams));
+        $searchKey = 'vdp_search:test:' . md5(json_encode($providerParams));
+        $legacySearchKey = 'vdp_search:test:' . md5(json_encode($fullSearchParams));
+        $outboundKey = $this->directionKey($service, 'RIO', 'FOR', '2026-05-24', $params);
+        $inboundKey = $this->directionKey($service, 'FOR', 'RIO', '2026-05-30', $params);
+
+        foreach ([$providerKey, $patriaKey, $searchKey, $legacySearchKey, $outboundKey, $inboundKey] as $key) {
+            Cache::put($key, ['cached' => true], now()->addMinutes(30));
+        }
+
+        $service->forgetSearchCaches($params);
+
+        foreach ([$providerKey, $patriaKey, $searchKey, $legacySearchKey, $outboundKey, $inboundKey] as $key) {
+            $this->assertFalse(Cache::has($key));
+        }
+    }
+
     private function directionKey(VdpFlightService $service, string $departure, string $arrival, string $date, array $params): string
     {
         $method = new \ReflectionMethod($service, 'directionPriceKey');
