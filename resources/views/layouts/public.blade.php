@@ -253,6 +253,12 @@
     </script>
 
     <main class="flex-1 @yield('container_class', 'max-w-5xl') mx-auto w-full px-4 sm:px-6 py-8">
+        @if(session('global_error'))
+            <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium">
+                {{ session('global_error') }}
+            </div>
+        @endif
+
         @yield('content')
     </main>
 

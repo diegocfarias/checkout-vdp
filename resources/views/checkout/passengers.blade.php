@@ -880,6 +880,7 @@
                     const payerDoc = document.getElementById('payer_document')?.value || '';
                     const res = await fetch('{{ route("checkout.apply-coupon", $order->token) }}', {
                         method: 'POST',
+                        credentials: 'same-origin',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -888,7 +889,12 @@
                         body: JSON.stringify({ coupon_code: code, payer_document: payerDoc }),
                     });
 
-                    const data = await res.json();
+                    let data = null;
+                    try {
+                        data = await res.json();
+                    } catch (e) {
+                        data = { success: false, message: 'Não foi possível verificar o código.' };
+                    }
                     feedback.classList.remove('hidden');
 
                     if (data.success) {
