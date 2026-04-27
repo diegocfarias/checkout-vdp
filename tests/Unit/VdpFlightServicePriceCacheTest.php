@@ -121,6 +121,40 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $this->assertSame('2000.00', $service->calculateBasePrice($flight));
     }
 
+    public function test_patria_merge_keeps_miles_fare_over_cheaper_conventional_duplicate(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_miles_enabled' => true,
+            'pricing_pct_enabled' => true,
+            'pricing_miles_gol' => '20',
+            'pricing_pct_gol' => '0',
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $method = new \ReflectionMethod($service, 'mergeWithPatria');
+        $method->setAccessible(true);
+
+        $merged = $method->invoke($service, [[
+            'operator' => 'GOL',
+            'flight_number' => 'G3-1886',
+            'departure_time' => '10:00',
+            'price_money' => '1.000,00',
+            'price_miles' => '20.000',
+            'boarding_tax' => '50,00',
+        ]], [[
+            'operator' => 'PATRIA',
+            'flight_number' => 'G3-1886',
+            'departure_time' => '10:00',
+            'price_money' => '100,00',
+            'price_miles' => '0',
+            'boarding_tax' => '50,00',
+        ]]);
+
+        $this->assertCount(1, $merged);
+        $this->assertSame('GOL', $merged[0]['operator']);
+        $this->assertSame('20.000', $merged[0]['price_miles']);
+    }
+
     private function directionKey(VdpFlightService $service, string $departure, string $arrival, string $date, array $params): string
     {
         $method = new \ReflectionMethod($service, 'directionPriceKey');

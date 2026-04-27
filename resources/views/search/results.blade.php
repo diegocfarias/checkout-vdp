@@ -405,6 +405,11 @@
         return parseFloat(val) || 0;
     }
 
+    function parseMilesValue(val) {
+        if (!val) return 0;
+        return parseTaxValue(String(val).replace(/[^\d.,]/g, ''));
+    }
+
     function getTimePeriod(time) {
         var h = parseInt((time || '').substring(0, 2), 10) || 0;
         if (h < 6) return 'madrugada';
@@ -466,7 +471,12 @@
             if (!Number.isFinite(price) || price <= 0) return;
 
             var key = (f.flight_number || '') + '|' + (f.departure_time || '');
-            if (!best[key] || price < Number(best[key].calculated_price)) {
+            var hasMiles = parseMilesValue(f.price_miles) > 0;
+            var bestHasMiles = best[key] && parseMilesValue(best[key].price_miles) > 0;
+
+            if (!best[key]
+                || (hasMiles && !bestHasMiles)
+                || (hasMiles === bestHasMiles && price < Number(best[key].calculated_price))) {
                 best[key] = f;
             }
         });
@@ -488,7 +498,13 @@
         regular.forEach(function(rf) {
             var key = (rf.flight_number || '') + '|' + (rf.departure_time || '');
             if (idx[key]) {
-                merged.push(idx[key].calculated_price < rf.calculated_price ? idx[key] : rf);
+                var regularHasMiles = parseMilesValue(rf.price_miles) > 0;
+                var patriaHasMiles = parseMilesValue(idx[key].price_miles) > 0;
+                if (regularHasMiles !== patriaHasMiles) {
+                    merged.push(regularHasMiles ? rf : idx[key]);
+                } else {
+                    merged.push(idx[key].calculated_price < rf.calculated_price ? idx[key] : rf);
+                }
                 used[key] = true;
             } else {
                 merged.push(rf);

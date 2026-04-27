@@ -561,7 +561,19 @@ class VdpFlightService
             $key = ($rf['flight_number'] ?? '') . '|' . ($rf['departure_time'] ?? '');
             if (isset($patriaIndex[$key])) {
                 $regularPrice = $this->calculateFlightPrice($rf);
-                if ($patriaIndex[$key]['price'] < $regularPrice) {
+                $regularHasMiles = $this->parseMilesValue($rf['price_miles'] ?? null) > 0;
+                $patriaHasMiles = $this->parseMilesValue($patriaIndex[$key]['flight']['price_miles'] ?? null) > 0;
+
+                if ($regularHasMiles && ! $patriaHasMiles) {
+                    $merged[] = $rf;
+                } elseif (! $regularHasMiles && $patriaHasMiles) {
+                    $merged[] = $patriaIndex[$key]['flight'];
+                    Log::debug('Patria merge: substituindo voo por tarifa com milhas', [
+                        'flight' => $key,
+                        'regular_price' => round($regularPrice, 2),
+                        'patria_price' => round($patriaIndex[$key]['price'], 2),
+                    ]);
+                } elseif ($patriaIndex[$key]['price'] < $regularPrice) {
                     $merged[] = $patriaIndex[$key]['flight'];
                     Log::debug('Patria merge: substituindo voo', [
                         'flight' => $key,
