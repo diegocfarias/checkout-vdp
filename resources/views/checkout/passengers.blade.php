@@ -895,6 +895,9 @@
                     } catch (e) {
                         data = { success: false, message: 'Não foi possível verificar o código.' };
                     }
+                    if (!res.ok && (!data.message || data.message === 'Server Error')) {
+                        data.message = 'Não foi possível validar o código agora. Tente novamente em instantes.';
+                    }
                     feedback.classList.remove('hidden');
 
                     if (data.success) {

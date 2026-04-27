@@ -432,77 +432,95 @@ class OrderCheckoutController extends Controller
 
     public function applyCoupon(Request $request, string $token)
     {
-        $order = Order::with('flights')
-            ->where('token', $token)
-            ->pending()
-            ->notExpired()
-            ->first();
+        try {
+            $order = Order::with('flights')
+                ->where('token', $token)
+                ->pending()
+                ->notExpired()
+                ->first();
 
-        if (! $order) {
-            return response()->json(['success' => false, 'message' => 'Pedido não encontrado.'], 404);
-        }
-
-        $code = strtoupper(trim($request->input('coupon_code', '')));
-
-        if (empty($code)) {
-            return response()->json(['success' => false, 'message' => 'Informe o código do cupom ou indicação.']);
-        }
-
-        $resolved = $this->referralService->resolveCode($code);
-
-        if (! $resolved) {
-            return response()->json(['success' => false, 'message' => 'Código inválido ou expirado.']);
-        }
-
-        $baseTotal = $this->calculateBaseTotal($order);
-
-        if ($resolved['type'] === 'referral') {
-            $affiliate = $resolved['model'];
-            $document = $request->input('payer_document', '');
-            $validation = $this->referralService->validateReferral($affiliate, $document);
-
-            if (! $validation['valid']) {
-                return response()->json(['success' => false, 'message' => $validation['error']]);
+            if (! $order) {
+                return response()->json(['success' => false, 'message' => 'Pedido não encontrado.'], 404);
             }
 
-            $preview = $this->referralService->previewReferralDiscount($affiliate, $baseTotal);
+            $code = strtoupper(trim((string) $request->input('coupon_code', '')));
+
+            if ($code === '') {
+                return response()->json(['success' => false, 'message' => 'Informe o código do cupom ou indicação.']);
+            }
+
+            $resolved = $this->referralService->resolveCode($code);
+
+            if (! $resolved) {
+                return response()->json(['success' => false, 'message' => 'Código inválido ou expirado.']);
+            }
+
+            $baseTotal = $this->calculateBaseTotal($order);
+
+            if (($resolved['type'] ?? null) === 'referral' && isset($resolved['model']) && $resolved['model'] instanceof Customer) {
+                $affiliate = $resolved['model'];
+                $document = (string) $request->input('payer_document', '');
+                $validation = $this->referralService->validateReferral($affiliate, $document);
+
+                if (! ($validation['valid'] ?? false)) {
+                    return response()->json(['success' => false, 'message' => $validation['error'] ?? 'Código inválido ou expirado.']);
+                }
+
+                $preview = $this->referralService->previewReferralDiscount($affiliate, $baseTotal);
+
+                return response()->json([
+                    'success' => true,
+                    'type' => 'referral',
+                    'coupon_code' => $code,
+                    'discount_amount' => $preview['discount_amount'],
+                    'new_total' => $preview['new_total'],
+                    'cumulative_with_pix' => (bool) Setting::get('referral_cumulative_with_pix', true),
+                    'message' => 'Desconto de indicação de ' . $preview['affiliate_name'] . ' aplicado!',
+                ]);
+            }
+
+            if (($resolved['type'] ?? null) !== 'coupon' || ! isset($resolved['model']) || ! ($resolved['model'] instanceof Coupon)) {
+                return response()->json(['success' => false, 'message' => 'Código inválido ou expirado.']);
+            }
+
+            /** @var Coupon $coupon */
+            $coupon = $resolved['model'];
+
+            if (! $coupon->isValid()) {
+                return response()->json(['success' => false, 'message' => 'Cupom inválido ou expirado.']);
+            }
+
+            $document = (string) $request->input('payer_document', '');
+            if (! $coupon->isAvailableForDocument($document)) {
+                $customerDoc = auth('customer')->user()?->document;
+                if (! $coupon->isAvailableForDocument($customerDoc)) {
+                    return response()->json(['success' => false, 'message' => 'Este cupom não está disponível para você.']);
+                }
+            }
+
+            $discount = $coupon->calculateDiscount($baseTotal);
 
             return response()->json([
                 'success' => true,
-                'type' => 'referral',
-                'coupon_code' => $code,
-                'discount_amount' => $preview['discount_amount'],
-                'new_total' => $preview['new_total'],
-                'cumulative_with_pix' => (bool) Setting::get('referral_cumulative_with_pix', true),
-                'message' => 'Desconto de indicação de ' . $preview['affiliate_name'] . ' aplicado!',
+                'type' => 'coupon',
+                'coupon_code' => $coupon->code,
+                'discount_amount' => round($discount, 2),
+                'new_total' => round($baseTotal - $discount, 2),
+                'cumulative_with_pix' => (bool) $coupon->cumulative_with_pix,
+                'message' => 'Cupom aplicado!',
             ]);
+        } catch (\Throwable $e) {
+            Log::error('Checkout: falha ao validar cupom/indicacao', [
+                'token' => $token,
+                'coupon_code' => (string) $request->input('coupon_code', ''),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Não foi possível validar o código agora. Tente novamente em instantes.',
+            ], 500);
         }
-
-        $coupon = $resolved['model'];
-
-        if (! $coupon->isValid()) {
-            return response()->json(['success' => false, 'message' => 'Cupom inválido ou expirado.']);
-        }
-
-        $document = $request->input('payer_document');
-        if (! $coupon->isAvailableForDocument($document)) {
-            $customerDoc = auth('customer')->user()?->document;
-            if (! $coupon->isAvailableForDocument($customerDoc)) {
-                return response()->json(['success' => false, 'message' => 'Este cupom não está disponível para você.']);
-            }
-        }
-
-        $discount = $coupon->calculateDiscount($baseTotal);
-
-        return response()->json([
-            'success' => true,
-            'type' => 'coupon',
-            'coupon_code' => $coupon->code,
-            'discount_amount' => round($discount, 2),
-            'new_total' => round($baseTotal - $discount, 2),
-            'cumulative_with_pix' => (bool) $coupon->cumulative_with_pix,
-            'message' => 'Cupom aplicado!',
-        ]);
     }
 
     private function calculateBaseTotal(Order $order): float

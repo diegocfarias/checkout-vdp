@@ -9,6 +9,7 @@ use App\Models\Referral;
 use App\Models\Setting;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ReferralService
 {
@@ -17,10 +18,31 @@ class ReferralService
      */
     public function resolveCode(string $code): ?array
     {
-        $code = strtoupper(trim($code));
+        $code = strtoupper(trim(preg_replace('/\s+/', '', $code)));
 
         if (! $code) {
             return null;
+        }
+
+        $referralCandidates = [$code];
+        if (str_starts_with($code, 'IND-')) {
+            $suffix = substr($code, 4);
+            if ($suffix !== '') {
+                $referralCandidates[] = $suffix;
+            }
+        } else {
+            $referralCandidates[] = 'IND-' . $code;
+        }
+        $referralCandidates = array_values(array_unique($referralCandidates));
+
+        if (str_starts_with($code, 'IND-')) {
+            $affiliate = Customer::whereIn('referral_code', $referralCandidates)
+                ->where('is_affiliate', true)
+                ->first();
+
+            if ($affiliate) {
+                return ['type' => 'referral', 'model' => $affiliate];
+            }
         }
 
         $coupon = Coupon::where('code', $code)->first();
@@ -28,7 +50,7 @@ class ReferralService
             return ['type' => 'coupon', 'model' => $coupon];
         }
 
-        $affiliate = Customer::where('referral_code', $code)
+        $affiliate = Customer::whereIn('referral_code', $referralCandidates)
             ->where('is_affiliate', true)
             ->first();
 
@@ -282,12 +304,18 @@ class ReferralService
     {
         $rates = $this->getEffectiveRates($affiliate);
         $discount = round($baseTotal * $rates['discount_pct'] / 100, 2);
+        $affiliateFirstName = (string) Str::of((string) ($affiliate->name ?? 'Afiliado'))
+            ->trim()
+            ->before(' ');
+        if ($affiliateFirstName === '') {
+            $affiliateFirstName = 'Afiliado';
+        }
 
         return [
             'discount_pct' => $rates['discount_pct'],
             'discount_amount' => $discount,
             'new_total' => round($baseTotal - $discount, 2),
-            'affiliate_name' => explode(' ', trim($affiliate->name))[0],
+            'affiliate_name' => $affiliateFirstName,
         ];
     }
 }
