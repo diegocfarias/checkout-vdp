@@ -228,7 +228,11 @@ class VdpFlightService
                 }
 
                 if ($minOb !== null) {
-                    if (! empty($params['inbound_date']) && ! empty($inbound)) {
+                    if (empty($params['inbound_date'])) {
+                        return round($minOb, 2);
+                    }
+
+                    if (! empty($inbound)) {
                         $minIb = null;
                         foreach ($inbound as $ib) {
                             $price = $this->calculateFlightPrice($ib);
@@ -236,25 +240,38 @@ class VdpFlightService
                                 $minIb = $price;
                             }
                         }
+
                         if ($minIb !== null) {
                             return round($minOb + $minIb, 2);
                         }
                     }
-
-                    return round($minOb, 2);
                 }
             }
         }
 
-        if (! empty($params['outbound_date'])) {
-            $dirKey = $this->directionPriceKey($pricingVersion, $params['departure'] ?? '', $params['arrival'] ?? '', $params['outbound_date'], [
-                'adults' => $params['adults'] ?? 1,
-                'children' => $params['children'] ?? 0,
-                'infants' => $params['infants'] ?? 0,
-                'cabin' => $params['cabin'] ?? 'EC',
-            ]);
+        $basePax = [
+            'adults' => $params['adults'] ?? 1,
+            'children' => $params['children'] ?? 0,
+            'infants' => $params['infants'] ?? 0,
+            'cabin' => $params['cabin'] ?? 'EC',
+        ];
 
-            return Cache::get($dirKey);
+        if (! empty($params['outbound_date'])) {
+            $outboundKey = $this->directionPriceKey($pricingVersion, $params['departure'] ?? '', $params['arrival'] ?? '', $params['outbound_date'], $basePax);
+            $outboundPrice = Cache::get($outboundKey);
+
+            if (! empty($params['inbound_date'])) {
+                $inboundKey = $this->directionPriceKey($pricingVersion, $params['arrival'] ?? '', $params['departure'] ?? '', $params['inbound_date'], $basePax);
+                $inboundPrice = Cache::get($inboundKey);
+
+                if ($outboundPrice !== null && $inboundPrice !== null) {
+                    return round((float) $outboundPrice + (float) $inboundPrice, 2);
+                }
+
+                return null;
+            }
+
+            return $outboundPrice;
         }
 
         return null;

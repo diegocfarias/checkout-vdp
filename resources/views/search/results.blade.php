@@ -499,7 +499,11 @@
     // ========================================
     // BUILD GROUPS (port of PHP buildGroups)
     // ========================================
-    function buildGroups(outbound, inbound) {
+    function buildGroups(outbound, inbound, requireInbound) {
+        if (requireInbound && !inbound.length) {
+            return [];
+        }
+
         var obByCiaPrice = {};
         outbound.forEach(function(ob) {
             var cia = displayCia(ob.operator, ob.flight_number);
@@ -1364,7 +1368,7 @@
 
         var selState = saveSelectionState();
 
-        groupsData = buildGroups(ob, CONFIG.isRoundtrip ? ib : []);
+        groupsData = buildGroups(ob, CONFIG.isRoundtrip ? ib : [], CONFIG.isRoundtrip);
         groupsData = stableSort(groupsData);
 
         if (!firstResultsRendered && groupsData.length > 0) {

@@ -404,6 +404,10 @@ class FlightSearchController extends Controller
         $inboundData = $request->input('inbound') ? json_decode($request->input('inbound'), true) : null;
         $confirmed = $request->input('confirmed') === '1';
 
+        if ($flightSearch->trip_type === 'roundtrip' && ! $inboundData) {
+            return back()->with('error', 'Selecione também um voo de volta para continuar com a compra de ida e volta.');
+        }
+
         $meta = [
             'ob_provider' => $request->input('ob_provider', ''),
             'ob_pricing_type' => $request->input('ob_pricing_type', ''),
