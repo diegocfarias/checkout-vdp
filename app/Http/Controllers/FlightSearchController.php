@@ -567,8 +567,9 @@ class FlightSearchController extends Controller
         if (str_starts_with($fn, 'G3')) return 'GOL';
         if (str_starts_with($fn, 'AD')) return 'AZUL';
         if (str_starts_with($fn, 'LA') || str_starts_with($fn, 'JJ')) return 'LATAM';
+        if (preg_match('/^[A-Z0-9]{2}/', $fn, $m)) return $m[0];
 
-        return $operator;
+        return 'CIA';
     }
 
     private function providerLabel(string $provider, string $airlines): string

@@ -48,6 +48,19 @@
     $ibTax = $hasInbound ? $parseTax($ibFlights[0]['boarding_tax'] ?? '0') : 0;
     $totalTax = round($obTax + $ibTax, 2);
     $basePrice = round($totalPrice - $totalTax, 2);
+
+    $displayCia = function($operator, $flightNumber) {
+        $op = strtoupper(trim((string) $operator));
+        if ($op !== 'PATRIA') return $op;
+
+        $fn = strtoupper(trim((string) $flightNumber));
+        if (str_starts_with($fn, 'G3')) return 'GOL';
+        if (str_starts_with($fn, 'AD')) return 'AZUL';
+        if (str_starts_with($fn, 'LA') || str_starts_with($fn, 'JJ')) return 'LATAM';
+        if (preg_match('/^[A-Z0-9]{2}/', $fn, $m)) return $m[0];
+
+        return 'CIA';
+    };
 @endphp
 
 <div class="combination-card bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 animate-fadeIn"
@@ -112,7 +125,7 @@
                             $conns = $flight['connection'] ?? [];
                             $isDirect = !is_array($conns) || count($conns) <= 1;
                             $connCount = is_array($conns) ? max(0, count($conns) - 1) : 0;
-                            $flightCia = strtoupper($flight['operator'] ?? '');
+                            $flightCia = $displayCia($flight['operator'] ?? '', $flight['flight_number'] ?? '');
                             $hiddenOb = $fi >= $collapseAfter;
                         @endphp
                         <div class="{{ $hiddenOb ? 'collapsed-ob-' . $groupIdx . ' hidden' : '' }}">
@@ -209,7 +222,7 @@
                                 $conns = $flight['connection'] ?? [];
                                 $isDirect = !is_array($conns) || count($conns) <= 1;
                                 $connCount = is_array($conns) ? max(0, count($conns) - 1) : 0;
-                                $flightCia = strtoupper($flight['operator'] ?? '');
+                                $flightCia = $displayCia($flight['operator'] ?? '', $flight['flight_number'] ?? '');
                                 $hiddenIb = $fi >= $collapseAfter;
                             @endphp
                             <div class="{{ $hiddenIb ? 'collapsed-ib-' . $groupIdx . ' hidden' : '' }}">

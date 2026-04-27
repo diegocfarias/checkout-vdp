@@ -452,7 +452,8 @@
         if (fn.indexOf('G3') === 0) return 'GOL';
         if (fn.indexOf('AD') === 0) return 'AZUL';
         if (fn.indexOf('LA') === 0 || fn.indexOf('JJ') === 0) return 'LATAM';
-        return op;
+        var code = fn.match(/^[A-Z0-9]{2}/);
+        return code ? code[0] : 'CIA';
     }
 
     // ========================================
@@ -883,7 +884,10 @@
     function updateAirlineFilters() {
         var airlines = {};
         groupsData.forEach(function(g) {
-            (g.airlines || []).forEach(function(a) { airlines[a.toUpperCase()] = true; });
+            (g.airlines || []).forEach(function(a) {
+                a = (a || '').toUpperCase();
+                if (a && a !== 'PATRIA') airlines[a] = true;
+            });
         });
         var list = Object.keys(airlines).sort();
 
