@@ -1004,7 +1004,7 @@ class VdpFlightService
      */
     public function calculateFlightPrice(array $flight): float
     {
-        $cia = $this->normalizeCia($flight['operator'] ?? '');
+        $cia = $this->resolvePricingCia($flight);
         $tax = $this->parseMoneyFloat($flight['boarding_tax'] ?? '0');
 
         $milesEnabled = Setting::get('pricing_miles_enabled', false);
@@ -1049,7 +1049,7 @@ class VdpFlightService
      */
     public function calculateBasePrice(array $flight): string
     {
-        $cia = $this->normalizeCia($flight['operator'] ?? '');
+        $cia = $this->resolvePricingCia($flight);
 
         $milesEnabled = Setting::get('pricing_miles_enabled', false);
         $pctEnabled = Setting::get('pricing_pct_enabled', false);
@@ -1111,6 +1111,27 @@ class VdpFlightService
         ];
 
         return $map[strtolower(trim($operator))] ?? strtolower(trim($operator));
+    }
+
+    private function resolvePricingCia(array $flight): string
+    {
+        $operator = strtoupper(trim((string) ($flight['operator'] ?? '')));
+
+        if ($operator === 'PATRIA') {
+            $flightNumber = strtoupper(trim((string) ($flight['flight_number'] ?? '')));
+
+            if (str_starts_with($flightNumber, 'G3')) {
+                return 'gol';
+            }
+            if (str_starts_with($flightNumber, 'AD')) {
+                return 'azul';
+            }
+            if (str_starts_with($flightNumber, 'LA') || str_starts_with($flightNumber, 'JJ')) {
+                return 'latam';
+            }
+        }
+
+        return $this->normalizeCia($flight['operator'] ?? '');
     }
 
     private function mapFlightData(array $flight): array
