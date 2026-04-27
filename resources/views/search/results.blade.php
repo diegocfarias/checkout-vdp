@@ -461,8 +461,11 @@
     function deduplicateFlights(flights) {
         var best = {};
         flights.forEach(function(f) {
+            var price = Number(f.calculated_price);
+            if (!Number.isFinite(price) || price <= 0) return;
+
             var key = (f.flight_number || '') + '|' + (f.departure_time || '');
-            if (!best[key] || f.calculated_price < best[key].calculated_price) {
+            if (!best[key] || price < Number(best[key].calculated_price)) {
                 best[key] = f;
             }
         });
@@ -507,7 +510,9 @@
         var obByCiaPrice = {};
         outbound.forEach(function(ob) {
             var cia = displayCia(ob.operator, ob.flight_number);
-            var price = ob.calculated_price;
+            var price = Number(ob.calculated_price);
+            if (!Number.isFinite(price) || price <= 0) return;
+
             var key = cia + '|' + price.toFixed(2);
             if (!obByCiaPrice[key]) obByCiaPrice[key] = { cia: cia, price: price, flights: [] };
             obByCiaPrice[key].flights.push(ob);
@@ -535,7 +540,9 @@
         var ibByCiaPrice = {};
         inbound.forEach(function(ib) {
             var cia = displayCia(ib.operator, ib.flight_number);
-            var price = ib.calculated_price;
+            var price = Number(ib.calculated_price);
+            if (!Number.isFinite(price) || price <= 0) return;
+
             var key = cia + '|' + price.toFixed(2);
             if (!ibByCiaPrice[key]) ibByCiaPrice[key] = { cia: cia, price: price, flights: [] };
             ibByCiaPrice[key].flights.push(ib);

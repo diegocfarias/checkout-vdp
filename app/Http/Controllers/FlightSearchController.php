@@ -225,9 +225,11 @@ class FlightSearchController extends Controller
             return $flight;
         };
 
+        $validPricedFlight = fn (array $flight): bool => ($flight['calculated_price'] ?? 0) > 0;
+
         return response()->json([
-            'outbound' => array_values(array_map($addMeta, $results['outbound'] ?? [])),
-            'inbound' => array_values(array_map($addMeta, $results['inbound'] ?? [])),
+            'outbound' => array_values(array_filter(array_map($addMeta, $results['outbound'] ?? []), $validPricedFlight)),
+            'inbound' => array_values(array_filter(array_map($addMeta, $results['inbound'] ?? []), $validPricedFlight)),
         ]);
     }
 
@@ -406,6 +408,12 @@ class FlightSearchController extends Controller
 
         if ($flightSearch->trip_type === 'roundtrip' && ! $inboundData) {
             return back()->with('error', 'Selecione também um voo de volta para continuar com a compra de ida e volta.');
+        }
+
+        $outboundPrice = round($this->parseFlightPrice($outboundData), 2);
+        $inboundPrice = $inboundData ? round($this->parseFlightPrice($inboundData), 2) : null;
+        if ($outboundPrice <= 0 || ($inboundData && $inboundPrice <= 0)) {
+            return back()->with('error', 'O voo selecionado está sem preço válido. Por favor, escolha outra opção.');
         }
 
         $meta = [
