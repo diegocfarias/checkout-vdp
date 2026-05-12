@@ -425,7 +425,7 @@
                                             $totalComJuros = $orderTotal * (1 + $rate / 100);
                                             $valorParcela = $totalComJuros / $i;
                                         @endphp
-                                        <option value="{{ $i }}" data-total="{{ number_format($totalComJuros, 2, '.', '') }}" {{ old('installments', 1) == $i ? 'selected' : '' }}>
+                                        <option value="{{ $i }}" data-total="{{ number_format($totalComJuros, 2, '.', '') }}" data-rate="{{ number_format($rate, 6, '.', '') }}" {{ old('installments', 1) == $i ? 'selected' : '' }}>
                                             {{ $i }}x de R$ {{ number_format($valorParcela, 2, ',', '.') }}{{ $rate > 0 ? ' com juros' : ' sem juros' }}
                                         </option>
                                     @endfor
@@ -731,6 +731,33 @@
         const pixDiscountPct = {{ $pixDiscount ?? 0 }};
         const walletBalance = {{ $walletBalance ?? 0 }};
 
+        function getInstallmentRate(option, baseTotal) {
+            if (!option) return 0;
+
+            const dataRate = parseFloat(option.dataset.rate || 0);
+            if (!Number.isNaN(dataRate)) return dataRate;
+
+            const dataTotal = parseFloat(option.dataset.total || 0);
+            if (baseTotal > 0 && dataTotal > 0) return ((dataTotal / baseTotal) - 1) * 100;
+
+            return 0;
+        }
+
+        function atualizarOpcoesParcelas(totalWithoutInterest, baseTotal, fmt) {
+            const installmentsSelect = document.getElementById('installments');
+            if (!installmentsSelect) return;
+
+            Array.from(installmentsSelect.options).forEach(option => {
+                const installments = parseInt(option.value || '1', 10);
+                const rate = getInstallmentRate(option, baseTotal);
+                const totalWithInterest = totalWithoutInterest * (1 + rate / 100);
+                const installmentAmount = installments > 0 ? totalWithInterest / installments : totalWithInterest;
+
+                option.dataset.currentTotal = totalWithInterest.toFixed(2);
+                option.textContent = installments + 'x de ' + fmt(Math.max(installmentAmount, 0)) + (rate > 0 ? ' com juros' : ' sem juros');
+            });
+        }
+
         function atualizarTotalFooter() {
             const footerTotal = document.getElementById('footer-total');
             const modalTotal = document.getElementById('modal-total');
@@ -743,7 +770,7 @@
             const modalWalletRow = document.getElementById('modal-wallet-row');
             const modalWalletValor = document.getElementById('modal-wallet-valor');
             const baseTotal = parseFloat(footerTotal.dataset.base || 0);
-            const totalComDesconto = baseTotal - appliedDiscount;
+            const totalComDesconto = Math.max(baseTotal - appliedDiscount, 0);
             const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';
             const isPix = document.querySelector('input[name="payment_method"]:checked')?.value === 'pix';
             const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -760,7 +787,8 @@
             if (walletToggle && walletToggle.checked && walletBalance > 0) {
                 walletUsed = Math.min(walletBalance, totalComDesconto);
             }
-            const totalAfterWallet = totalComDesconto - walletUsed;
+            const totalAfterWallet = Math.max(totalComDesconto - walletUsed, 0);
+            atualizarOpcoesParcelas(totalAfterWallet, baseTotal, fmt);
 
             if (walletUsed > 0) {
                 if (modalWalletRow) modalWalletRow.classList.remove('hidden');
@@ -804,9 +832,8 @@
 
             const installmentsSelect = document.getElementById('installments');
             const selectedOption = installmentsSelect?.options[installmentsSelect.selectedIndex];
-            const rateDataTotal = selectedOption?.dataset.total ? parseFloat(selectedOption.dataset.total) : baseTotal;
-            const rate = baseTotal > 0 ? (rateDataTotal / baseTotal) : 1;
-            const totalComJuros = totalAfterWallet * rate;
+            const rate = getInstallmentRate(selectedOption, baseTotal);
+            const totalComJuros = totalAfterWallet * (1 + rate / 100);
             const juros = totalComJuros - totalAfterWallet;
 
             footerTotal.textContent = fmt(Math.max(totalComJuros, 0));
