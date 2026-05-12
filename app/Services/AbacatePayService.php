@@ -43,7 +43,7 @@ class AbacatePayService implements PaymentGatewayInterface
             $firstPassenger = $order->passengers->first();
             if ($firstPassenger) {
                 $payload['customer'] = [
-                    'name' => trim($firstPassenger->first_name . ' ' . $firstPassenger->last_name),
+                    'name' => trim($firstPassenger->first_name.' '.$firstPassenger->last_name),
                     'cellphone' => $firstPassenger->phone ?? '',
                     'email' => $firstPassenger->email ?? '',
                     'taxId' => $firstPassenger->document ?? '',
@@ -259,10 +259,11 @@ class AbacatePayService implements PaymentGatewayInterface
             return (int) round($cardData['total_with_interest'] * 100);
         }
 
+        $payingPax = max(1, (int) $order->total_adults + (int) $order->total_children);
         $total = 0;
+
         foreach ($order->flights as $flight) {
-            $total += (float) ($flight->money_price ?? 0);
-            $total += (float) ($flight->tax ?? 0);
+            $total += ((float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0)) * $payingPax;
         }
 
         return (int) round($total * 100);

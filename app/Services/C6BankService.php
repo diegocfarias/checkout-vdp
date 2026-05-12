@@ -11,8 +11,11 @@ use Illuminate\Support\Facades\Log;
 class C6BankService implements PaymentGatewayInterface
 {
     private string $baseUrl;
+
     private string $clientId;
+
     private string $clientSecret;
+
     private string $apiKey;
 
     public function __construct()
@@ -30,6 +33,7 @@ class C6BankService implements PaymentGatewayInterface
      */
     public function createCheckout(Order $order, ?string $paymentMethod = null, ?array $cardData = null): OrderPayment
     {
+        $paymentMethod = $paymentMethod ?? 'pix';
         $amount = isset($cardData['total_with_interest'])
             ? (float) $cardData['total_with_interest']
             : $this->calculateOrderAmount($order);
@@ -39,7 +43,7 @@ class C6BankService implements PaymentGatewayInterface
             'currency' => 'BRL',
             'reference' => $order->token,
             'description' => "Pedido de passagens #{$order->id}",
-            'return_url' => rtrim(config('app.url'), '/') . "/r/{$order->token}/payment-callback",
+            'return_url' => rtrim(config('app.url'), '/')."/r/{$order->token}/payment-callback",
         ];
 
         Log::info('C6Bank: criando checkout', [
@@ -73,6 +77,7 @@ class C6BankService implements PaymentGatewayInterface
             'status' => 'pending',
             'amount' => $amount,
             'currency' => 'BRL',
+            'payment_method' => $paymentMethod,
             'gateway_response' => $data,
         ];
 
@@ -142,6 +147,7 @@ class C6BankService implements PaymentGatewayInterface
 
         if (! $checkoutId) {
             $payment->update(['status' => 'cancelled']);
+
             return;
         }
 
@@ -202,11 +208,11 @@ class C6BankService implements PaymentGatewayInterface
 
     private function calculateOrderAmount(Order $order): float
     {
+        $payingPax = max(1, (int) $order->total_adults + (int) $order->total_children);
         $total = 0;
 
         foreach ($order->flights as $flight) {
-            $total += (float) ($flight->money_price ?? 0);
-            $total += (float) ($flight->tax ?? 0);
+            $total += ((float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0)) * $payingPax;
         }
 
         return round($total, 2);

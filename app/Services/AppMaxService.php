@@ -343,31 +343,7 @@ class AppMaxService implements PaymentGatewayInterface
     private function createOrder(Order $order, int $customerId, float $amountDecimal): int
     {
         $amountCents = $this->toCents($amountDecimal);
-
-        $payingPax = $order->total_adults + $order->total_children;
-        if ($payingPax < 1) $payingPax = 1;
-
-        $products = [];
-        foreach ($order->flights as $flight) {
-            $unitValue = $this->toCents((float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0));
-            $products[] = [
-                'sku' => 'FLIGHT-' . ($flight->id ?? $order->id),
-                'name' => trim(($flight->cia ?? 'Voo') . ' ' . ($flight->departure_location ?? '') . ' → ' . ($flight->arrival_location ?? '')),
-                'quantity' => $payingPax,
-                'unit_value' => $unitValue,
-                'type' => 'physical',
-            ];
-        }
-
-        if (empty($products)) {
-            $products[] = [
-                'sku' => 'ORDER-' . $order->id,
-                'name' => 'Passagem aérea #' . $order->id,
-                'quantity' => 1,
-                'unit_value' => $amountCents,
-                'type' => 'physical',
-            ];
-        }
+        $products = $this->buildProducts($order, $amountCents);
 
         $payload = [
             'customer_id' => $customerId,
@@ -639,14 +615,51 @@ class AppMaxService implements PaymentGatewayInterface
 
     private function calculateOrderAmount(Order $order): float
     {
+        $payingPax = $this->payingPax($order);
         $total = 0;
 
         foreach ($order->flights as $flight) {
-            $total += (float) ($flight->money_price ?? 0);
-            $total += (float) ($flight->tax ?? 0);
+            $total += ((float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0)) * $payingPax;
         }
 
         return round($total, 2);
+    }
+
+    private function buildProducts(Order $order, int $amountCents): array
+    {
+        $payingPax = $this->payingPax($order);
+        $products = [];
+        $grossCents = 0;
+
+        foreach ($order->flights as $flight) {
+            $unitValue = $this->toCents((float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0));
+            $grossCents += $unitValue * $payingPax;
+
+            $products[] = [
+                'sku' => 'FLIGHT-'.($flight->id ?? $order->id),
+                'name' => trim(($flight->cia ?? 'Voo').' '.($flight->departure_location ?? '').' -> '.($flight->arrival_location ?? '')),
+                'quantity' => $payingPax,
+                'unit_value' => $unitValue,
+                'type' => 'physical',
+            ];
+        }
+
+        if (! empty($products) && $grossCents === $amountCents) {
+            return $products;
+        }
+
+        return [[
+            'sku' => 'ORDER-'.$order->id,
+            'name' => 'Passagem aerea #'.$order->id,
+            'quantity' => 1,
+            'unit_value' => $amountCents,
+            'type' => 'physical',
+        ]];
+    }
+
+    private function payingPax(Order $order): int
+    {
+        return max(1, (int) $order->total_adults + (int) $order->total_children);
     }
 
     private function toCents(float $value): int
