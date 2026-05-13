@@ -1114,7 +1114,7 @@ class VdpFlightService
         return $flight;
     }
 
-    public function resolveBoardingTax(array $flight, mixed $fallback = '0'): string
+    public function resolveBoardingTax(array $flight, mixed $fallback = null): string
     {
         $candidate = $this->firstMoneyCandidate($flight, [
             ['boarding_tax'],
@@ -1141,7 +1141,26 @@ class VdpFlightService
             return $this->parseMoneyValue($candidate);
         }
 
-        return $this->parseMoneyValue($fallback);
+        if ($fallback !== null && $this->parseMoneyFloat($fallback) > 0) {
+            return $this->parseMoneyValue($fallback);
+        }
+
+        return $this->calculateFallbackBoardingTax($flight);
+    }
+
+    private function calculateFallbackBoardingTax(array $flight): string
+    {
+        $fallbackPct = (float) Setting::get('boarding_tax_fallback_pct', '10');
+        if ($fallbackPct <= 0) {
+            return '0';
+        }
+
+        $basePrice = (float) $this->calculateBasePrice($flight);
+        if ($basePrice <= 0) {
+            return '0';
+        }
+
+        return number_format($basePrice * ($fallbackPct / 100), 2, '.', '');
     }
 
     /**

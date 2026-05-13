@@ -29,6 +29,7 @@ class SettingsSeeder extends Seeder
             ['key' => 'pricing_pct_azul', 'value' => '80', 'type' => 'string'],
             ['key' => 'pricing_pct_gol', 'value' => '80', 'type' => 'string'],
             ['key' => 'pricing_pct_latam', 'value' => '80', 'type' => 'string'],
+            ['key' => 'boarding_tax_fallback_pct', 'value' => '10', 'type' => 'string'],
         ];
 
         foreach ($defaults as $setting) {

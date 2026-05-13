@@ -163,6 +163,27 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $this->assertSame('1234', $service->parseMoneyValue('1.234'));
     }
 
+    public function test_missing_boarding_tax_uses_configured_percentage_of_base_price(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_miles_enabled' => true,
+            'pricing_pct_enabled' => false,
+            'pricing_miles_latam' => '30.00',
+            'boarding_tax_fallback_pct' => '10',
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $flight = $service->normalizeFlightFields([
+            'operator' => 'LATAM',
+            'price_money' => '0,00',
+            'price_miles' => '21691',
+            'boarding_tax' => '0,00',
+        ]);
+
+        $this->assertSame('65.07', $flight['boarding_tax']);
+        $this->assertSame(715.80, round($service->calculateFlightPrice($flight), 2));
+    }
+
     public function test_patria_merge_keeps_miles_fare_over_cheaper_conventional_duplicate(): void
     {
         Cache::forever('app_settings', [

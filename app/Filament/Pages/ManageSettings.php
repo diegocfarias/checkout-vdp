@@ -14,7 +14,7 @@ use Filament\Schemas\Schema;
 
 class ManageSettings extends Page
 {
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static ?string $navigationLabel = 'Configurações';
 
@@ -90,6 +90,7 @@ class ManageSettings extends Page
             'pricing_pct_azul' => Setting::get('pricing_pct_azul', '80'),
             'pricing_pct_gol' => Setting::get('pricing_pct_gol', '80'),
             'pricing_pct_latam' => Setting::get('pricing_pct_latam', '80'),
+            'boarding_tax_fallback_pct' => Setting::get('boarding_tax_fallback_pct', '10'),
             'gateway_pix' => $gatewayPix,
             'pix_discount' => Setting::get('pix_discount', '0'),
             'gateway_credit_card' => $gatewayCc,
@@ -258,6 +259,16 @@ class ManageSettings extends Page
                             ->step(0.01)
                             ->placeholder('80')
                             ->visible(fn ($get) => $get('pricing_pct_enabled')),
+
+                        TextInput::make('boarding_tax_fallback_pct')
+                            ->label('Taxa interna fallback (%)')
+                            ->helperText('Usada quando a integração retorna taxa vazia ou zerada. Calcula sobre o valor base da passagem.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%')
+                            ->placeholder('10'),
                     ]),
 
                 Section::make('PIX')
@@ -505,7 +516,7 @@ class ManageSettings extends Page
             'pricing_miles_enabled', 'pricing_pct_enabled',
             'pricing_miles_azul', 'pricing_miles_gol', 'pricing_miles_latam',
             'pricing_pct_azul', 'pricing_pct_gol', 'pricing_pct_latam',
-            'pix_discount',
+            'boarding_tax_fallback_pct', 'pix_discount',
         ];
 
         $oldPricing = [];
@@ -521,6 +532,7 @@ class ManageSettings extends Page
         Setting::set('pricing_pct_azul', $data['pricing_pct_azul'] ?? '80', 'string');
         Setting::set('pricing_pct_gol', $data['pricing_pct_gol'] ?? '80', 'string');
         Setting::set('pricing_pct_latam', $data['pricing_pct_latam'] ?? '80', 'string');
+        Setting::set('boarding_tax_fallback_pct', $data['boarding_tax_fallback_pct'] ?? '10', 'string');
         Setting::set('gateway_pix', $data['gateway_pix'] ?? '', 'string');
         Setting::set('pix_discount', $data['pix_discount'] ?? '0', 'string');
         Setting::set('gateway_credit_card', $data['gateway_credit_card'] ?? '', 'string');
