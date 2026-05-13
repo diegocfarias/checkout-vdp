@@ -254,6 +254,10 @@ class SupportTicketResource extends Resource
                             ->label('')
                             ->html()
                             ->prose(),
+
+                        Infolists\Components\ViewEntry::make('initial_attachments')
+                            ->label('')
+                            ->view('filament.components.support-ticket-attachments'),
                     ]),
 
                 Section::make('Respostas')

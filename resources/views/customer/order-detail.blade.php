@@ -230,7 +230,7 @@
                         </button>
                     </div>
 
-                    <form method="POST" action="{{ route('customer.support.store') }}">
+                    <form method="POST" action="{{ route('customer.support.store') }}" enctype="multipart/form-data">
                         @csrf
                         <input type="hidden" name="order_id" value="{{ $order->id }}">
 
@@ -248,6 +248,13 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Mensagem</label>
                             <textarea name="message" rows="5" required maxlength="5000" placeholder="Descreva o que precisa..."
                                 class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Anexos</label>
+                            <input type="file" name="attachments[]" multiple
+                                class="block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
+                            <p class="text-xs text-gray-400 mt-1">Até 5 arquivos de 10 MB.</p>
                         </div>
 
                         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors text-sm">

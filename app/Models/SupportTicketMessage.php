@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SupportTicketMessage extends Model
 {
@@ -35,6 +36,11 @@ class SupportTicketMessage extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(SupportTicketAttachment::class);
     }
 
     public function getSenderNameAttribute(): string

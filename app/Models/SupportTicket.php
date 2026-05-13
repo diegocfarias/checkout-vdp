@@ -87,6 +87,17 @@ class SupportTicket extends Model
         return $this->hasMany(SupportTicketMessage::class);
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(SupportTicketAttachment::class);
+    }
+
+    public function initialAttachments(): HasMany
+    {
+        return $this->hasMany(SupportTicketAttachment::class)
+            ->whereNull('support_ticket_message_id');
+    }
+
     public function getSubjectLabelAttribute(): string
     {
         return self::SUBJECTS[$this->subject] ?? $this->subject;

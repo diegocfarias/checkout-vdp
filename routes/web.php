@@ -13,9 +13,10 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ChangeRequestController;
 use App\Http\Controllers\CustomerAreaController;
 use App\Http\Controllers\FlightSearchController;
-use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\OrderCheckoutController;
 use App\Http\Controllers\OrderTrackingController;
+use App\Http\Controllers\SupportTicketAttachmentController;
+use App\Http\Controllers\SupportTicketController;
 use App\Http\Middleware\EnsureCustomerIsActive;
 use App\Models\Order;
 use Illuminate\Support\Facades\Route;
@@ -135,6 +136,8 @@ Route::middleware(['auth:customer', EnsureCustomerIsActive::class])->group(funct
     Route::get('/minha-conta/atendimentos/{ticket:uuid}', [SupportTicketController::class, 'show'])->name('customer.support.show');
     Route::post('/minha-conta/atendimentos', [SupportTicketController::class, 'store'])->name('customer.support.store');
     Route::post('/minha-conta/atendimentos/{ticket:uuid}/responder', [SupportTicketController::class, 'reply'])->name('customer.support.reply');
+    Route::get('/minha-conta/atendimentos/{ticket:uuid}/anexos/{attachment}/visualizar', [SupportTicketAttachmentController::class, 'customerView'])->name('customer.support.attachments.view');
+    Route::get('/minha-conta/atendimentos/{ticket:uuid}/anexos/{attachment}/baixar', [SupportTicketAttachmentController::class, 'customerDownload'])->name('customer.support.attachments.download');
 });
 
 // ── Checkout & Tracking ──
@@ -154,3 +157,11 @@ Route::middleware('throttle:60,1')->group(function () {
 Route::post('/admin/showcase/search-images', [ShowcaseImageController::class, 'search'])
     ->middleware(['web', 'auth'])
     ->name('admin.showcase.search-images');
+
+Route::get('/admin/support-attachments/{attachment}/visualizar', [SupportTicketAttachmentController::class, 'adminView'])
+    ->middleware(['web', 'auth'])
+    ->name('admin.support.attachments.view');
+
+Route::get('/admin/support-attachments/{attachment}/baixar', [SupportTicketAttachmentController::class, 'adminDownload'])
+    ->middleware(['web', 'auth'])
+    ->name('admin.support.attachments.download');

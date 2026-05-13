@@ -57,6 +57,7 @@
             @endif
 
             <div class="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ $ticket->message }}</div>
+            @include('customer.partials.support-attachments', ['ticket' => $ticket, 'attachments' => $ticket->initialAttachments])
         </div>
 
         {{-- Thread de mensagens --}}
@@ -79,6 +80,9 @@
                             <span class="text-xs text-gray-400">{{ $msg->created_at->timezone('America/Sao_Paulo')->format('d/m/Y H:i') }}</span>
                         </div>
                         <div class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap pl-9">{{ $msg->message }}</div>
+                        <div class="pl-9">
+                            @include('customer.partials.support-attachments', ['ticket' => $ticket, 'attachments' => $msg->attachments])
+                        </div>
                     </div>
                 @endforeach
             </div>
@@ -88,12 +92,24 @@
         @if($ticket->status !== 'closed')
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <h3 class="font-semibold text-gray-800 mb-3">Responder</h3>
-                <form method="POST" action="{{ route('customer.support.reply', $ticket) }}">
+                <form method="POST" action="{{ route('customer.support.reply', $ticket) }}" enctype="multipart/form-data">
                     @csrf
                     <div class="mb-3">
-                        <textarea name="message" rows="4" required maxlength="5000" placeholder="Escreva sua resposta..."
+                        <textarea name="message" rows="4" maxlength="5000" placeholder="Escreva sua resposta..."
                             class="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none @error('message') border-red-300 @enderror">{{ old('message') }}</textarea>
                         @error('message')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Anexos</label>
+                        <input type="file" name="attachments[]" multiple
+                            class="block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
+                        <p class="text-xs text-gray-400 mt-1">Até 5 arquivos de 10 MB. Imagens, PDF, documentos, planilhas, texto ou ZIP.</p>
+                        @error('attachments')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                        @error('attachments.*')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
                     </div>

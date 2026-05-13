@@ -7,13 +7,17 @@ use App\Mail\SupportTicketReplyMail;
 use App\Models\SupportTicket;
 use App\Models\User;
 use Filament\Actions;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class ViewSupportTicket extends ViewRecord
 {
@@ -30,9 +34,33 @@ class ViewSupportTicket extends ViewRecord
                 ->form([
                     Textarea::make('message')
                         ->label('Mensagem')
-                        ->required()
+                        ->required(fn (Get $get): bool => empty($get('attachments')))
                         ->rows(5)
                         ->maxLength(5000),
+
+                    FileUpload::make('attachments')
+                        ->label('Anexos')
+                        ->multiple()
+                        ->maxFiles(5)
+                        ->maxSize(10240)
+                        ->disk('local')
+                        ->directory(fn () => 'support-ticket-attachments/' . $this->record->uuid)
+                        ->storeFileNamesIn('attachment_names')
+                        ->acceptedFileTypes([
+                            'image/jpeg',
+                            'image/png',
+                            'image/webp',
+                            'application/pdf',
+                            'application/msword',
+                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            'application/vnd.ms-excel',
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'text/csv',
+                            'text/plain',
+                            'application/zip',
+                            'application/x-zip-compressed',
+                        ])
+                        ->helperText('Até 5 arquivos de 10 MB. Anexos em notas internas não aparecem para o cliente.'),
 
                     Toggle::make('is_internal_note')
                         ->label('Nota interna')
@@ -45,11 +73,15 @@ class ViewSupportTicket extends ViewRecord
                 ])
                 ->visible(fn () => $this->record->status !== 'closed')
                 ->action(function (array $data): void {
+                    $messageText = trim((string) ($data['message'] ?? ''));
+
                     $msg = $this->record->messages()->create([
                         'user_id' => auth()->id(),
-                        'message' => $data['message'],
+                        'message' => $messageText !== '' ? $messageText : 'Anexo enviado.',
                         'is_internal_note' => $data['is_internal_note'] ?? false,
                     ]);
+
+                    $this->storeAttachments($msg, $data);
 
                     $updates = [];
 
@@ -164,5 +196,28 @@ class ViewSupportTicket extends ViewRecord
                     $this->refreshFormData(['status', 'closed_at']);
                 }),
         ];
+    }
+
+    private function storeAttachments($message, array $data): void
+    {
+        $paths = Arr::wrap($data['attachments'] ?? []);
+        $names = Arr::wrap($data['attachment_names'] ?? []);
+
+        foreach ($paths as $key => $path) {
+            if (! is_string($path) || ! Storage::disk('local')->exists($path)) {
+                continue;
+            }
+
+            $this->record->attachments()->create([
+                'support_ticket_message_id' => $message->id,
+                'uploaded_by_user_id' => auth()->id(),
+                'disk' => 'local',
+                'path' => $path,
+                'original_name' => $names[$key] ?? $names[$path] ?? basename($path),
+                'mime_type' => Storage::disk('local')->mimeType($path),
+                'size' => Storage::disk('local')->size($path),
+                'is_internal' => (bool) ($data['is_internal_note'] ?? false),
+            ]);
+        }
     }
 }
