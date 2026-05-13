@@ -31,6 +31,7 @@ class OrderFlight extends Model
         'miles_price',
         'money_price',
         'tax',
+        'paid_boarding_tax',
         'provider',
         'pricing_type',
         'source_provider',
@@ -39,6 +40,7 @@ class OrderFlight extends Model
 
     protected $casts = [
         'connection' => 'array',
+        'paid_boarding_tax' => 'decimal:2',
     ];
 
     public function order(): BelongsTo

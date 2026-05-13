@@ -71,7 +71,7 @@ class EmissionQueue extends Page implements HasTable
                 Tables\Columns\TextColumn::make('route')
                     ->label('Rota')
                     ->getStateUsing(fn (OrderEmission $record) => $record->order
-                        ? strtoupper($record->order->departure_iata) . ' → ' . strtoupper($record->order->arrival_iata)
+                        ? strtoupper($record->order->departure_iata).' → '.strtoupper($record->order->arrival_iata)
                         : '-'),
 
                 Tables\Columns\TextColumn::make('passenger')
@@ -85,6 +85,7 @@ class EmissionQueue extends Page implements HasTable
                         if (! $search || ! $search->outbound_date) {
                             return '-';
                         }
+
                         return $search->outbound_date->format('d/m/Y');
                     }),
 
@@ -92,6 +93,7 @@ class EmissionQueue extends Page implements HasTable
                     ->label('Milhas')
                     ->getStateUsing(function (OrderEmission $record) {
                         $total = $record->order?->flights->sum(fn ($f) => (float) ($f->price_miles ?? $f->miles_price ?? 0));
+
                         return $total > 0 ? number_format($total, 0, '', '.') : '-';
                     }),
 
@@ -126,6 +128,7 @@ class EmissionQueue extends Page implements HasTable
                             return '-';
                         }
                         $diff = $from->diffForHumans(short: true);
+
                         return $diff;
                     }),
             ])
@@ -182,26 +185,33 @@ class EmissionQueue extends Page implements HasTable
                         foreach ($record->order->flights as $flight) {
                             $dir = $flight->direction === 'outbound' ? 'Ida' : 'Volta';
                             $cia = strtoupper($flight->cia ?? $flight->operator ?? '');
-                            $pType = $flight->pricing_type ?? '';
-                            $badge = $pType === 'convencional' ? ' (Conv.)' : ($pType === 'milhas' ? ' (Milhas)' : '');
-                            $label = "{$dir} — {$cia}{$badge}";
+                            $label = "{$dir} — {$cia}";
 
-                            $fields[] = TextInput::make('loc_' . $flight->id)
+                            $fields[] = TextInput::make('loc_'.$flight->id)
                                 ->label("LOC {$label}")
                                 ->required()
                                 ->maxLength(20)
                                 ->placeholder('Ex: ABC123')
                                 ->extraInputAttributes(['style' => 'text-transform: uppercase']);
 
-                            $fields[] = TextInput::make('miles_cost_' . $flight->id)
+                            $fields[] = TextInput::make('paid_boarding_tax_'.$flight->id)
+                                ->label("Taxa paga {$label}")
+                                ->numeric()
+                                ->minValue(0)
+                                ->step(0.01)
+                                ->required()
+                                ->prefix('R$')
+                                ->default($flight->paid_boarding_tax ?? $flight->tax ?? 0)
+                                ->placeholder('Ex: 42.17');
+
+                            $fields[] = TextInput::make('miles_cost_'.$flight->id)
                                 ->label("Custo milheiro {$label}")
                                 ->numeric()
                                 ->minValue(0)
                                 ->step(0.01)
                                 ->required()
                                 ->prefix('R$')
-                                ->placeholder('Ex: 25.00')
-                                ->helperText($pType === 'convencional' ? 'Convencional — informe 0 se não aplicável' : '');
+                                ->placeholder('Ex: 25.00');
                         }
 
                         return $fields;
@@ -325,11 +335,15 @@ class EmissionQueue extends Page implements HasTable
         $locNotes = [];
 
         foreach ($order->flights as $flight) {
-            $loc = strtoupper(trim($data['loc_' . $flight->id] ?? ''));
-            $milesCost = (float) ($data['miles_cost_' . $flight->id] ?? 0);
+            $loc = strtoupper(trim($data['loc_'.$flight->id] ?? ''));
+            $milesCost = (float) ($data['miles_cost_'.$flight->id] ?? 0);
+            $paidBoardingTax = (float) ($data['paid_boarding_tax_'.$flight->id] ?? 0);
 
             if ($loc) {
-                $flight->update(['loc' => $loc]);
+                $flight->update([
+                    'loc' => $loc,
+                    'paid_boarding_tax' => $paidBoardingTax,
+                ]);
                 $locs[] = $loc;
             }
 
@@ -338,7 +352,9 @@ class EmissionQueue extends Page implements HasTable
             }
 
             $dir = $flight->direction === 'outbound' ? 'Ida' : 'Volta';
-            $locNotes[] = "{$dir}: {$loc}" . ($milesCost > 0 ? " (R\${$milesCost}/mil)" : '');
+            $locNotes[] = "{$dir}: {$loc}"
+                .' (taxa R$ '.number_format($paidBoardingTax, 2, ',', '.').')'
+                .($milesCost > 0 ? " (R\${$milesCost}/mil)" : '');
         }
 
         $emission->update([
