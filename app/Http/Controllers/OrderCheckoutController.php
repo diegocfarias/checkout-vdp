@@ -69,8 +69,8 @@ class OrderCheckoutController extends Controller
         $pixDiscount = (float) Setting::get('pix_discount', 0);
 
         $ccGateway = $gatewayCc ?: config('services.payment.gateway', 'appmax');
-        $maxInstallments = Setting::get('max_installments_' . $ccGateway, Setting::get('max_installments', 12));
-        $interestRates = Setting::get('interest_rates_' . $ccGateway, Setting::get('interest_rates', []));
+        $maxInstallments = Setting::get('max_installments_'.$ccGateway, Setting::get('max_installments', 12));
+        $interestRates = Setting::get('interest_rates_'.$ccGateway, Setting::get('interest_rates', []));
 
         $savedPassengers = collect();
         $walletBalance = 0;
@@ -302,7 +302,7 @@ class OrderCheckoutController extends Controller
         } else {
             $ccGateway = Setting::get('gateway_credit_card') ?: config('services.payment.gateway', 'appmax');
             $installments = (int) ($cardData['installments'] ?? 1);
-            $allRates = Setting::get('interest_rates_' . $ccGateway, Setting::get('interest_rates', []));
+            $allRates = Setting::get('interest_rates_'.$ccGateway, Setting::get('interest_rates', []));
             $rate = $allRates[$installments] ?? 0;
             $cardData['total_with_interest'] = round($totalAfterDiscount * (1 + $rate / 100), 2);
         }
@@ -475,7 +475,7 @@ class OrderCheckoutController extends Controller
                     'discount_amount' => $preview['discount_amount'],
                     'new_total' => $preview['new_total'],
                     'cumulative_with_pix' => (bool) Setting::get('referral_cumulative_with_pix', true),
-                    'message' => 'Desconto de indicação de ' . $preview['affiliate_name'] . ' aplicado!',
+                    'message' => 'Desconto de indicação de '.$preview['affiliate_name'].' aplicado!',
                 ]);
             }
 
@@ -605,21 +605,25 @@ class OrderCheckoutController extends Controller
             $newTotal = $newTotalPerPax * $payingPax;
 
             if (abs($newTotal - $oldTotal) >= 0.01) {
+                $freshOb = $this->vdpService->normalizeFlightFields($freshOb);
+
                 $obFlight->update([
                     'price_money' => $freshOb['price_money'] ?? $obFlight->price_money,
                     'price_miles' => $freshOb['price_miles'] ?? $obFlight->price_miles,
-                    'boarding_tax' => $freshOb['boarding_tax'] ?? $obFlight->boarding_tax,
+                    'boarding_tax' => $this->vdpService->resolveBoardingTax($freshOb, $obFlight->boarding_tax ?? $obFlight->tax ?? '0'),
                     'money_price' => $this->vdpService->calculateBasePrice($freshOb),
-                    'tax' => $this->vdpService->parseMoneyValue($freshOb['boarding_tax'] ?? '0'),
+                    'tax' => $this->vdpService->resolveBoardingTax($freshOb, $obFlight->boarding_tax ?? $obFlight->tax ?? '0'),
                 ]);
 
                 if ($freshIb && $ibFlight) {
+                    $freshIb = $this->vdpService->normalizeFlightFields($freshIb);
+
                     $ibFlight->update([
                         'price_money' => $freshIb['price_money'] ?? $ibFlight->price_money,
                         'price_miles' => $freshIb['price_miles'] ?? $ibFlight->price_miles,
-                        'boarding_tax' => $freshIb['boarding_tax'] ?? $ibFlight->boarding_tax,
+                        'boarding_tax' => $this->vdpService->resolveBoardingTax($freshIb, $ibFlight->boarding_tax ?? $ibFlight->tax ?? '0'),
                         'money_price' => $this->vdpService->calculateBasePrice($freshIb),
-                        'tax' => $this->vdpService->parseMoneyValue($freshIb['boarding_tax'] ?? '0'),
+                        'tax' => $this->vdpService->resolveBoardingTax($freshIb, $ibFlight->boarding_tax ?? $ibFlight->tax ?? '0'),
                     ]);
                 }
 

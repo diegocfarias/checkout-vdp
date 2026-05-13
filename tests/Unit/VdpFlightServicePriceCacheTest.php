@@ -121,6 +121,48 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $this->assertSame('2000.00', $service->calculateBasePrice($flight));
     }
 
+    public function test_calculate_flight_price_uses_tax_alias_when_boarding_tax_is_missing(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_pct_enabled' => false,
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $flight = [
+            'operator' => 'GOL',
+            'price_money' => '100.00',
+            'price_miles' => '0',
+            'tax' => '34.11',
+        ];
+
+        $this->assertSame(134.11, round($service->calculateFlightPrice($flight), 2));
+        $this->assertSame('34.11', $service->resolveBoardingTax($flight));
+    }
+
+    public function test_nested_taxes_amount_is_normalized_as_boarding_tax(): void
+    {
+        $service = app(VdpFlightService::class);
+
+        $flight = $service->normalizeFlightFields([
+            'operator' => 'LATAM',
+            'price_money' => '250,00',
+            'price_miles' => '0',
+            'taxes' => ['amount' => 62.62],
+        ]);
+
+        $this->assertSame('62.62', $flight['boarding_tax']);
+        $this->assertSame(312.62, round($service->calculateFlightPrice($flight), 2));
+    }
+
+    public function test_money_parser_accepts_brazilian_and_decimal_dot_values(): void
+    {
+        $service = app(VdpFlightService::class);
+
+        $this->assertSame('1234.56', $service->parseMoneyValue('R$ 1.234,56'));
+        $this->assertSame('34.11', $service->parseMoneyValue('34.11'));
+        $this->assertSame('1234', $service->parseMoneyValue('1.234'));
+    }
+
     public function test_patria_merge_keeps_miles_fare_over_cheaper_conventional_duplicate(): void
     {
         Cache::forever('app_settings', [
@@ -180,10 +222,10 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $fullSearchParams = $providerParams;
         unset($fullSearchParams['cia']);
 
-        $providerKey = 'vdp_prov:test:bds_crawler:gol:' . md5(json_encode($providerParams));
-        $patriaKey = 'vdp_prov:test:bds_crawler:patria:' . md5(json_encode($providerParams));
-        $searchKey = 'vdp_search:test:' . md5(json_encode($providerParams));
-        $legacySearchKey = 'vdp_search:test:' . md5(json_encode($fullSearchParams));
+        $providerKey = 'vdp_prov:test:bds_crawler:gol:'.md5(json_encode($providerParams));
+        $patriaKey = 'vdp_prov:test:bds_crawler:patria:'.md5(json_encode($providerParams));
+        $searchKey = 'vdp_search:test:'.md5(json_encode($providerParams));
+        $legacySearchKey = 'vdp_search:test:'.md5(json_encode($fullSearchParams));
         $outboundKey = $this->directionKey($service, 'RIO', 'FOR', '2026-05-24', $params);
         $inboundKey = $this->directionKey($service, 'FOR', 'RIO', '2026-05-30', $params);
 

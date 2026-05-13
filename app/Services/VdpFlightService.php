@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 class VdpFlightService
 {
     private ?LatamCrawlerService $crawlerService = null;
+
     private ?BdsCrawlerService $bdsCrawlerService = null;
 
     private function getCrawlerService(): LatamCrawlerService
@@ -97,7 +98,7 @@ class VdpFlightService
                 'cia' => $ida['cia'],
                 'miles_price' => $this->parseMoneyValue($ida['miles_price']),
                 'money_price' => $this->parseMoneyValue($ida['money_price']),
-                'tax' => $this->parseMoneyValue($ida['tax']),
+                'tax' => $this->resolveBoardingTax($outboundFlight, $ida['tax'] ?? '0'),
                 ...$this->mapFlightData($outboundFlight),
             ],
         ];
@@ -108,7 +109,7 @@ class VdpFlightService
                 'cia' => $volta['cia'],
                 'miles_price' => $this->parseMoneyValue($volta['miles_price']),
                 'money_price' => $this->parseMoneyValue($volta['money_price']),
-                'tax' => $this->parseMoneyValue($volta['tax']),
+                'tax' => $this->resolveBoardingTax($inboundFlight, $volta['tax'] ?? '0'),
                 ...$this->mapFlightData($inboundFlight),
             ];
         }
@@ -124,7 +125,7 @@ class VdpFlightService
     public function searchFlights(array $params): array
     {
         $pricingVersion = Setting::get('pricing_version', '0');
-        $cacheKey = 'vdp_search:' . $pricingVersion . ':' . md5(json_encode($params));
+        $cacheKey = 'vdp_search:'.$pricingVersion.':'.md5(json_encode($params));
 
         $results = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($params) {
             return $this->fetchFromProviders($params);
@@ -182,19 +183,20 @@ class VdpFlightService
 
     private function directionPriceKey(string $version, string $departure, string $arrival, string $date, array $pax): string
     {
-        return 'vdp_dir_price:' . $version . ':' . md5(json_encode([
+        return 'vdp_dir_price:'.$version.':'.md5(json_encode([
             $departure, $arrival, $date, $pax['cabin'], $pax['adults'], $pax['children'], $pax['infants'],
         ]));
     }
 
     /**
      * Busca voos retornando se o resultado veio do cache.
+     *
      * @return array{data: array, from_cache: bool}
      */
     public function searchFlightsWithCacheInfo(array $params): array
     {
         $pricingVersion = Setting::get('pricing_version', '0');
-        $cacheKey = 'vdp_search:' . $pricingVersion . ':' . md5(json_encode($params));
+        $cacheKey = 'vdp_search:'.$pricingVersion.':'.md5(json_encode($params));
 
         $fromCache = Cache::has($cacheKey);
         $data = $this->searchFlights($params);
@@ -210,7 +212,7 @@ class VdpFlightService
     public function getMinPriceFromCache(array $params): ?float
     {
         $pricingVersion = Setting::get('pricing_version', '0');
-        $cacheKey = 'vdp_search:' . $pricingVersion . ':' . md5(json_encode($params));
+        $cacheKey = 'vdp_search:'.$pricingVersion.':'.md5(json_encode($params));
 
         $results = Cache::get($cacheKey);
 
@@ -298,6 +300,7 @@ class VdpFlightService
                 if ($providers[0] === 'bds_crawler') {
                     return $this->getBdsCrawlerService()->searchFlights($params, [strtoupper($normalized)]);
                 }
+
                 return $this->callForProvider($providers[0], $params);
             }
 
@@ -305,9 +308,13 @@ class VdpFlightService
             $crawlerCias = [];
             $bdsCias = [];
             foreach ($providers as $p) {
-                if ($p === 'vdp') { $vdpCias[] = $normalized; }
-                elseif ($p === 'latam_crawler') { $crawlerCias[] = $normalized; }
-                elseif ($p === 'bds_crawler') { $bdsCias[] = $normalized; }
+                if ($p === 'vdp') {
+                    $vdpCias[] = $normalized;
+                } elseif ($p === 'latam_crawler') {
+                    $crawlerCias[] = $normalized;
+                } elseif ($p === 'bds_crawler') {
+                    $bdsCias[] = $normalized;
+                }
             }
 
             return $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
@@ -354,6 +361,7 @@ class VdpFlightService
                 return $this->callApi($params);
             } catch (\Throwable $e) {
                 Log::warning('VDP API: falha na busca', ['error' => $e->getMessage()]);
+
                 return ['outbound' => [], 'inbound' => []];
             }
         }
@@ -363,6 +371,7 @@ class VdpFlightService
                 return $this->getCrawlerService()->searchFlights($params);
             } catch (\Throwable $e) {
                 Log::warning('LatamCrawler: falha na busca', ['error' => $e->getMessage()]);
+
                 return ['outbound' => [], 'inbound' => []];
             }
         }
@@ -372,6 +381,7 @@ class VdpFlightService
                 return $this->getBdsCrawlerService()->searchFlights($params, array_map('strtoupper', $bdsCias));
             } catch (\Throwable $e) {
                 Log::warning('BdsCrawler: falha na busca', ['error' => $e->getMessage()]);
+
                 return ['outbound' => [], 'inbound' => []];
             }
         }
@@ -385,7 +395,7 @@ class VdpFlightService
      */
     private function fetchParallel(array $params, array $vdpCias, array $crawlerCias = [], array $bdsCias = []): array
     {
-        $vdpUrl = rtrim(config('services.vdp.url'), '/') . '/api/search/flights';
+        $vdpUrl = rtrim(config('services.vdp.url'), '/').'/api/search/flights';
         $crawlerUrl = rtrim(config('services.latam_crawler.url', ''), '/');
         $crawlerKey = config('services.latam_crawler.api_key', '');
         $bdsUrl = rtrim(config('services.bds_crawler.url', ''), '/');
@@ -468,7 +478,7 @@ class VdpFlightService
 
             if ($needBds) {
                 foreach ($bdsCias as $cia) {
-                    $pool->as('bds_' . $cia)
+                    $pool->as('bds_'.$cia)
                         ->withHeaders($bdsHeaders)
                         ->timeout($bdsTimeout)
                         ->get("{$bdsUrl}/api/search", array_merge($bdsBaseQuery, [
@@ -509,7 +519,7 @@ class VdpFlightService
 
         if ($needBds) {
             foreach ($bdsCias as $cia) {
-                $bdsResponse = $responses['bds_' . $cia] ?? null;
+                $bdsResponse = $responses['bds_'.$cia] ?? null;
                 if ($bdsResponse && ! ($bdsResponse instanceof \Throwable) && $bdsResponse->successful()) {
                     $bdsData = $bdsResponse->json();
                     if ($cia === 'patria') {
@@ -548,7 +558,7 @@ class VdpFlightService
     {
         $patriaIndex = [];
         foreach ($patriaFlights as $pf) {
-            $key = ($pf['flight_number'] ?? '') . '|' . ($pf['departure_time'] ?? '');
+            $key = ($pf['flight_number'] ?? '').'|'.($pf['departure_time'] ?? '');
             $price = $this->calculateFlightPrice($pf);
             if (! isset($patriaIndex[$key]) || $price < $patriaIndex[$key]['price']) {
                 $patriaIndex[$key] = ['flight' => $pf, 'price' => $price];
@@ -558,7 +568,7 @@ class VdpFlightService
         $usedKeys = [];
         $merged = [];
         foreach ($regularFlights as $rf) {
-            $key = ($rf['flight_number'] ?? '') . '|' . ($rf['departure_time'] ?? '');
+            $key = ($rf['flight_number'] ?? '').'|'.($rf['departure_time'] ?? '');
             if (isset($patriaIndex[$key])) {
                 $regularPrice = $this->calculateFlightPrice($rf);
                 $regularHasMiles = $this->parseMilesValue($rf['price_miles'] ?? null) > 0;
@@ -609,6 +619,7 @@ class VdpFlightService
 
         if ($provider === 'bds_crawler') {
             $cia = strtoupper($this->normalizeCia($params['cia'] ?? ''));
+
             return $this->getBdsCrawlerService()->searchFlights($params, $cia ? [$cia] : null);
         }
 
@@ -669,7 +680,7 @@ class VdpFlightService
     public function searchSingleProvider(array $params, string $provider, string $airlines): array
     {
         $pricingVersion = Setting::get('pricing_version', '0');
-        $cacheKey = 'vdp_prov:' . $pricingVersion . ':' . $provider . ':' . strtolower($airlines) . ':' . md5(json_encode($params));
+        $cacheKey = 'vdp_prov:'.$pricingVersion.':'.$provider.':'.strtolower($airlines).':'.md5(json_encode($params));
 
         return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($params, $provider, $airlines) {
             return $this->fetchSingleProvider($params, $provider, $airlines);
@@ -683,15 +694,15 @@ class VdpFlightService
         $fullSearchParams = $cacheParams;
         unset($fullSearchParams['cia']);
 
-        Cache::forget('vdp_search:' . $pricingVersion . ':' . md5(json_encode($cacheParams)));
-        Cache::forget('vdp_search:' . $pricingVersion . ':' . md5(json_encode($fullSearchParams)));
+        Cache::forget('vdp_search:'.$pricingVersion.':'.md5(json_encode($cacheParams)));
+        Cache::forget('vdp_search:'.$pricingVersion.':'.md5(json_encode($fullSearchParams)));
 
         foreach ($this->getActiveProviderSlots() as $slot) {
             Cache::forget(
-                'vdp_prov:' . $pricingVersion . ':'
-                . $slot['provider'] . ':'
-                . strtolower($slot['airlines']) . ':'
-                . md5(json_encode($cacheParams))
+                'vdp_prov:'.$pricingVersion.':'
+                .$slot['provider'].':'
+                .strtolower($slot['airlines']).':'
+                .md5(json_encode($cacheParams))
             );
         }
 
@@ -742,6 +753,7 @@ class VdpFlightService
             if ($provider === 'vdp') {
                 $result = $this->callApi($params);
                 $airlineList = array_map('trim', explode(',', strtolower($airlines)));
+
                 return [
                     'outbound' => $this->filterByCias($result['outbound'] ?? [], $airlineList),
                     'inbound' => $this->filterByCias($result['inbound'] ?? [], $airlineList),
@@ -782,11 +794,13 @@ class VdpFlightService
                     ->get("{$bdsUrl}/api/search", $query);
 
                 if ($response->failed()) {
-                    Log::warning("BDS single provider failed", ['status' => $response->status(), 'airlines' => $airlines]);
+                    Log::warning('BDS single provider failed', ['status' => $response->status(), 'airlines' => $airlines]);
+
                     return ['outbound' => [], 'inbound' => []];
                 }
 
                 $data = $response->json();
+
                 return [
                     'outbound' => $data['outbound'] ?? [],
                     'inbound' => $data['inbound'] ?? [],
@@ -796,6 +810,7 @@ class VdpFlightService
             return ['outbound' => [], 'inbound' => []];
         } catch (\Throwable $e) {
             Log::warning("Single provider search failed [{$provider}/{$airlines}]", ['error' => $e->getMessage()]);
+
             return ['outbound' => [], 'inbound' => []];
         }
     }
@@ -993,7 +1008,7 @@ class VdpFlightService
 
     private function callApi(array $params): array
     {
-        $url = rtrim(config('services.vdp.url'), '/') . '/api/search/flights';
+        $url = rtrim(config('services.vdp.url'), '/').'/api/search/flights';
 
         Log::info('VDP API request', ['url' => $url, 'params' => $params]);
 
@@ -1053,14 +1068,36 @@ class VdpFlightService
     }
 
     /**
-     * Converte valor monetário em formato BR ("1.151" ou "1.151,50") para decimal padrão ("1151" ou "1151.50").
+     * Converte valor monetario em decimal padrao ("1151" ou "1151.50").
+     * Aceita formato BR ("1.151,50"), decimal com ponto ("34.11") e textos como "R$ 34,11".
      */
-    public function parseMoneyValue(string $value): string
+    public function parseMoneyValue(mixed $value): string
     {
-        $value = trim($value);
+        if ($value === null) {
+            return '0';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '0';
+        }
+
+        $value = preg_replace('/[^\d,.\-]/', '', $value) ?? '';
+
+        if ($value === '' || $value === '-' || $value === ',' || $value === '.') {
+            return '0';
+        }
 
         if (str_contains($value, ',')) {
             return str_replace(',', '.', str_replace('.', '', $value));
+        }
+
+        if (substr_count($value, '.') > 1) {
+            return str_replace('.', '', $value);
         }
 
         if (preg_match('/\.\d{3}$/', $value)) {
@@ -1070,6 +1107,43 @@ class VdpFlightService
         return $value;
     }
 
+    public function normalizeFlightFields(array $flight): array
+    {
+        $flight['boarding_tax'] = $this->resolveBoardingTax($flight);
+
+        return $flight;
+    }
+
+    public function resolveBoardingTax(array $flight, mixed $fallback = '0'): string
+    {
+        $candidate = $this->firstMoneyCandidate($flight, [
+            ['boarding_tax'],
+            ['boardingTax'],
+            ['boarding_tax_amount'],
+            ['boardingTaxAmount'],
+            ['tax'],
+            ['tax_amount'],
+            ['taxAmount'],
+            ['total_tax'],
+            ['totalTax'],
+            ['airport_tax'],
+            ['airportTax'],
+            ['fee'],
+            ['fees'],
+            ['taxes'],
+            ['taxes', 'amount'],
+            ['taxes', 'value'],
+            ['taxes', 'total'],
+            ['taxes', 'totalAmount'],
+        ]);
+
+        if ($candidate !== null) {
+            return $this->parseMoneyValue($candidate);
+        }
+
+        return $this->parseMoneyValue($fallback);
+    }
+
     /**
      * Calcula o preço total de um voo (base + taxa) usando a precificação configurada.
      * Prioridade: milhas > percentual > preço original da API.
@@ -1077,7 +1151,7 @@ class VdpFlightService
     public function calculateFlightPrice(array $flight): float
     {
         $cia = $this->resolvePricingCia($flight);
-        $tax = $this->parseMoneyFloat($flight['boarding_tax'] ?? '0');
+        $tax = $this->parseMoneyFloat($this->resolveBoardingTax($flight));
 
         $pctEnabled = Setting::get('pricing_pct_enabled', false);
 
@@ -1158,14 +1232,72 @@ class VdpFlightService
         return $this->parseMoneyFloat($clean);
     }
 
-    private function parseMoneyFloat(string $value): float
+    private function parseMoneyFloat(mixed $value): float
     {
-        $value = trim($value);
-        if ($value === '') {
-            return 0;
+        return (float) $this->parseMoneyValue($value);
+    }
+
+    private function firstMoneyCandidate(array $data, array $paths): mixed
+    {
+        foreach ($paths as $path) {
+            $value = $this->valueAtPath($data, $path);
+            $money = $this->extractMoneyCandidate($value);
+
+            if ($money !== null) {
+                return $money;
+            }
         }
 
-        return (float) str_replace(['.', ','], ['', '.'], $value);
+        return null;
+    }
+
+    private function valueAtPath(array $data, array $path): mixed
+    {
+        $current = $data;
+
+        foreach ($path as $key) {
+            if (! is_array($current) || ! array_key_exists($key, $current)) {
+                return null;
+            }
+
+            $current = $current[$key];
+        }
+
+        return $current;
+    }
+
+    private function extractMoneyCandidate(mixed $value): mixed
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value) || is_float($value) || is_string($value)) {
+            return $this->parseMoneyFloat($value) > 0 ? $value : null;
+        }
+
+        if (! is_array($value)) {
+            return null;
+        }
+
+        foreach (['amount', 'value', 'total', 'totalAmount'] as $key) {
+            if (array_key_exists($key, $value)) {
+                $candidate = $this->extractMoneyCandidate($value[$key]);
+                if ($candidate !== null) {
+                    return $candidate;
+                }
+            }
+        }
+
+        $sum = 0.0;
+        foreach ($value as $item) {
+            $candidate = $this->extractMoneyCandidate($item);
+            if ($candidate !== null) {
+                $sum += $this->parseMoneyFloat($candidate);
+            }
+        }
+
+        return $sum > 0 ? $sum : null;
     }
 
     private function normalizeCia(string $operator): string
@@ -1202,6 +1334,8 @@ class VdpFlightService
 
     private function mapFlightData(array $flight): array
     {
+        $flight = $this->normalizeFlightFields($flight);
+
         return [
             'operator' => $flight['operator'] ?? null,
             'flight_number' => $flight['flight_number'] ?? null,
@@ -1211,7 +1345,7 @@ class VdpFlightService
             'arrival_location' => $flight['arrival_location'] ?? null,
             'departure_label' => $flight['departure_label'] ?? null,
             'arrival_label' => $flight['arrival_label'] ?? null,
-            'boarding_tax' => $flight['boarding_tax'] ?? null,
+            'boarding_tax' => $flight['boarding_tax'],
             'class_service' => $flight['class_service'] ?? null,
             'price_money' => $flight['price_money'] ?? null,
             'price_miles' => $flight['price_miles'] ?? null,

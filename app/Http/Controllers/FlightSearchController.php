@@ -113,7 +113,7 @@ class FlightSearchController extends Controller
             'price' => $price,
             'formatted_price' => $showcaseRoute->formattedPrice(),
             'pix_price' => $pixPrice,
-            'formatted_pix_price' => $pixPrice ? 'R$ ' . number_format($pixPrice, 2, ',', '.') : null,
+            'formatted_pix_price' => $pixPrice ? 'R$ '.number_format($pixPrice, 2, ',', '.') : null,
             'date' => $showcaseRoute->cached_date?->format('Y-m-d'),
             'return_date' => $showcaseRoute->cached_return_date?->format('Y-m-d'),
             'airline' => $showcaseRoute->cached_airline,
@@ -148,8 +148,8 @@ class FlightSearchController extends Controller
             'pixDiscount' => (float) Setting::get('pix_discount', 0),
             'pixEnabled' => ! empty(Setting::get('gateway_pix', config('services.payment.gateway'))),
             'providerSlots' => collect($this->vdpService->getActiveProviderSlots())->values()->map(fn ($slot, $i) => [
-                'key' => 's' . $i,
-                'token' => encrypt($slot['provider'] . '|' . $slot['airlines']),
+                'key' => 's'.$i,
+                'token' => encrypt($slot['provider'].'|'.$slot['airlines']),
                 'p' => $slot['patria'],
             ])->all(),
             'maxInstallments' => (int) Setting::get('max_installments', 12),
@@ -242,7 +242,7 @@ class FlightSearchController extends Controller
         foreach ($outbound as $ob) {
             $cia = $this->resolveDisplayCia($ob['operator'] ?? '', $ob['flight_number'] ?? '');
             $price = $this->parseFlightPrice($ob);
-            $key = $cia . '|' . number_format($price, 2, '.', '');
+            $key = $cia.'|'.number_format($price, 2, '.', '');
             $obByCiaPrice[$key] ??= ['cia' => $cia, 'price' => $price, 'flights' => []];
             $obByCiaPrice[$key]['flights'][] = $ob;
         }
@@ -272,7 +272,7 @@ class FlightSearchController extends Controller
         foreach ($inbound as $ib) {
             $cia = $this->resolveDisplayCia($ib['operator'] ?? '', $ib['flight_number'] ?? '');
             $price = $this->parseFlightPrice($ib);
-            $key = $cia . '|' . number_format($price, 2, '.', '');
+            $key = $cia.'|'.number_format($price, 2, '.', '');
             $ibByCiaPrice[$key] ??= ['cia' => $cia, 'price' => $price, 'flights' => []];
             $ibByCiaPrice[$key]['flights'][] = $ib;
         }
@@ -365,6 +365,8 @@ class FlightSearchController extends Controller
 
     private function sanitizeFlight(array $flight): array
     {
+        $flight = $this->vdpService->normalizeFlightFields($flight);
+
         $allowed = [
             'operator', 'flight_number', 'departure_time', 'arrival_time',
             'departure_location', 'arrival_location', 'departure_label', 'arrival_label',
@@ -559,6 +561,7 @@ class FlightSearchController extends Controller
 
     private function buildFlightRow(string $direction, array $data, array $meta = []): array
     {
+        $data = $this->vdpService->normalizeFlightFields($data);
         $prefix = $direction === 'outbound' ? 'ob_' : 'ib_';
         $operator = $this->resolveDisplayCia($data['operator'] ?? '', $data['flight_number'] ?? '');
 
@@ -573,7 +576,7 @@ class FlightSearchController extends Controller
             'arrival_location' => $data['arrival_location'] ?? null,
             'departure_label' => $data['departure_label'] ?? null,
             'arrival_label' => $data['arrival_label'] ?? null,
-            'boarding_tax' => $data['boarding_tax'] ?? null,
+            'boarding_tax' => $data['boarding_tax'],
             'class_service' => $data['class_service'] ?? null,
             'price_money' => $data['price_money'] ?? null,
             'price_miles' => $data['price_miles'] ?? null,
@@ -583,7 +586,7 @@ class FlightSearchController extends Controller
             'connection' => $data['connection'] ?? null,
             'miles_price' => $data['price_miles'] ?? '0',
             'money_price' => $this->vdpService->calculateBasePrice($data),
-            'tax' => $this->vdpService->parseMoneyValue($data['boarding_tax'] ?? '0'),
+            'tax' => $this->vdpService->parseMoneyValue($data['boarding_tax']),
             'provider' => $meta[$prefix.'provider'] ?? null ?: null,
             'pricing_type' => $meta[$prefix.'pricing_type'] ?? null ?: null,
             'source_provider' => $meta[$prefix.'source_provider'] ?? null ?: null,
@@ -599,10 +602,18 @@ class FlightSearchController extends Controller
         }
 
         $fn = strtoupper(trim($flightNumber));
-        if (str_starts_with($fn, 'G3')) return 'GOL';
-        if (str_starts_with($fn, 'AD')) return 'AZUL';
-        if (str_starts_with($fn, 'LA') || str_starts_with($fn, 'JJ')) return 'LATAM';
-        if (preg_match('/^[A-Z0-9]{2}/', $fn, $m)) return $m[0];
+        if (str_starts_with($fn, 'G3')) {
+            return 'GOL';
+        }
+        if (str_starts_with($fn, 'AD')) {
+            return 'AZUL';
+        }
+        if (str_starts_with($fn, 'LA') || str_starts_with($fn, 'JJ')) {
+            return 'LATAM';
+        }
+        if (preg_match('/^[A-Z0-9]{2}/', $fn, $m)) {
+            return $m[0];
+        }
 
         return 'CIA';
     }
