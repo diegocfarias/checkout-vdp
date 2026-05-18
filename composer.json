@@ -52,8 +52,11 @@
         ],
         "test": [
             "@php artisan config:clear --ansi",
-            "@php artisan test"
+            "@php -d memory_limit=512M vendor/bin/phpunit"
         ],
+        "test:unit": "@php -d memory_limit=512M vendor/bin/phpunit --testsuite=Unit",
+        "test:feature": "@php -d memory_limit=512M vendor/bin/phpunit --testsuite=Feature",
+        "test:coverage": "@php -d memory_limit=512M -d pcov.enabled=1 -d xdebug.mode=coverage vendor/bin/phpunit --coverage-text --coverage-html storage/app/private/coverage/html --coverage-clover storage/app/private/coverage/clover.xml",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",

@@ -56,15 +56,16 @@ class SupportDashboard extends Page implements HasTable
             ->whereBetween('created_at', [$from, $to])
             ->count();
 
-        $avgFirstResponse = SupportTicket::whereNotNull('first_response_at')
+        $firstResponseTickets = SupportTicket::whereNotNull('first_response_at')
             ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, created_at, first_response_at)) as avg_minutes')
-            ->value('avg_minutes');
+            ->get(['created_at', 'first_response_at']);
 
-        $avgResolution = SupportTicket::whereNotNull('resolved_at')
+        $resolvedTickets = SupportTicket::whereNotNull('resolved_at')
             ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, created_at, resolved_at)) as avg_minutes')
-            ->value('avg_minutes');
+            ->get(['created_at', 'resolved_at']);
+
+        $avgFirstResponse = $this->averageMinutes($firstResponseTickets, 'created_at', 'first_response_at');
+        $avgResolution = $this->averageMinutes($resolvedTickets, 'created_at', 'resolved_at');
 
         $resolutionRate = $totalPeriod > 0 ? round(($resolvedPeriod / $totalPeriod) * 100) : 0;
 
@@ -101,7 +102,7 @@ class SupportDashboard extends Page implements HasTable
             ],
             [
                 'label' => 'Taxa de resolução',
-                'value' => $resolutionRate . '%',
+                'value' => $resolutionRate.'%',
                 'color' => 'success',
                 'icon' => 'heroicon-o-chart-pie',
             ],
@@ -130,11 +131,13 @@ class SupportDashboard extends Page implements HasTable
                     ->open()
                     ->count();
 
-                $avgMinutes = SupportTicketMessage::whereHas('ticket', function ($q) use ($user, $from, $to) {
-                    $q->where('assigned_to', $user->id)->whereBetween('created_at', [$from, $to]);
-                })->where('user_id', $user->id)
-                    ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, (SELECT st.created_at FROM support_tickets st WHERE st.id = support_ticket_messages.support_ticket_id), support_ticket_messages.created_at)) as avg_min')
-                    ->value('avg_min');
+                $responseMessages = SupportTicketMessage::with('ticket:id,created_at')
+                    ->whereHas('ticket', function ($q) use ($user, $from, $to) {
+                        $q->where('assigned_to', $user->id)->whereBetween('created_at', [$from, $to]);
+                    })->where('user_id', $user->id)
+                    ->get(['id', 'support_ticket_id', 'created_at']);
+
+                $avgMinutes = $this->averageMessageResponseMinutes($responseMessages);
 
                 return [
                     'name' => $user->name,
@@ -214,6 +217,36 @@ class SupportDashboard extends Page implements HasTable
         $remainHours = $hours % 24;
 
         return "{$days}d {$remainHours}h";
+    }
+
+    private function averageMinutes($records, string $fromColumn, string $toColumn): ?float
+    {
+        $minutes = [];
+
+        foreach ($records as $record) {
+            if (! $record->{$fromColumn} || ! $record->{$toColumn}) {
+                continue;
+            }
+
+            $minutes[] = $record->{$fromColumn}->diffInMinutes($record->{$toColumn});
+        }
+
+        return $minutes === [] ? null : array_sum($minutes) / count($minutes);
+    }
+
+    private function averageMessageResponseMinutes($messages): ?float
+    {
+        $minutes = [];
+
+        foreach ($messages as $message) {
+            if (! $message->ticket?->created_at || ! $message->created_at) {
+                continue;
+            }
+
+            $minutes[] = $message->ticket->created_at->diffInMinutes($message->created_at);
+        }
+
+        return $minutes === [] ? null : array_sum($minutes) / count($minutes);
     }
 
     public function updatedDateFrom(): void {}

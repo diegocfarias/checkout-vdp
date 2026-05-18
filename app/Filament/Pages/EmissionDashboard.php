@@ -4,7 +4,6 @@ namespace App\Filament\Pages;
 
 use App\Models\OrderEmission;
 use App\Models\User;
-use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
 use Filament\Tables;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -102,9 +101,10 @@ class EmissionDashboard extends Page implements HasTable
 
         return User::issuers()
             ->withCount(['emissions as completed_count' => fn (Builder $q) => $q->completedBetween($from, $to)])
-            ->having('completed_count', '>', 0)
             ->orderByDesc('completed_count')
             ->get()
+            ->filter(fn (User $user): bool => $user->completed_count > 0)
+            ->values()
             ->map(function (User $user) use ($from, $to) {
                 $avgSeconds = $user->emissions()
                     ->completedBetween($from, $to)
@@ -119,7 +119,7 @@ class EmissionDashboard extends Page implements HasTable
                     'name' => $user->name,
                     'count' => $user->completed_count,
                     'avg_time' => $avgSeconds ? $this->formatDuration((int) $avgSeconds) : '—',
-                    'total_value' => 'R$ ' . number_format((float) $totalValue, 2, ',', '.'),
+                    'total_value' => 'R$ '.number_format((float) $totalValue, 2, ',', '.'),
                 ];
             })
             ->toArray();

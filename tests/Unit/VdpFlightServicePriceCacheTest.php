@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Services\VdpFlightService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class VdpFlightServicePriceCacheTest extends TestCase
@@ -261,6 +262,177 @@ class VdpFlightServicePriceCacheTest extends TestCase
         }
     }
 
+    public function test_search_flights_with_cache_info_caches_vdp_results_and_direction_prices(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_version' => 'test',
+            'provider_gol' => 'vdp',
+            'provider_azul' => 'disabled',
+            'provider_latam' => 'disabled',
+            'pricing_pct_enabled' => false,
+        ]);
+        config()->set('services.vdp.url', 'https://vdp.test');
+
+        Http::fake([
+            'https://vdp.test/api/search/flights' => Http::response([
+                'outbound' => [
+                    $this->flight('GOL', 'G31234', '10:00', '100,00', '30,00'),
+                    $this->flight('GOL', 'G34321', '11:00', '90,00', '25,00'),
+                ],
+                'inbound' => [
+                    $this->flight('GOL', 'G35678', '18:00', '110,00', '40,00'),
+                ],
+            ]),
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $params = $this->searchParams([
+            'inbound_date' => '2026-06-15',
+        ]);
+
+        $first = $service->searchFlightsWithCacheInfo($params);
+        $second = $service->searchFlightsWithCacheInfo($params);
+
+        $this->assertFalse($first['from_cache']);
+        $this->assertTrue($second['from_cache']);
+        $this->assertCount(2, $first['data']['outbound']);
+        $this->assertSame(265.0, $service->getMinPriceFromCache($params));
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_search_single_provider_filters_vdp_results_and_uses_cache(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_version' => 'test',
+            'pricing_pct_enabled' => false,
+        ]);
+        config()->set('services.vdp.url', 'https://vdp.test');
+
+        Http::fake([
+            'https://vdp.test/api/search/flights' => Http::response([
+                'outbound' => [
+                    $this->flight('GOL', 'G31234', '10:00', '100,00', '30,00'),
+                    $this->flight('LATAM', 'LA1234', '12:00', '200,00', '60,00'),
+                ],
+                'inbound' => [
+                    $this->flight('AZUL', 'AD1234', '15:00', '100,00', '30,00'),
+                    $this->flight('GOL', 'G35678', '18:00', '110,00', '40,00'),
+                ],
+            ]),
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $params = $this->searchParams(['inbound_date' => '2026-06-15']);
+
+        $first = $service->searchSingleProvider($params, 'vdp', 'GOL');
+        $second = $service->searchSingleProvider($params, 'vdp', 'GOL');
+
+        $this->assertSame('G31234', $first['outbound'][0]['flight_number']);
+        $this->assertSame('G35678', $first['inbound'][0]['flight_number']);
+        $this->assertSame($first, $second);
+        Http::assertSentCount(1);
+    }
+
+    public function test_search_single_provider_calls_bds_with_headers_and_handles_failures(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_version' => 'test',
+            'bds_crawler_timeout' => 12,
+        ]);
+        config()->set('services.bds_crawler.url', 'https://bds.test');
+        config()->set('services.bds_crawler.api_key', 'secret-key');
+
+        Http::fake([
+            'https://bds.test/api/search*' => Http::sequence()
+                ->push([
+                    'outbound' => [$this->flight('AZUL', 'AD1234', '10:00', '100,00', '30,00')],
+                    'inbound' => [],
+                ])
+                ->push(['message' => 'erro'], 500),
+        ]);
+
+        $service = app(VdpFlightService::class);
+
+        $success = $service->searchSingleProvider($this->searchParams(), 'bds_crawler', 'AZUL,LATAM');
+        $failed = $service->searchSingleProvider($this->searchParams([
+            'outbound_date' => '2026-06-11',
+        ]), 'bds_crawler', 'AZUL');
+
+        $this->assertSame('AD1234', $success['outbound'][0]['flight_number']);
+        $this->assertSame(['outbound' => [], 'inbound' => []], $failed);
+
+        Http::assertSent(function ($request): bool {
+            return $request->url() === 'https://bds.test/api/search?origin=GRU&destination=SDU&outbound_date=2026-06-10&adults=1&children=0&infants=0&cabin=EC&airlines=AZUL%2CLATAM'
+                && $request->hasHeader('X-API-KEY', 'secret-key');
+        });
+    }
+
+    public function test_revalidate_flight_pair_matches_by_flight_number_when_unique_id_changes(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_version' => 'test',
+            'pricing_pct_enabled' => false,
+        ]);
+        config()->set('services.vdp.url', 'https://vdp.test');
+
+        Http::fake([
+            'https://vdp.test/api/search/flights' => Http::response([
+                'outbound' => [
+                    $this->flight('GOL', 'G3 1234', '10:00', '140,00', '35,00', 'new-ob'),
+                ],
+                'inbound' => [
+                    $this->flight('GOL', 'G3-5678', '18:00', '150,00', '45,00', 'new-ib'),
+                ],
+            ]),
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $result = $service->revalidateFlightPair(
+            $this->searchParams(['inbound_date' => '2026-06-15']),
+            [
+                ...$this->flight('GOL', 'G3-1234', '10:00', '100,00', '30,00', 'old-ob'),
+                '_source_provider' => 'vdp',
+                '_source_airlines' => 'GOL',
+            ],
+            [
+                ...$this->flight('GOL', 'G35678', '18:00', '110,00', '40,00', 'old-ib'),
+                '_source_provider' => 'vdp',
+                '_source_airlines' => 'GOL',
+            ],
+        );
+
+        $this->assertSame('new-ob', $result['outbound']['unique_id']);
+        $this->assertSame('new-ib', $result['inbound']['unique_id']);
+    }
+
+    public function test_revalidate_flight_pair_keeps_original_when_provider_returns_empty(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_version' => 'test',
+        ]);
+        config()->set('services.vdp.url', 'https://vdp.test');
+
+        Http::fake([
+            'https://vdp.test/api/search/flights' => Http::response([
+                'outbound' => [],
+                'inbound' => [],
+            ]),
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $original = [
+            ...$this->flight('GOL', 'G31234', '10:00', '100,00', '30,00', 'old-ob'),
+            '_source_provider' => 'vdp',
+            '_source_airlines' => 'GOL',
+        ];
+
+        $result = $service->revalidateFlightPair($this->searchParams(), $original);
+
+        $this->assertSame($original, $result['outbound']);
+        $this->assertNull($result['inbound']);
+    }
+
     private function directionKey(VdpFlightService $service, string $departure, string $arrival, string $date, array $params): string
     {
         $method = new \ReflectionMethod($service, 'directionPriceKey');
@@ -272,5 +444,45 @@ class VdpFlightServicePriceCacheTest extends TestCase
             'infants' => $params['infants'],
             'cabin' => $params['cabin'],
         ]);
+    }
+
+    private function searchParams(array $overrides = []): array
+    {
+        return array_merge([
+            'cia' => 'all',
+            'departure' => 'GRU',
+            'arrival' => 'SDU',
+            'outbound_date' => '2026-06-10',
+            'inbound_date' => null,
+            'adults' => 1,
+            'children' => 0,
+            'infants' => 0,
+            'cabin' => 'EC',
+        ], $overrides);
+    }
+
+    private function flight(
+        string $operator,
+        string $flightNumber,
+        string $departureTime,
+        string $priceMoney,
+        string $boardingTax,
+        ?string $uniqueId = null,
+    ): array {
+        return [
+            'operator' => $operator,
+            'flight_number' => $flightNumber,
+            'departure_time' => $departureTime,
+            'arrival_time' => '11:00',
+            'departure_location' => 'GRU',
+            'arrival_location' => 'SDU',
+            'boarding_tax' => $boardingTax,
+            'class_service' => 'Economy',
+            'price_money' => $priceMoney,
+            'price_miles' => '0',
+            'total_flight_duration' => '01:00',
+            'unique_id' => $uniqueId ?? strtolower(str_replace([' ', '-'], '', $flightNumber)),
+            'connection' => null,
+        ];
     }
 }

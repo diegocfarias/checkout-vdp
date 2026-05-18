@@ -74,12 +74,12 @@ class ReferralDashboard extends Page implements HasTable
         return [
             ['label' => 'Afiliados ativos', 'value' => $activeAffiliates, 'icon' => 'heroicon-o-users'],
             ['label' => 'Indicações no período', 'value' => $totalReferrals, 'icon' => 'heroicon-o-gift'],
-            ['label' => 'GMV por indicações', 'value' => 'R$ ' . number_format((float) $gmv, 2, ',', '.'), 'icon' => 'heroicon-o-banknotes'],
-            ['label' => 'Desconto concedido', 'value' => 'R$ ' . number_format((float) $totalDiscount, 2, ',', '.'), 'icon' => 'heroicon-o-receipt-percent'],
-            ['label' => 'Crédito gerado', 'value' => 'R$ ' . number_format((float) $totalCreditGenerated, 2, ',', '.'), 'icon' => 'heroicon-o-arrow-trending-up'],
-            ['label' => 'Crédito liberado', 'value' => 'R$ ' . number_format((float) $totalCreditReleased, 2, ',', '.'), 'icon' => 'heroicon-o-check-circle'],
-            ['label' => 'Crédito usado', 'value' => 'R$ ' . number_format((float) $totalCreditUsed, 2, ',', '.'), 'icon' => 'heroicon-o-shopping-cart'],
-            ['label' => 'Saldo pendente', 'value' => 'R$ ' . number_format((float) $pendingBalance, 2, ',', '.'), 'icon' => 'heroicon-o-clock'],
+            ['label' => 'GMV por indicações', 'value' => 'R$ '.number_format((float) $gmv, 2, ',', '.'), 'icon' => 'heroicon-o-banknotes'],
+            ['label' => 'Desconto concedido', 'value' => 'R$ '.number_format((float) $totalDiscount, 2, ',', '.'), 'icon' => 'heroicon-o-receipt-percent'],
+            ['label' => 'Crédito gerado', 'value' => 'R$ '.number_format((float) $totalCreditGenerated, 2, ',', '.'), 'icon' => 'heroicon-o-arrow-trending-up'],
+            ['label' => 'Crédito liberado', 'value' => 'R$ '.number_format((float) $totalCreditReleased, 2, ',', '.'), 'icon' => 'heroicon-o-check-circle'],
+            ['label' => 'Crédito usado', 'value' => 'R$ '.number_format((float) $totalCreditUsed, 2, ',', '.'), 'icon' => 'heroicon-o-shopping-cart'],
+            ['label' => 'Saldo pendente', 'value' => 'R$ '.number_format((float) $pendingBalance, 2, ',', '.'), 'icon' => 'heroicon-o-clock'],
         ];
     }
 
@@ -90,10 +90,11 @@ class ReferralDashboard extends Page implements HasTable
 
         return Customer::where('is_affiliate', true)
             ->withCount(['referrals as referrals_count' => fn (Builder $q) => $q->where('status', 'active')->whereBetween('created_at', [$from, $to])])
-            ->having('referrals_count', '>', 0)
             ->orderByDesc('referrals_count')
-            ->limit(10)
             ->get()
+            ->filter(fn (Customer $customer): bool => $customer->referrals_count > 0)
+            ->take(10)
+            ->values()
             ->map(function (Customer $customer) use ($from, $to) {
                 $gmv = $customer->referrals()
                     ->where('status', 'active')
@@ -109,8 +110,8 @@ class ReferralDashboard extends Page implements HasTable
                     'name' => $customer->name,
                     'referral_code' => $customer->referral_code,
                     'count' => $customer->referrals_count,
-                    'gmv' => 'R$ ' . number_format((float) $gmv, 2, ',', '.'),
-                    'credits' => 'R$ ' . number_format((float) $credits, 2, ',', '.'),
+                    'gmv' => 'R$ '.number_format((float) $gmv, 2, ',', '.'),
+                    'credits' => 'R$ '.number_format((float) $credits, 2, ',', '.'),
                 ];
             })
             ->toArray();
