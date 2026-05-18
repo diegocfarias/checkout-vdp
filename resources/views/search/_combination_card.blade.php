@@ -22,20 +22,12 @@
         if (!is_array($c) || count($c) <= 1) { $hasDirect = true; } else { $hasConnection = true; }
     }
 
-    $pixOn = ($pixEnabled ?? false) && ($pixDiscount ?? 0) > 0;
-    $pixPrice = $pixOn ? round($totalPrice * (1 - ($pixDiscount / 100)), 2) : $totalPrice;
-    $pixSavings = $pixOn ? round($totalPrice - $pixPrice, 2) : 0;
-
     $obDateFormatted = isset($params['outbound_date'])
         ? \Carbon\Carbon::parse($params['outbound_date'])->translatedFormat('D, d/m/Y')
         : '';
     $ibDateFormatted = !empty($params['inbound_date'])
         ? \Carbon\Carbon::parse($params['inbound_date'])->translatedFormat('D, d/m/Y')
         : '';
-
-    $totalPax = ($params['adults'] ?? 1) + ($params['children'] ?? 0);
-    $totalAllPax = round($totalPrice * $totalPax, 2);
-    $pixAllPax = $pixOn ? round($pixPrice * $totalPax, 2) : $totalAllPax;
 
     $parseTax = function($val) {
         $val = trim((string)($val ?? '0'));
@@ -47,7 +39,13 @@
     $obTax = $parseTax($obFlights[0]['boarding_tax'] ?? '0');
     $ibTax = $hasInbound ? $parseTax($ibFlights[0]['boarding_tax'] ?? '0') : 0;
     $totalTax = round($obTax + $ibTax, 2);
-    $basePrice = round($totalPrice - $totalTax, 2);
+    $basePrice = max(round($totalPrice - $totalTax, 2), 0);
+    $pixOn = ($pixEnabled ?? false) && ($pixDiscount ?? 0) > 0;
+    $pixPrice = $pixOn ? round(($basePrice * (1 - ($pixDiscount / 100))) + $totalTax, 2) : $totalPrice;
+    $pixSavings = $pixOn ? round($totalPrice - $pixPrice, 2) : 0;
+    $totalPax = ($params['adults'] ?? 1) + ($params['children'] ?? 0);
+    $totalAllPax = round($totalPrice * $totalPax, 2);
+    $pixAllPax = $pixOn ? round($pixPrice * $totalPax, 2) : $totalAllPax;
 
     $displayCia = function($operator, $flightNumber) {
         $op = strtoupper(trim((string) $operator));
@@ -330,7 +328,7 @@
                             <span class="text-gray-700 font-medium">R$ {{ number_format($totalTax, 2, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between text-emerald-600">
-                            <span>Desconto no Pix</span>
+                            <span>Desconto no Pix nas passagens</span>
                             <span class="font-medium">-R$ {{ number_format($pixSavings, 2, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between font-bold text-gray-800 pt-1.5 border-t border-gray-100">

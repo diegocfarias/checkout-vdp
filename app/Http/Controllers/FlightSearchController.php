@@ -105,8 +105,10 @@ class FlightSearchController extends Controller
         $pixDiscount = (float) Setting::get('pix_discount', 0);
         $pixEnabled = ! empty(Setting::get('gateway_pix'));
         $price = (float) $showcaseRoute->cached_price;
+        $flightData = is_array($showcaseRoute->cached_flight_data) ? $showcaseRoute->cached_flight_data : [];
+        $discountablePrice = (float) ($flightData['base_price'] ?? max($price - (float) ($flightData['tax'] ?? 0), 0));
         $pixPrice = ($pixEnabled && $pixDiscount > 0)
-            ? round($price * (1 - $pixDiscount / 100), 2)
+            ? max(round($price - ($discountablePrice * $pixDiscount / 100), 2), 0)
             : null;
 
         return response()->json([

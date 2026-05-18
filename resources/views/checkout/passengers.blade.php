@@ -519,7 +519,13 @@
                 <div>
                     <div class="flex items-baseline gap-2">
                         <span class="text-sm text-gray-500">Total</span>
-                        <span id="footer-total" class="text-2xl font-bold text-gray-900" data-base="{{ $orderTotal }}">R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
+                        <span
+                            id="footer-total"
+                            class="text-2xl font-bold text-gray-900"
+                            data-base="{{ $orderTotal }}"
+                            data-fare="{{ $subtotalPassagens }}"
+                            data-tax="{{ $subtotalTaxas }}"
+                        >R$ {{ number_format($orderTotal, 2, ',', '.') }}</span>
                     </div>
                     <p id="footer-discount-info" class="text-xs text-emerald-600 font-medium hidden"></p>
                 </div>
@@ -659,7 +665,7 @@
                         <div id="modal-pix-discount-row" class="hidden flex justify-between items-center text-emerald-600 bg-emerald-50 -mx-2 px-2 py-1.5 rounded-lg">
                             <span class="flex items-center gap-1.5">
                                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                Desconto PIX ({{ number_format($pixDiscount ?? 0, 0) }}%)
+                                Desconto PIX nas passagens ({{ number_format($pixDiscount ?? 0, 0) }}%)
                             </span>
                             <span id="modal-pix-discount-valor" class="font-semibold"></span>
                         </div>
@@ -770,7 +776,10 @@
             const modalWalletRow = document.getElementById('modal-wallet-row');
             const modalWalletValor = document.getElementById('modal-wallet-valor');
             const baseTotal = parseFloat(footerTotal.dataset.base || 0);
-            const totalComDesconto = Math.max(baseTotal - appliedDiscount, 0);
+            const fareTotal = parseFloat(footerTotal.dataset.fare || 0);
+            const taxTotal = parseFloat(footerTotal.dataset.tax || 0);
+            const fareAfterDiscount = Math.max(fareTotal - appliedDiscount, 0);
+            const totalComDesconto = Math.max(fareAfterDiscount + taxTotal, 0);
             const isCreditCard = document.querySelector('input[name="payment_method"]:checked')?.value === 'credit_card';
             const isPix = document.querySelector('input[name="payment_method"]:checked')?.value === 'pix';
             const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -800,7 +809,8 @@
             let pixDiscountVal = 0;
             const canApplyPix = appliedDiscount > 0 ? cumulativeWithPix : true;
             if (isPix && pixDiscountPct > 0 && canApplyPix) {
-                pixDiscountVal = totalAfterWallet * (pixDiscountPct / 100);
+                const pixDiscountBase = Math.min(fareAfterDiscount, totalAfterWallet);
+                pixDiscountVal = pixDiscountBase * (pixDiscountPct / 100);
                 if (modalPixDiscRow) modalPixDiscRow.classList.remove('hidden');
                 if (modalPixDiscValor) modalPixDiscValor.textContent = '- ' + fmt(pixDiscountVal);
             } else {

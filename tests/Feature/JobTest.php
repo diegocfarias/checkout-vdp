@@ -156,6 +156,13 @@ class JobTest extends TestCase
         $vdpService->shouldReceive('calculateFlightPrice')
             ->twice()
             ->andReturnUsing(fn (array $flight): float => (float) $flight['price']);
+        $vdpService->shouldReceive('resolveBoardingTax')
+            ->twice()
+            ->andReturn('0');
+        $vdpService->shouldReceive('parseMoneyValue')
+            ->twice()
+            ->with('0')
+            ->andReturn('0');
 
         (new RefreshShowcaseRoute($route))->handle($vdpService);
 
@@ -164,6 +171,8 @@ class JobTest extends TestCase
         $this->assertSame('2026-06-02', $route->cached_date->format('Y-m-d'));
         $this->assertSame('AZUL', $route->cached_airline);
         $this->assertSame('10:00', $route->cached_flight_data['departure_time']);
+        $this->assertEqualsWithDelta(250, $route->cached_flight_data['base_price'], 0.01);
+        $this->assertEqualsWithDelta(0, $route->cached_flight_data['tax'], 0.01);
 
         $this->assertDatabaseHas('showcase_refresh_logs', [
             'showcase_route_id' => $route->id,

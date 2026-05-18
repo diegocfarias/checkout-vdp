@@ -29,7 +29,10 @@
     ]);
 
     $hasPixDiscount = isset($pixEnabled) && $pixEnabled && isset($pixDiscount) && $pixDiscount > 0;
-    $pixPrice = $hasPixDiscount ? round((float)$route->cached_price * (1 - $pixDiscount / 100), 2) : null;
+    $cachedFlightData = is_array($route->cached_flight_data ?? null) ? $route->cached_flight_data : [];
+    $cachedPrice = (float) $route->cached_price;
+    $discountablePrice = (float) ($cachedFlightData['base_price'] ?? max($cachedPrice - (float) ($cachedFlightData['tax'] ?? 0), 0));
+    $pixPrice = $hasPixDiscount ? max(round($cachedPrice - ($discountablePrice * $pixDiscount / 100), 2), 0) : null;
     $monthLabel = $route->cached_date ? $route->cached_date->translatedFormat('M/Y') : '';
 @endphp
 
@@ -76,7 +79,7 @@
                 @if($hasPixDiscount)
                     <p class="text-xs text-gray-400 line-through showcase-original-price" data-route="{{ $route->id }}">{{ $route->formattedPrice() }}</p>
                     <p class="text-lg font-bold text-emerald-600 leading-tight showcase-pix-price" data-route="{{ $route->id }}">R$ {{ number_format($pixPrice, 2, ',', '.') }}</p>
-                    <p class="text-[11px] text-emerald-500 font-medium">{{ number_format($pixDiscount, 0) }}% off no PIX</p>
+                    <p class="text-[11px] text-emerald-500 font-medium">{{ number_format($pixDiscount, 0) }}% off nas passagens no PIX</p>
                 @else
                     <p class="text-lg font-bold text-gray-900 leading-tight showcase-price" data-route="{{ $route->id }}">{{ $route->formattedPrice() }}</p>
                 @endif

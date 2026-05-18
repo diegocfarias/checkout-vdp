@@ -46,15 +46,15 @@ class OrderCheckoutControllerTest extends TestCase
             'tax' => '30.00',
         ]);
         $coupon = Coupon::create([
-            'code' => 'SAVE50',
-            'type' => 'fixed',
-            'value' => 50,
+            'code' => 'SAVE10',
+            'type' => 'percent',
+            'value' => 10,
             'active' => true,
             'cumulative_with_pix' => true,
         ]);
 
         $this->postJson("/r/{$order->token}/apply-coupon", [
-            'coupon_code' => ' save50 ',
+            'coupon_code' => ' save10 ',
             'payer_document' => '529.982.247-25',
         ])
             ->assertOk()
@@ -62,9 +62,9 @@ class OrderCheckoutControllerTest extends TestCase
                 'success' => true,
                 'type' => 'coupon',
                 'coupon_code' => $coupon->code,
-                'discount_amount' => 50,
-                'new_total' => 210,
-                'cumulative_with_pix' => true,
+                'discount_amount' => 20,
+                'new_total' => 240,
+                'cumulative_with_pix' => false,
                 'message' => 'Cupom aplicado!',
             ]);
     }
@@ -134,7 +134,7 @@ class OrderCheckoutControllerTest extends TestCase
                 Mockery::on(fn ($checkoutOrder): bool => $checkoutOrder->is($order)),
                 'pix',
                 Mockery::on(function (array $cardData): bool {
-                    return abs($cardData['total_with_interest'] - 90) < 0.01
+                    return abs($cardData['total_with_interest'] - 100) < 0.01
                         && $cardData['payer']['document'] === '52998224725'
                         && $cardData['payer']['email'] === 'pagador@example.com';
                 }),
@@ -145,7 +145,7 @@ class OrderCheckoutControllerTest extends TestCase
                 'payment_url' => '000201PIX',
                 'status' => 'pending',
                 'payment_method' => 'pix',
-                'amount' => 90,
+                'amount' => 100,
                 'currency' => 'BRL',
             ]));
 
@@ -182,7 +182,7 @@ class OrderCheckoutControllerTest extends TestCase
         $this->assertDatabaseHas('order_payments', [
             'order_id' => $order->id,
             'gateway' => 'fake',
-            'amount' => 90,
+            'amount' => 100,
             'payment_method' => 'pix',
         ]);
     }
@@ -274,7 +274,7 @@ class OrderCheckoutControllerTest extends TestCase
                 Mockery::on(fn ($checkoutOrder): bool => $checkoutOrder->is($order)),
                 'credit_card',
                 Mockery::on(function (array $cardData): bool {
-                    return abs($cardData['total_with_interest'] - 128.70) < 0.01
+                    return abs($cardData['total_with_interest'] - 132) < 0.01
                         && $cardData['installments'] === '2'
                         && $cardData['payer']['document'] === '52998224725'
                         && $cardData['payer']['billing']['zipcode'] === '30140071';
@@ -286,7 +286,7 @@ class OrderCheckoutControllerTest extends TestCase
                 'payment_url' => 'https://pay.test/checkout',
                 'status' => 'pending',
                 'payment_method' => 'credit_card',
-                'amount' => 128.70,
+                'amount' => 132,
                 'currency' => 'BRL',
             ]));
 
@@ -306,19 +306,19 @@ class OrderCheckoutControllerTest extends TestCase
             'referred_order_id' => $order->id,
             'referred_customer_id' => $customer->id,
             'referral_code_used' => 'IND-AFF123',
-            'discount_amount' => 13,
-            'credit_amount' => 6.5,
+            'discount_amount' => 10,
+            'credit_amount' => 5,
             'credit_status' => 'pending',
         ]);
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
             'customer_id' => $customer->id,
-            'discount_amount' => 13,
+            'discount_amount' => 10,
             'status' => 'awaiting_payment',
         ]);
         $this->assertDatabaseHas('order_payments', [
             'order_id' => $order->id,
-            'amount' => 128.70,
+            'amount' => 132,
             'payment_method' => 'credit_card',
         ]);
     }

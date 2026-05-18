@@ -152,6 +152,10 @@ class RouteAndMiddlewareTest extends TestCase
             'arrival_iata' => 'SDU',
             'arrival_city' => 'Rio de Janeiro',
             'cached_price' => 500,
+            'cached_flight_data' => [
+                'base_price' => 400,
+                'tax' => 100,
+            ],
             'sort_order' => 2,
         ]);
         $this->createShowcaseRoute([
@@ -171,8 +175,8 @@ class RouteAndMiddlewareTest extends TestCase
             ->assertJson([
                 'price' => 500,
                 'formatted_price' => 'R$ 500,00',
-                'pix_price' => 450,
-                'formatted_pix_price' => 'R$ 450,00',
+                'pix_price' => 460,
+                'formatted_pix_price' => 'R$ 460,00',
                 'airline' => 'AZUL',
             ]);
     }

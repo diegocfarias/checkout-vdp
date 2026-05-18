@@ -250,11 +250,11 @@ class OrderCheckoutController extends Controller
                 $validation = $this->referralService->validateReferral($affiliate, $payerDoc);
 
                 if ($validation['valid']) {
-                    $baseTotal = $this->calculateBaseTotal($order);
+                    $discountBase = $this->calculateDiscountableTotal($order);
                     $referredCustomerId = $order->customer_id;
 
                     $referral = $this->referralService->applyReferralDiscount(
-                        $order, $affiliate, $baseTotal, $payerDoc, $referredCustomerId
+                        $order, $affiliate, $discountBase, $payerDoc, $referredCustomerId
                     );
 
                     $discountAmount = (float) $referral->discount_amount;
@@ -268,8 +268,8 @@ class OrderCheckoutController extends Controller
                     $docValid = $coupon->isAvailableForDocument($payerDoc) || $coupon->isAvailableForDocument($customerDoc);
 
                     if ($docValid) {
-                        $baseTotal = $this->calculateBaseTotal($order);
-                        $discountAmount = $coupon->calculateDiscount($baseTotal);
+                        $discountBase = $this->calculateDiscountableTotal($order);
+                        $discountAmount = $coupon->calculateDiscount($discountBase);
 
                         $order->update([
                             'coupon_id' => $coupon->id,
@@ -283,7 +283,8 @@ class OrderCheckoutController extends Controller
         }
 
         $baseTotal = $this->calculateBaseTotal($order);
-        $totalAfterDiscount = $baseTotal - $discountAmount - $walletAmountUsed;
+        $discountableTotal = $this->calculateDiscountableTotal($order);
+        $totalAfterDiscount = max($baseTotal - $discountAmount - $walletAmountUsed, 0);
 
         if ($paymentMethod === 'pix') {
             $canApplyPixDiscount = true;
@@ -291,12 +292,15 @@ class OrderCheckoutController extends Controller
             if (isset($referral)) {
                 $canApplyPixDiscount = (bool) Setting::get('referral_cumulative_with_pix', true);
             } elseif (isset($coupon)) {
-                $canApplyPixDiscount = (bool) $coupon->cumulative_with_pix;
+                $canApplyPixDiscount = false;
             }
 
             $pixDiscountPct = (float) Setting::get('pix_discount', 0);
             if ($pixDiscountPct > 0 && $canApplyPixDiscount) {
-                $totalAfterDiscount = round($totalAfterDiscount * (1 - $pixDiscountPct / 100), 2);
+                $remainingDiscountableTotal = max($discountableTotal - $discountAmount, 0);
+                $pixDiscountBase = min($remainingDiscountableTotal, $totalAfterDiscount);
+                $pixDiscountAmount = round($pixDiscountBase * ($pixDiscountPct / 100), 2);
+                $totalAfterDiscount = max(round($totalAfterDiscount - $pixDiscountAmount, 2), 0);
             }
             $cardData['total_with_interest'] = round($totalAfterDiscount, 2);
         } else {
@@ -456,6 +460,7 @@ class OrderCheckoutController extends Controller
             }
 
             $baseTotal = $this->calculateBaseTotal($order);
+            $discountBase = $this->calculateDiscountableTotal($order);
 
             if (($resolved['type'] ?? null) === 'referral' && isset($resolved['model']) && $resolved['model'] instanceof Customer) {
                 $affiliate = $resolved['model'];
@@ -466,14 +471,15 @@ class OrderCheckoutController extends Controller
                     return response()->json(['success' => false, 'message' => $validation['error'] ?? 'Código inválido ou expirado.']);
                 }
 
-                $preview = $this->referralService->previewReferralDiscount($affiliate, $baseTotal);
+                $preview = $this->referralService->previewReferralDiscount($affiliate, $discountBase);
+                $discount = round((float) $preview['discount_amount'], 2);
 
                 return response()->json([
                     'success' => true,
                     'type' => 'referral',
                     'coupon_code' => $code,
-                    'discount_amount' => $preview['discount_amount'],
-                    'new_total' => $preview['new_total'],
+                    'discount_amount' => $discount,
+                    'new_total' => round(max($baseTotal - $discount, 0), 2),
                     'cumulative_with_pix' => (bool) Setting::get('referral_cumulative_with_pix', true),
                     'message' => 'Desconto de indicação de '.$preview['affiliate_name'].' aplicado!',
                 ]);
@@ -498,7 +504,7 @@ class OrderCheckoutController extends Controller
                 }
             }
 
-            $discount = $coupon->calculateDiscount($baseTotal);
+            $discount = $coupon->calculateDiscount($discountBase);
 
             return response()->json([
                 'success' => true,
@@ -506,7 +512,7 @@ class OrderCheckoutController extends Controller
                 'coupon_code' => $coupon->code,
                 'discount_amount' => round($discount, 2),
                 'new_total' => round($baseTotal - $discount, 2),
-                'cumulative_with_pix' => (bool) $coupon->cumulative_with_pix,
+                'cumulative_with_pix' => false,
                 'message' => 'Cupom aplicado!',
             ]);
         } catch (\Throwable $e) {
@@ -534,6 +540,21 @@ class OrderCheckoutController extends Controller
         foreach ($order->flights as $flight) {
             $perPax = (float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0);
             $total += $perPax * $payingPax;
+        }
+
+        return round($total, 2);
+    }
+
+    private function calculateDiscountableTotal(Order $order): float
+    {
+        $payingPax = $order->total_adults + $order->total_children;
+        if ($payingPax < 1) {
+            $payingPax = 1;
+        }
+
+        $total = 0;
+        foreach ($order->flights as $flight) {
+            $total += (float) ($flight->money_price ?? 0) * $payingPax;
         }
 
         return round($total, 2);

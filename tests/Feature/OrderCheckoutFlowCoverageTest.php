@@ -336,8 +336,8 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'type' => 'referral',
-                'discount_amount' => 13,
-                'new_total' => 117,
+                'discount_amount' => 10,
+                'new_total' => 120,
                 'message' => 'Desconto de indicação de Afiliado aplicado!',
             ]);
 

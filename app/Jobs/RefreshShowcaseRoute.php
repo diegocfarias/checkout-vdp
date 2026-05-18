@@ -62,7 +62,7 @@ class RefreshShowcaseRoute implements ShouldQueue
             foreach ($dates as $index => $outboundDate) {
                 $returnDate = null;
                 if ($route->trip_type === 'roundtrip' && $route->return_stay_days) {
-                    $returnDate = date('Y-m-d', strtotime($outboundDate . ' + ' . $route->return_stay_days . ' days'));
+                    $returnDate = date('Y-m-d', strtotime($outboundDate.' + '.$route->return_stay_days.' days'));
                 }
 
                 $params = [
@@ -101,6 +101,7 @@ class RefreshShowcaseRoute implements ShouldQueue
 
                     foreach ($outboundFlights as $flight) {
                         $price = $vdpService->calculateFlightPrice($flight);
+                        $tax = (float) $vdpService->parseMoneyValue($vdpService->resolveBoardingTax($flight));
 
                         if ($route->trip_type === 'roundtrip') {
                             $inboundFlights = $results['inbound'] ?? [];
@@ -109,10 +110,12 @@ class RefreshShowcaseRoute implements ShouldQueue
                             }
 
                             $cheapestInboundPrice = PHP_FLOAT_MAX;
+                            $cheapestInboundTax = 0.0;
                             foreach ($inboundFlights as $ibFlight) {
                                 $ibPrice = $vdpService->calculateFlightPrice($ibFlight);
                                 if ($ibPrice < $cheapestInboundPrice) {
                                     $cheapestInboundPrice = $ibPrice;
+                                    $cheapestInboundTax = (float) $vdpService->parseMoneyValue($vdpService->resolveBoardingTax($ibFlight));
                                 }
                             }
 
@@ -121,8 +124,10 @@ class RefreshShowcaseRoute implements ShouldQueue
                             }
 
                             $totalPrice = round($price + $cheapestInboundPrice, 2);
+                            $totalTax = round($tax + $cheapestInboundTax, 2);
                         } else {
                             $totalPrice = round($price, 2);
+                            $totalTax = round($tax, 2);
                         }
 
                         if ($bestPrice === null || $totalPrice < $bestPrice) {
@@ -134,6 +139,8 @@ class RefreshShowcaseRoute implements ShouldQueue
                                 'departure_time' => $flight['departure_time'] ?? null,
                                 'arrival_time' => $flight['arrival_time'] ?? null,
                                 'total_flight_duration' => $flight['total_flight_duration'] ?? null,
+                                'base_price' => max(round($totalPrice - $totalTax, 2), 0),
+                                'tax' => $totalTax,
                                 'connection_count' => is_array($flight['connection'] ?? null) ? max(0, count($flight['connection']) - 1) : 0,
                             ];
                         }
