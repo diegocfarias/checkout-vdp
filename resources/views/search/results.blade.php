@@ -841,7 +841,7 @@
                 + '<div class="space-y-1.5 text-xs text-gray-500 border-t border-gray-100 pt-3 mb-3">'
                 + '<div class="flex justify-between"><span>' + totalPax + ' ' + (totalPax > 1 ? 'adultos' : 'adulto') + '</span><span class="text-gray-700 font-medium">R$ ' + formatBRL(basePrice) + '</span></div>'
                 + '<div class="flex justify-between"><span>Valor das taxas</span><span class="text-gray-700 font-medium">R$ ' + formatBRL(totalTax) + '</span></div>'
-                + '<div class="flex justify-between text-emerald-600"><span>Desconto no Pix nas passagens</span><span class="font-medium">-R$ ' + formatBRL(pixSavings) + '</span></div>'
+                + '<div class="flex justify-between text-emerald-600"><span>Desconto no Pix</span><span class="font-medium">-R$ ' + formatBRL(pixSavings) + '</span></div>'
                 + '<div class="flex justify-between font-bold text-gray-800 pt-1.5 border-t border-gray-100"><span>' + (totalPax > 1 ? 'Total por adulto' : 'Total') + ' no Pix</span><span>R$ ' + formatBRL(pixPrice) + '</span></div>';
             if (totalPax > 1) {
                 html += '<div class="flex justify-between font-bold text-blue-700 bg-blue-50 -mx-1 px-1 py-1 rounded"><span>Total (' + totalPax + 'x)</span><span>R$ ' + formatBRL(pixAllPax) + '</span></div>';

@@ -2,7 +2,6 @@
     $prefill = $prefill ?? null;
     $compact = $compact ?? false;
     $calendarPricesEnabled = \App\Models\Setting::get('calendar_prices_enabled', true);
-    $calendarPricesMonths = (int) \App\Models\Setting::get('calendar_prices_months', 3);
     if ($prefill && isset($prefill['trip_type'])) {
         $tripType = $prefill['trip_type'];
     } elseif ($prefill && !empty($prefill['inbound_date'])) {
@@ -16,20 +15,15 @@
 
 <style>
 .cal-price-tag {
-    font-size: 8px;
-    font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
-    margin-top: 1px;
-    padding: 1px 3px;
-    border-radius: 3px;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: block;
+    width: 2.15rem;
+    height: 0.36rem;
+    margin-top: 0.12rem;
+    border-radius: 999px;
 }
-.cal-price-green { color: #059669; background-color: #ecfdf5; }
-.cal-price-yellow { color: #d97706; background-color: #fffbeb; }
-.cal-price-red { color: #ef4444; background-color: #fef2f2; }
+.cal-price-green { background-color: #16a34a; }
+.cal-price-yellow { background-color: #f59e0b; }
+.cal-price-red { background-color: #ef4444; }
 </style>
 <form action="{{ route('search.results') }}" method="GET" id="search-form" class="{{ $compact ? 'w-full' : 'max-w-5xl mx-auto' }}">
     <div class="{{ $compact ? 'bg-white rounded-xl border border-gray-200 p-4 sm:p-5' : 'bg-white rounded-2xl shadow-2xl p-5 sm:p-7' }}">
@@ -551,27 +545,10 @@
     maxDate.setHours(0,0,0,0);
 
     var calendarPricesFeatureEnabled = @json((bool) $calendarPricesEnabled);
-    var calendarPricesMonths = @json($calendarPricesMonths);
-    var calendarPrices = {};
-    var calendarPriceLevels = {};
-    var calendarPriceThresholds = { p33: null, p66: null };
+    var CALENDAR_PRICE_MONTHS_PER_FETCH = 6;
+    var calendarPriceLevels = { outbound: {}, inbound: {} };
     var calPriceFetchId = 0;
-    var calPriceDirection = 'outbound';
-
-    function computePriceThresholds() {
-        var vals = [];
-        Object.keys(calendarPrices).forEach(function(k) {
-            if (calendarPrices[k] != null) vals.push(calendarPrices[k]);
-        });
-        vals.sort(function(a, b) { return a - b; });
-        if (vals.length > 2) {
-            calendarPriceThresholds.p33 = vals[Math.floor(vals.length * 0.33)];
-            calendarPriceThresholds.p66 = vals[Math.floor(vals.length * 0.66)];
-        } else {
-            calendarPriceThresholds.p33 = null;
-            calendarPriceThresholds.p66 = null;
-        }
-    }
+    var calendarFetchedMonths = { outbound: {}, inbound: {} };
 
     function getLevelColorClass(level) {
         if (level === 'low') return 'cal-price-green';
@@ -580,32 +557,53 @@
         return '';
     }
 
-    function getPriceColorClass(price, dateKeyValue) {
-        var levelClass = getLevelColorClass(calendarPriceLevels[dateKeyValue]);
-        if (levelClass) return levelClass;
-        if (price == null || calendarPriceThresholds.p33 == null) return '';
-        if (price <= calendarPriceThresholds.p33) return 'cal-price-green';
-        if (price > calendarPriceThresholds.p66) return 'cal-price-red';
-        return 'cal-price-yellow';
-    }
-
-    function formatCalPrice(price) {
-        if (price >= 1000) return (price / 1000).toFixed(1).replace('.', ',') + 'k';
-        return Math.round(price).toString();
-    }
-
     function getCurrentPriceDirection() {
         if (dpOutbound && !dpInbound && isRoundtrip()) return 'inbound';
         return 'outbound';
     }
 
-    function fetchCalendarPrices(monthFrom, yearFrom, monthTo, yearTo) {
+    function getActiveCalendarLevels() {
+        return calendarPriceLevels[getCurrentPriceDirection()] || {};
+    }
+
+    function applyCalendarPriceBar(wrapper, dateKeyValue, isPast) {
+        var existing = wrapper.querySelector('.cal-price-tag');
+        var level = isPast ? null : getActiveCalendarLevels()[dateKeyValue];
+        var levelClass = getLevelColorClass(level);
+
+        if (!levelClass) {
+            if (existing) existing.remove();
+            return;
+        }
+
+        if (!existing) {
+            existing = document.createElement('span');
+            existing.setAttribute('aria-hidden', 'true');
+            wrapper.appendChild(existing);
+        }
+
+        var desiredClass = 'cal-price-tag ' + levelClass;
+        if (existing.className !== desiredClass) {
+            existing.className = desiredClass;
+        }
+    }
+
+    function monthOffset(year, month) {
+        return (year - today.getFullYear()) * 12 + (month - today.getMonth());
+    }
+
+    function monthFromOffset(offset) {
+        var d = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+        return { month: d.getMonth(), year: d.getFullYear() };
+    }
+
+    function fetchCalendarPrices(monthFrom, yearFrom, monthTo, yearTo, direction) {
         if (!calendarPricesFeatureEnabled) return;
         var dep = document.getElementById('departure-iata').value;
         var arr = document.getElementById('arrival-iata').value;
         if (!dep || !arr) return;
 
-        var direction = getCurrentPriceDirection();
+        direction = direction || getCurrentPriceDirection();
         var fetchDep = direction === 'inbound' ? arr : dep;
         var fetchArr = direction === 'inbound' ? dep : arr;
 
@@ -629,34 +627,25 @@
             + '&trip_type=oneway'
             + '&inbound_offset=0';
 
-        calPriceFetchId++;
         var myFetchId = calPriceFetchId;
-        calPriceDirection = direction;
 
         fetch('/api/date-prices?' + qs)
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (myFetchId !== calPriceFetchId) return;
-                if (data.prices) {
-                    Object.keys(data.prices).forEach(function(k) {
-                        if (data.prices[k] != null) calendarPrices[k] = data.prices[k];
-                    });
-                }
                 if (data.levels) {
                     Object.keys(data.levels).forEach(function(k) {
-                        calendarPriceLevels[k] = data.levels[k];
+                        calendarPriceLevels[direction][k] = data.levels[k];
                     });
                 }
-                computePriceThresholds();
                 updateCalendarPriceCells();
             })
             .catch(function() {});
     }
 
     function clearCalendarPrices() {
-        calendarPrices = {};
-        calendarPriceLevels = {};
-        calendarPriceThresholds = { p33: null, p66: null };
+        calendarPriceLevels = { outbound: {}, inbound: {} };
+        calendarFetchedMonths = { outbound: {}, inbound: {} };
         calPriceFetchId++;
         updateCalendarPriceCells();
     }
@@ -668,16 +657,9 @@
             for (var i = 0; i < cells.length; i++) {
                 var wrapper = cells[i];
                 var dk = wrapper.getAttribute('data-date');
-                var existing = wrapper.querySelector('.cal-price-tag');
-                if (existing) existing.remove();
-
-                var price = calendarPrices[dk];
-                if (price != null) {
-                    var tag = document.createElement('span');
-                    tag.className = 'cal-price-tag ' + getPriceColorClass(price, dk);
-                    tag.textContent = 'R$' + formatCalPrice(price);
-                    wrapper.appendChild(tag);
-                }
+                var parts = dk.split('-');
+                var dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                applyCalendarPriceBar(wrapper, dk, dt < today || dt > maxDate);
             }
         });
     }
@@ -784,13 +766,7 @@
             cellWrapper.appendChild(cell);
 
             var dk = dateKey(date);
-            var cachedPrice = calendarPrices[dk];
-            if (cachedPrice != null && !(date < today || date > maxDate)) {
-                var priceTag = document.createElement('span');
-                priceTag.className = 'cal-price-tag ' + getPriceColorClass(cachedPrice, dk);
-                priceTag.textContent = 'R$' + formatCalPrice(cachedPrice);
-                cellWrapper.appendChild(priceTag);
-            }
+            applyCalendarPriceBar(cellWrapper, dk, date < today || date > maxDate);
 
             grid.appendChild(cellWrapper);
         }
@@ -822,16 +798,7 @@
                     wrapper.insertBefore(labelTag, wrapper.firstChild);
                 }
 
-                var oldPriceTag = wrapper.querySelector('.cal-price-tag');
-                if (oldPriceTag) oldPriceTag.remove();
-                var price = calendarPrices[dk];
-                var isPast = dt < today || dt > maxDate;
-                if (price != null && !isPast) {
-                    var priceTag = document.createElement('span');
-                    priceTag.className = 'cal-price-tag ' + getPriceColorClass(price, dk);
-                    priceTag.textContent = 'R$' + formatCalPrice(price);
-                    wrapper.appendChild(priceTag);
-                }
+                applyCalendarPriceBar(wrapper, dk, dt < today || dt > maxDate);
             }
         });
         dpUpdateChips();
@@ -910,18 +877,15 @@
 
     function dpSelectDate(date) {
         var wasSelectingOutbound = !dpOutbound || (dpOutbound && dpInbound) || !isRoundtrip();
-        var switchedToInbound = false;
 
         if (wasSelectingOutbound) {
             dpOutbound = date;
             dpInbound = null;
             dpHover = null;
-            if (isRoundtrip()) switchedToInbound = true;
         } else {
             if (date < dpOutbound) {
                 dpOutbound = date;
                 dpInbound = null;
-                switchedToInbound = true;
             } else {
                 dpInbound = date;
                 dpHover = null;
@@ -931,11 +895,7 @@
         document.getElementById('inbound-date').value = dpInbound ? dateKey(dpInbound) : '';
         dpUpdateLabel();
         dpUpdateAllCells();
-
-        if (switchedToInbound) {
-            clearCalendarPrices();
-            dpFetchVisiblePrices();
-        }
+        dpFetchVisiblePrices();
 
         if (!isMobile()) {
             if (!isRoundtrip() && dpOutbound) {
@@ -994,29 +954,46 @@
         }
     }
 
-    function dpFetchVisiblePrices() {
-        var startM = today.getMonth();
-        var startY = today.getFullYear();
-        var maxEndIdx = calendarPricesMonths - 1;
+    function fetchCalendarPriceOffsets(startOffset, endOffset, direction) {
+        var maxOffset = MOBILE_MONTHS_COUNT - 1;
+        direction = direction || getCurrentPriceDirection();
+        startOffset = Math.max(0, Math.min(maxOffset, startOffset));
+        endOffset = Math.max(startOffset, Math.min(maxOffset, endOffset));
 
+        var firstMissing = null;
+        var lastMissing = null;
+        for (var offset = startOffset; offset <= endOffset; offset++) {
+            if (!calendarFetchedMonths[direction][offset]) {
+                firstMissing = firstMissing === null ? offset : firstMissing;
+                lastMissing = offset;
+                calendarFetchedMonths[direction][offset] = true;
+            }
+        }
+
+        if (firstMissing === null) return;
+
+        var from = monthFromOffset(firstMissing);
+        var to = monthFromOffset(lastMissing);
+        fetchCalendarPrices(from.month, from.year, to.month, to.year, direction);
+    }
+
+    function dpFetchVisiblePricesForDirection(direction) {
         if (isMobile()) {
-            var endIdx = Math.min(MOBILE_MONTHS_COUNT - 1, maxEndIdx);
-            var endM = (startM + endIdx) % 12;
-            var endY = startY + Math.floor((startM + endIdx) / 12);
-            fetchCalendarPrices(startM, startY, endM, endY);
+            fetchCalendarPriceOffsets(0, CALENDAR_PRICE_MONTHS_PER_FETCH - 1, direction);
         } else {
             var m1 = dpViewMonth % 12;
             var y1 = dpViewYear + Math.floor(dpViewMonth / 12);
-            var m2 = (dpViewMonth + 1) % 12;
-            var y2 = dpViewYear + Math.floor((dpViewMonth + 1) / 12);
-            var limitM = (startM + maxEndIdx) % 12;
-            var limitY = startY + Math.floor((startM + maxEndIdx) / 12);
-            if (y1 > limitY || (y1 === limitY && m1 > limitM)) return;
-            if (y2 > limitY || (y2 === limitY && m2 > limitM)) {
-                m2 = limitM;
-                y2 = limitY;
-            }
-            fetchCalendarPrices(m1, y1, m2, y2);
+            var startOffset = monthOffset(y1, m1);
+            if (startOffset > MOBILE_MONTHS_COUNT - 1) return;
+            fetchCalendarPriceOffsets(startOffset, startOffset + CALENDAR_PRICE_MONTHS_PER_FETCH - 1, direction);
+        }
+    }
+
+    function dpFetchVisiblePrices() {
+        dpFetchVisiblePricesForDirection(getCurrentPriceDirection());
+        if (isRoundtrip()) {
+            dpFetchVisiblePricesForDirection('outbound');
+            dpFetchVisiblePricesForDirection('inbound');
         }
     }
 

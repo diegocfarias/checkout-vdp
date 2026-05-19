@@ -12,7 +12,7 @@ class CalendarPriceService
     /**
      * Consulta a API externa de preços por data.
      *
-     * @return array{prices: array<string, float>, levels: array<string, string>, currency: string|null, source: string}
+     * @return array{levels: array<string, string>, currency: string|null, source: string}
      */
     public function datePrices(
         string $departure,
@@ -35,7 +35,7 @@ class CalendarPriceService
     }
 
     /**
-     * @return array{prices: array<string, float>, levels: array<string, string>, currency: string|null, source: string}
+     * @return array{levels: array<string, string>, currency: string|null, source: string}
      */
     private function requestDatePrices(
         string $departure,
@@ -92,7 +92,7 @@ class CalendarPriceService
     }
 
     /**
-     * @return array{prices: array<string, float>, levels: array<string, string>, currency: string|null, source: string}
+     * @return array{levels: array<string, string>, currency: string|null, source: string}
      */
     private function parseResponse(array $data): array
     {
@@ -130,7 +130,6 @@ class CalendarPriceService
         ksort($levels);
 
         return [
-            'prices' => $prices,
             'levels' => $levels,
             'currency' => $data['currency'] ?? null,
             'source' => ! empty($prices) ? '123milhas' : 'cache',
@@ -157,12 +156,11 @@ class CalendarPriceService
     }
 
     /**
-     * @return array{prices: array<string, float>, levels: array<string, string>, currency: string|null, source: string}
+     * @return array{levels: array<string, string>, currency: string|null, source: string}
      */
     private function emptyResult(): array
     {
         return [
-            'prices' => [],
             'levels' => [],
             'currency' => null,
             'source' => 'cache',

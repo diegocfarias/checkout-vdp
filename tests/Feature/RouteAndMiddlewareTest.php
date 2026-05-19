@@ -182,21 +182,29 @@ class RouteAndMiddlewareTest extends TestCase
             ]);
     }
 
-    public function test_date_prices_reads_cached_prices_for_requested_range(): void
+    public function test_date_prices_returns_123_calendar_levels_only(): void
     {
         Http::fake([
-            'https://123milhas.com/api/flight/prices' => Http::response(['currency' => 'BRL', 'offers' => []]),
+            'https://123milhas.com/api/flight/prices' => Http::response([
+                'currency' => 'BRL',
+                'offers' => [
+                    [
+                        'bounds' => [[
+                            'departureDates' => ['2026-06-01T10:00:00Z'],
+                        ]],
+                        'totalPrice' => 350.25,
+                        'rating' => 'EXPENSIVE',
+                    ],
+                    [
+                        'bounds' => [[
+                            'departureDates' => ['2026-06-03T10:00:00Z'],
+                        ]],
+                        'totalPrice' => 299.99,
+                        'rating' => 'CHEAP',
+                    ],
+                ],
+            ]),
         ]);
-
-        $vdp = Mockery::mock(VdpFlightService::class);
-        $vdp->shouldReceive('getMinPriceFromCache')
-            ->times(3)
-            ->andReturnUsing(fn (array $params): ?float => match ($params['outbound_date']) {
-                '2026-06-01' => 350.25,
-                '2026-06-02' => null,
-                '2026-06-03' => 299.99,
-            });
-        $this->app->instance(VdpFlightService::class, $vdp);
 
         $this->getJson(route('api.date-prices').'?'.http_build_query([
             'departure' => 'gru',
@@ -217,12 +225,7 @@ class RouteAndMiddlewareTest extends TestCase
                     '2026-06-01' => 'high',
                     '2026-06-03' => 'low',
                 ],
-                'prices' => [
-                    '2026-06-01' => 350.25,
-                    '2026-06-02' => null,
-                    '2026-06-03' => 299.99,
-                ],
-                'source' => 'cache',
+                'source' => '123milhas',
             ]);
     }
 

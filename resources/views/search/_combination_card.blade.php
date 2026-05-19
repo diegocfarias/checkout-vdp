@@ -328,7 +328,7 @@
                             <span class="text-gray-700 font-medium">R$ {{ number_format($totalTax, 2, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between text-emerald-600">
-                            <span>Desconto no Pix nas passagens</span>
+                            <span>Desconto no Pix</span>
                             <span class="font-medium">-R$ {{ number_format($pixSavings, 2, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between font-bold text-gray-800 pt-1.5 border-t border-gray-100">

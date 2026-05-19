@@ -31,7 +31,7 @@ class FlightSearchControllerCoverageTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_date_prices_clamps_long_ranges_and_builds_roundtrip_cache_params(): void
+    public function test_date_prices_clamps_long_ranges_for_123_calendar_request(): void
     {
         Http::fake([
             'https://123milhas.com/api/flight/prices' => Http::response(['currency' => 'BRL', 'offers' => []]),
@@ -39,16 +39,6 @@ class FlightSearchControllerCoverageTest extends TestCase
 
         $firstDate = '2026-06-01';
         $lastAllowedDate = Carbon::parse($firstDate)->addDays(335)->format('Y-m-d');
-        $blockedDate = Carbon::parse($firstDate)->addDays(336)->format('Y-m-d');
-
-        $vdp = Mockery::mock(VdpFlightService::class);
-        $vdp->shouldReceive('getMinPriceFromCache')
-            ->times(336)
-            ->with(Mockery::on(fn (array $params): bool => $params['departure'] === 'GRU'
-                && $params['arrival'] === 'SDU'
-                && $params['inbound_date'] === Carbon::parse($params['outbound_date'])->addDays(2)->format('Y-m-d')))
-            ->andReturn(321.45);
-        $this->app->instance(VdpFlightService::class, $vdp);
 
         $response = $this->getJson(route('api.date-prices').'?'.http_build_query([
             'departure' => 'gru',
@@ -63,12 +53,18 @@ class FlightSearchControllerCoverageTest extends TestCase
             'inbound_offset' => 2,
         ]))->assertOk();
 
-        $prices = $response->json('prices');
+        $response->assertExactJson([
+            'currency' => 'BRL',
+            'levels' => [],
+            'source' => 'cache',
+        ]);
 
-        $this->assertCount(336, $prices);
-        $this->assertSame(321.45, $prices[$firstDate]);
-        $this->assertSame(321.45, $prices[$lastAllowedDate]);
-        $this->assertArrayNotHasKey($blockedDate, $prices);
+        Http::assertSent(function ($request) use ($firstDate, $lastAllowedDate): bool {
+            $data = $request->data();
+
+            return $data['bounds'][0]['departureDate']['start'] === $firstDate
+                && $data['bounds'][0]['departureDate']['end'] === $lastAllowedDate;
+        });
     }
 
     public function test_date_prices_uses_external_calendar_prices_and_levels(): void
@@ -109,12 +105,6 @@ class FlightSearchControllerCoverageTest extends TestCase
             ]),
         ]);
 
-        $vdp = Mockery::mock(VdpFlightService::class);
-        $vdp->shouldReceive('getMinPriceFromCache')
-            ->times(3)
-            ->andReturn(null);
-        $this->app->instance(VdpFlightService::class, $vdp);
-
         $response = $this->getJson(route('api.date-prices').'?'.http_build_query([
             'departure' => 'bhz',
             'arrival' => 'gru',
@@ -128,9 +118,7 @@ class FlightSearchControllerCoverageTest extends TestCase
             'inbound_offset' => 0,
         ]))->assertOk();
 
-        $this->assertSame(236.56, $response->json('prices.2026-07-16'));
-        $this->assertSame(336.15, $response->json('prices.2026-07-17'));
-        $this->assertSame(680.15, $response->json('prices.2026-07-18'));
+        $response->assertJsonMissingPath('prices');
         $this->assertSame('low', $response->json('levels.2026-07-16'));
         $this->assertSame('medium', $response->json('levels.2026-07-17'));
         $this->assertSame('medium', $response->json('levels.2026-07-18'));

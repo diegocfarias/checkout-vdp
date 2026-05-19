@@ -71,7 +71,6 @@ class ManageSettings extends Page
             'showcase_max_cards' => Setting::get('showcase_max_cards', 9),
             'showcase_sort_mode' => Setting::get('showcase_sort_mode', 'manual'),
             'calendar_prices_enabled' => Setting::get('calendar_prices_enabled', true),
-            'calendar_prices_months' => Setting::get('calendar_prices_months', 3),
             'provider_gol' => self::normalizeProviderSetting(Setting::get('provider_gol', ['vdp'])),
             'provider_azul' => self::normalizeProviderSetting(Setting::get('provider_azul', ['vdp'])),
             'provider_latam' => self::normalizeProviderSetting(Setting::get('provider_latam', ['latam_crawler'])),
@@ -120,15 +119,6 @@ class ManageSettings extends Page
                             ->label('Preços no calendário')
                             ->helperText('Exibe preços nas datas do calendário de busca (ida e volta), com código de cores.')
                             ->default(true),
-
-                        TextInput::make('calendar_prices_months')
-                            ->label('Meses de preços no calendário')
-                            ->helperText('Quantos meses à frente buscar preços para exibir no calendário.')
-                            ->numeric()
-                            ->minValue(1)
-                            ->maxValue(11)
-                            ->default(3)
-                            ->suffix('meses'),
 
                         Select::make('provider_gol')
                             ->label('Fornecedores — GOL')
@@ -581,7 +571,6 @@ class ManageSettings extends Page
         Setting::set('showcase_max_cards', (int) ($data['showcase_max_cards'] ?? 9), 'integer');
         Setting::set('showcase_sort_mode', $data['showcase_sort_mode'] ?? 'manual', 'string');
         Setting::set('calendar_prices_enabled', (bool) ($data['calendar_prices_enabled'] ?? true), 'boolean');
-        Setting::set('calendar_prices_months', (int) ($data['calendar_prices_months'] ?? 3), 'integer');
         Setting::set('provider_gol', $data['provider_gol'] ?? [], 'json');
         Setting::set('provider_azul', $data['provider_azul'] ?? [], 'json');
         Setting::set('provider_latam', $data['provider_latam'] ?? [], 'json');

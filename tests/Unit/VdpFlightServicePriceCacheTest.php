@@ -19,45 +19,6 @@ class VdpFlightServicePriceCacheTest extends TestCase
         ]);
     }
 
-    public function test_roundtrip_direction_cache_returns_outbound_plus_inbound(): void
-    {
-        $service = app(VdpFlightService::class);
-        $params = [
-            'departure' => 'RIO',
-            'arrival' => 'FOR',
-            'outbound_date' => '2026-05-24',
-            'inbound_date' => '2026-05-30',
-            'adults' => 1,
-            'children' => 0,
-            'infants' => 0,
-            'cabin' => 'EC',
-        ];
-
-        Cache::put($this->directionKey($service, 'RIO', 'FOR', '2026-05-24', $params), 123.45);
-        Cache::put($this->directionKey($service, 'FOR', 'RIO', '2026-05-30', $params), 234.55);
-
-        $this->assertSame(358.0, $service->getMinPriceFromCache($params));
-    }
-
-    public function test_roundtrip_direction_cache_does_not_return_outbound_only(): void
-    {
-        $service = app(VdpFlightService::class);
-        $params = [
-            'departure' => 'RIO',
-            'arrival' => 'FOR',
-            'outbound_date' => '2026-05-24',
-            'inbound_date' => '2026-05-30',
-            'adults' => 1,
-            'children' => 0,
-            'infants' => 0,
-            'cabin' => 'EC',
-        ];
-
-        Cache::put($this->directionKey($service, 'RIO', 'FOR', '2026-05-24', $params), 123.45);
-
-        $this->assertNull($service->getMinPriceFromCache($params));
-    }
-
     public function test_patria_gol_conventional_flight_uses_gol_percentage_pricing(): void
     {
         Cache::forever('app_settings', [
@@ -252,7 +213,7 @@ class VdpFlightServicePriceCacheTest extends TestCase
         ], $slots);
     }
 
-    public function test_forget_search_caches_clears_provider_search_and_direction_prices(): void
+    public function test_forget_search_caches_clears_search_and_provider_search_caches(): void
     {
         Cache::forever('app_settings', [
             'pricing_version' => 'test',
@@ -281,21 +242,18 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $patriaKey = 'vdp_prov:test:bds_crawler:patria:'.md5(json_encode($providerParams));
         $searchKey = 'vdp_search:test:'.md5(json_encode($providerParams));
         $legacySearchKey = 'vdp_search:test:'.md5(json_encode($fullSearchParams));
-        $outboundKey = $this->directionKey($service, 'RIO', 'FOR', '2026-05-24', $params);
-        $inboundKey = $this->directionKey($service, 'FOR', 'RIO', '2026-05-30', $params);
-
-        foreach ([$providerKey, $patriaKey, $searchKey, $legacySearchKey, $outboundKey, $inboundKey] as $key) {
+        foreach ([$providerKey, $patriaKey, $searchKey, $legacySearchKey] as $key) {
             Cache::put($key, ['cached' => true], now()->addMinutes(30));
         }
 
         $service->forgetSearchCaches($params);
 
-        foreach ([$providerKey, $patriaKey, $searchKey, $legacySearchKey, $outboundKey, $inboundKey] as $key) {
+        foreach ([$providerKey, $patriaKey, $searchKey, $legacySearchKey] as $key) {
             $this->assertFalse(Cache::has($key));
         }
     }
 
-    public function test_search_flights_with_cache_info_caches_vdp_results_and_direction_prices(): void
+    public function test_search_flights_with_cache_info_caches_vdp_results(): void
     {
         Cache::forever('app_settings', [
             'pricing_version' => 'test',
@@ -329,7 +287,6 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $this->assertFalse($first['from_cache']);
         $this->assertTrue($second['from_cache']);
         $this->assertCount(2, $first['data']['outbound']);
-        $this->assertSame(265.0, $service->getMinPriceFromCache($params));
 
         Http::assertSentCount(1);
     }
@@ -464,19 +421,6 @@ class VdpFlightServicePriceCacheTest extends TestCase
 
         $this->assertSame($original, $result['outbound']);
         $this->assertNull($result['inbound']);
-    }
-
-    private function directionKey(VdpFlightService $service, string $departure, string $arrival, string $date, array $params): string
-    {
-        $method = new \ReflectionMethod($service, 'directionPriceKey');
-        $method->setAccessible(true);
-
-        return $method->invoke($service, 'test', $departure, $arrival, $date, [
-            'adults' => $params['adults'],
-            'children' => $params['children'],
-            'infants' => $params['infants'],
-            'cabin' => $params['cabin'],
-        ]);
     }
 
     private function searchParams(array $overrides = []): array

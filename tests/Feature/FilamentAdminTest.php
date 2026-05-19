@@ -154,7 +154,6 @@ class FilamentAdminTest extends TestCase
                 'showcase_max_cards' => 12,
                 'showcase_sort_mode' => 'cheapest',
                 'calendar_prices_enabled' => false,
-                'calendar_prices_months' => 4,
                 'provider_gol' => ['vdp', 'bds_crawler'],
                 'provider_azul' => ['bds_crawler'],
                 'provider_latam' => ['latam_crawler'],
