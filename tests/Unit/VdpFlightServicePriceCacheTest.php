@@ -185,7 +185,7 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $this->assertSame(715.80, round($service->calculateFlightPrice($flight), 2));
     }
 
-    public function test_patria_merge_keeps_miles_fare_over_cheaper_conventional_duplicate(): void
+    public function test_patria_merge_keeps_cheapest_duplicate_and_unique_conventional_flights(): void
     {
         Cache::forever('app_settings', [
             'pricing_miles_enabled' => true,
@@ -212,11 +212,44 @@ class VdpFlightServicePriceCacheTest extends TestCase
             'price_money' => '100,00',
             'price_miles' => '0',
             'boarding_tax' => '50,00',
+        ], [
+            'operator' => 'PATRIA',
+            'flight_number' => 'G3-1990',
+            'departure_time' => '12:00',
+            'price_money' => '200,00',
+            'price_miles' => '0',
+            'boarding_tax' => '50,00',
         ]]);
 
-        $this->assertCount(1, $merged);
-        $this->assertSame('GOL', $merged[0]['operator']);
-        $this->assertSame('20.000', $merged[0]['price_miles']);
+        $this->assertCount(2, $merged);
+        $this->assertSame('PATRIA', $merged[0]['operator']);
+        $this->assertSame('0', $merged[0]['price_miles']);
+        $this->assertSame('G3-1990', $merged[1]['flight_number']);
+    }
+
+    public function test_active_provider_slots_include_patria_when_bds_provider_is_active(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_version' => 'test',
+            'provider_gol' => 'bds_crawler',
+            'provider_azul' => 'disabled',
+            'provider_latam' => 'disabled',
+            'bds_patria_enabled' => false,
+        ]);
+
+        $slots = app(VdpFlightService::class)->getActiveProviderSlots();
+
+        $this->assertContains([
+            'provider' => 'bds_crawler',
+            'airlines' => 'GOL',
+            'patria' => false,
+        ], $slots);
+
+        $this->assertContains([
+            'provider' => 'bds_crawler',
+            'airlines' => 'PATRIA',
+            'patria' => true,
+        ], $slots);
     }
 
     public function test_forget_search_caches_clears_provider_search_and_direction_prices(): void

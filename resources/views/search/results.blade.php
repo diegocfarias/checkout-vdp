@@ -492,12 +492,7 @@
             if (!Number.isFinite(price) || price <= 0) return;
 
             var key = (f.flight_number || '') + '|' + (f.departure_time || '');
-            var hasMiles = parseMilesValue(f.price_miles) > 0;
-            var bestHasMiles = best[key] && parseMilesValue(best[key].price_miles) > 0;
-
-            if (!best[key]
-                || (hasMiles && !bestHasMiles)
-                || (hasMiles === bestHasMiles && price < Number(best[key].calculated_price))) {
+            if (!best[key] || price < Number(best[key].calculated_price)) {
                 best[key] = f;
             }
         });
@@ -519,13 +514,7 @@
         regular.forEach(function(rf) {
             var key = (rf.flight_number || '') + '|' + (rf.departure_time || '');
             if (idx[key]) {
-                var regularHasMiles = parseMilesValue(rf.price_miles) > 0;
-                var patriaHasMiles = parseMilesValue(idx[key].price_miles) > 0;
-                if (regularHasMiles !== patriaHasMiles) {
-                    merged.push(regularHasMiles ? rf : idx[key]);
-                } else {
-                    merged.push(idx[key].calculated_price < rf.calculated_price ? idx[key] : rf);
-                }
+                merged.push(Number(idx[key].calculated_price) < Number(rf.calculated_price) ? idx[key] : rf);
                 used[key] = true;
             } else {
                 merged.push(rf);

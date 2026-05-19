@@ -298,7 +298,12 @@ class VdpFlightService
 
             if (count($providers) === 1) {
                 if ($providers[0] === 'bds_crawler') {
-                    return $this->getBdsCrawlerService()->searchFlights($params, [strtoupper($normalized)]);
+                    $bdsCias = [$normalized];
+                    if ($this->shouldIncludeBdsPatria($bdsCias)) {
+                        $bdsCias[] = 'patria';
+                    }
+
+                    return $this->fetchParallel($params, [], [], array_values(array_unique($bdsCias)));
                 }
 
                 return $this->callForProvider($providers[0], $params);
@@ -315,6 +320,10 @@ class VdpFlightService
                 } elseif ($p === 'bds_crawler') {
                     $bdsCias[] = $normalized;
                 }
+            }
+
+            if ($this->shouldIncludeBdsPatria($bdsCias)) {
+                $bdsCias[] = 'patria';
             }
 
             return $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
@@ -342,8 +351,7 @@ class VdpFlightService
         $crawlerCias = array_unique($crawlerCias);
         $bdsCias = array_unique($bdsCias);
 
-        $patriaEnabled = (bool) Setting::get('bds_patria_enabled', false);
-        if ($patriaEnabled) {
+        if ($this->shouldIncludeBdsPatria($bdsCias)) {
             $bdsCias[] = 'patria';
         }
 
@@ -571,20 +579,10 @@ class VdpFlightService
             $key = ($rf['flight_number'] ?? '').'|'.($rf['departure_time'] ?? '');
             if (isset($patriaIndex[$key])) {
                 $regularPrice = $this->calculateFlightPrice($rf);
-                $regularHasMiles = $this->parseMilesValue($rf['price_miles'] ?? null) > 0;
-                $patriaHasMiles = $this->parseMilesValue($patriaIndex[$key]['flight']['price_miles'] ?? null) > 0;
-
-                if ($regularHasMiles && ! $patriaHasMiles) {
-                    $merged[] = $rf;
-                } elseif (! $regularHasMiles && $patriaHasMiles) {
-                    $merged[] = $patriaIndex[$key]['flight'];
-                    Log::debug('Patria merge: substituindo voo por tarifa com milhas', [
-                        'flight' => $key,
-                        'regular_price' => round($regularPrice, 2),
-                        'patria_price' => round($patriaIndex[$key]['price'], 2),
-                    ]);
-                } elseif ($patriaIndex[$key]['price'] < $regularPrice) {
-                    $merged[] = $patriaIndex[$key]['flight'];
+                if ($patriaIndex[$key]['price'] < $regularPrice) {
+                    if (! isset($usedKeys[$key])) {
+                        $merged[] = $patriaIndex[$key]['flight'];
+                    }
                     Log::debug('Patria merge: substituindo voo', [
                         'flight' => $key,
                         'regular_price' => round($regularPrice, 2),
@@ -647,6 +645,7 @@ class VdpFlightService
         $allCias = ['gol', 'azul', 'latam'];
         $slots = [];
         $vdpCias = [];
+        $bdsCias = [];
 
         foreach ($allCias as $c) {
             $providers = $this->getProvidersForCia($c);
@@ -657,6 +656,7 @@ class VdpFlightService
                 } elseif ($provider === 'latam_crawler') {
                     $slots[] = ['provider' => 'latam_crawler', 'airlines' => strtoupper($c), 'patria' => false];
                 } elseif ($provider === 'bds_crawler') {
+                    $bdsCias[] = $c;
                     $slots[] = ['provider' => 'bds_crawler', 'airlines' => strtoupper($c), 'patria' => false];
                 }
             }
@@ -667,11 +667,16 @@ class VdpFlightService
             $slots[] = ['provider' => 'vdp', 'airlines' => implode(',', array_map('strtoupper', $vdpCias)), 'patria' => false];
         }
 
-        if ((bool) Setting::get('bds_patria_enabled', false)) {
+        if ($this->shouldIncludeBdsPatria($bdsCias)) {
             $slots[] = ['provider' => 'bds_crawler', 'airlines' => 'PATRIA', 'patria' => true];
         }
 
         return $slots;
+    }
+
+    private function shouldIncludeBdsPatria(array $bdsCias = []): bool
+    {
+        return ! empty($bdsCias) || (bool) Setting::get('bds_patria_enabled', false);
     }
 
     /**

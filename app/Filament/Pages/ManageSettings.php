@@ -192,7 +192,7 @@ class ManageSettings extends Page
 
                         Toggle::make('bds_patria_enabled')
                             ->label('BDS Patria (voos convencionais)')
-                            ->helperText('Busca voos convencionais via BDS em paralelo. Substitui voos por milhas quando o preço convencional for menor.')
+                            ->helperText('Voos convencionais da BDS entram automaticamente quando alguma cia usa BDS. Este toggle mantém o convencional ativo mesmo sem cias BDS selecionadas.')
                             ->default(false),
                     ]),
 
