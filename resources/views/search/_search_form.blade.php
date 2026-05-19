@@ -244,6 +244,7 @@
             btn.classList.remove('text-gray-500');
             btn.classList.add('bg-white', 'shadow-sm', 'text-blue-700', 'font-semibold');
             toggleInbound();
+            scheduleCalendarPriceFetch();
         });
     });
 
@@ -320,6 +321,7 @@
                 input.value = item.d;
                 hidden.value = item.c;
                 dropdown.classList.add('hidden');
+                scheduleCalendarPriceFetch();
             });
             dropdown.appendChild(div);
         });
@@ -344,6 +346,7 @@
                                 input.value = item.d;
                                 hidden.value = item.c;
                                 dropdown.classList.add('hidden');
+                                scheduleCalendarPriceFetch();
                             });
                             dropdown.appendChild(div);
                         });
@@ -355,6 +358,7 @@
         input.addEventListener('input', function() {
             var term = input.value.trim();
             hidden.value = '';
+            clearCalendarPrices();
             if (term.length < 2) {
                 loadAirports(function(airports) {
                     var popular = getPopularAirports(airports);
@@ -368,6 +372,7 @@
                                 input.value = item.d;
                                 hidden.value = item.c;
                                 dropdown.classList.add('hidden');
+                                scheduleCalendarPriceFetch();
                             });
                             dropdown.appendChild(div);
                         });
@@ -407,6 +412,7 @@
             arrInput.value = tmpVal;
             arrHidden.value = tmpHidden;
             swapBtn.classList.add('rotate-180');
+            scheduleCalendarPriceFetch();
             setTimeout(function() { swapBtn.classList.remove('rotate-180'); }, 300);
         });
     }
@@ -427,6 +433,7 @@
         document.getElementById('pax-' + type).textContent = pax[type];
         document.getElementById('input-' + type).value = pax[type];
         updatePaxLabel();
+        scheduleCalendarPriceFetch();
     };
     function updatePaxLabel() {
         var parts = [];
@@ -463,6 +470,7 @@
             opt.classList.remove('text-gray-700');
             opt.classList.add('bg-blue-50', 'text-blue-700', 'font-semibold');
             document.getElementById('cabin-dropdown').classList.add('hidden');
+            scheduleCalendarPriceFetch();
         });
     });
     document.addEventListener('click', function(e) {
@@ -545,6 +553,7 @@
     var calendarPricesFeatureEnabled = @json((bool) $calendarPricesEnabled);
     var calendarPricesMonths = @json($calendarPricesMonths);
     var calendarPrices = {};
+    var calendarPriceLevels = {};
     var calendarPriceThresholds = { p33: null, p66: null };
     var calPriceFetchId = 0;
     var calPriceDirection = 'outbound';
@@ -564,7 +573,16 @@
         }
     }
 
-    function getPriceColorClass(price) {
+    function getLevelColorClass(level) {
+        if (level === 'low') return 'cal-price-green';
+        if (level === 'medium') return 'cal-price-yellow';
+        if (level === 'high') return 'cal-price-red';
+        return '';
+    }
+
+    function getPriceColorClass(price, dateKeyValue) {
+        var levelClass = getLevelColorClass(calendarPriceLevels[dateKeyValue]);
+        if (levelClass) return levelClass;
         if (price == null || calendarPriceThresholds.p33 == null) return '';
         if (price <= calendarPriceThresholds.p33) return 'cal-price-green';
         if (price > calendarPriceThresholds.p66) return 'cal-price-red';
@@ -623,15 +641,21 @@
                     Object.keys(data.prices).forEach(function(k) {
                         if (data.prices[k] != null) calendarPrices[k] = data.prices[k];
                     });
-                    computePriceThresholds();
-                    updateCalendarPriceCells();
                 }
+                if (data.levels) {
+                    Object.keys(data.levels).forEach(function(k) {
+                        calendarPriceLevels[k] = data.levels[k];
+                    });
+                }
+                computePriceThresholds();
+                updateCalendarPriceCells();
             })
             .catch(function() {});
     }
 
     function clearCalendarPrices() {
         calendarPrices = {};
+        calendarPriceLevels = {};
         calendarPriceThresholds = { p33: null, p66: null };
         calPriceFetchId++;
         updateCalendarPriceCells();
@@ -650,7 +674,7 @@
                 var price = calendarPrices[dk];
                 if (price != null) {
                     var tag = document.createElement('span');
-                    tag.className = 'cal-price-tag ' + getPriceColorClass(price);
+                    tag.className = 'cal-price-tag ' + getPriceColorClass(price, dk);
                     tag.textContent = 'R$' + formatCalPrice(price);
                     wrapper.appendChild(tag);
                 }
@@ -763,7 +787,7 @@
             var cachedPrice = calendarPrices[dk];
             if (cachedPrice != null && !(date < today || date > maxDate)) {
                 var priceTag = document.createElement('span');
-                priceTag.className = 'cal-price-tag ' + getPriceColorClass(cachedPrice);
+                priceTag.className = 'cal-price-tag ' + getPriceColorClass(cachedPrice, dk);
                 priceTag.textContent = 'R$' + formatCalPrice(cachedPrice);
                 cellWrapper.appendChild(priceTag);
             }
@@ -804,7 +828,7 @@
                 var isPast = dt < today || dt > maxDate;
                 if (price != null && !isPast) {
                     var priceTag = document.createElement('span');
-                    priceTag.className = 'cal-price-tag ' + getPriceColorClass(price);
+                    priceTag.className = 'cal-price-tag ' + getPriceColorClass(price, dk);
                     priceTag.textContent = 'R$' + formatCalPrice(price);
                     wrapper.appendChild(priceTag);
                 }
@@ -996,6 +1020,21 @@
         }
     }
 
+    function scheduleCalendarPriceFetch() {
+        if (!calendarPricesFeatureEnabled) return;
+        var dep = document.getElementById('departure-iata').value;
+        var arr = document.getElementById('arrival-iata').value;
+        if (!dep || !arr || dep === arr) {
+            clearCalendarPrices();
+            return;
+        }
+
+        debounce('calendar_prices_prefetch', function() {
+            clearCalendarPrices();
+            dpFetchVisiblePrices();
+        }, 250);
+    }
+
     function dpToggle(force) {
         dpOpen = force !== undefined ? force : !dpOpen;
         if (isMobile()) {
@@ -1177,5 +1216,6 @@
             }
         } catch(ex) {}
     }
+    scheduleCalendarPriceFetch();
 })();
 </script>

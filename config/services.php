@@ -97,4 +97,9 @@ return [
         'api_key' => env('BDS_CRAWLER_API_KEY'),
     ],
 
+    'calendar_prices_123' => [
+        'url' => env('CALENDAR_123_PRICES_URL', 'https://123milhas.com/api/flight/prices'),
+        'timeout' => env('CALENDAR_123_PRICES_TIMEOUT', 8),
+    ],
+
 ];

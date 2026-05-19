@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Services\VdpFlightService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\Support\CreatesCheckoutFixtures;
 use Tests\TestCase;
@@ -32,6 +33,10 @@ class FlightSearchControllerCoverageTest extends TestCase
 
     public function test_date_prices_clamps_long_ranges_and_builds_roundtrip_cache_params(): void
     {
+        Http::fake([
+            'https://123milhas.com/api/flight/prices' => Http::response(['currency' => 'BRL', 'offers' => []]),
+        ]);
+
         $firstDate = '2026-06-01';
         $lastAllowedDate = Carbon::parse($firstDate)->addDays(335)->format('Y-m-d');
         $blockedDate = Carbon::parse($firstDate)->addDays(336)->format('Y-m-d');
@@ -64,6 +69,82 @@ class FlightSearchControllerCoverageTest extends TestCase
         $this->assertSame(321.45, $prices[$firstDate]);
         $this->assertSame(321.45, $prices[$lastAllowedDate]);
         $this->assertArrayNotHasKey($blockedDate, $prices);
+    }
+
+    public function test_date_prices_uses_external_calendar_prices_and_levels(): void
+    {
+        Http::fake([
+            'https://123milhas.com/api/flight/prices' => Http::response([
+                'currency' => 'BRL',
+                'offers' => [
+                    [
+                        'bounds' => [[
+                            'departureDates' => ['2026-07-16T07:50:00Z'],
+                        ]],
+                        'totalPrice' => 236.56,
+                        'rating' => 'CHEAP',
+                    ],
+                    [
+                        'bounds' => [[
+                            'departureDates' => ['2026-07-17T15:40:00Z'],
+                        ]],
+                        'totalPrice' => 336.15,
+                        'rating' => 'AVERAGE',
+                    ],
+                    [
+                        'bounds' => [[
+                            'departureDates' => ['2026-07-18T15:35:00Z'],
+                        ]],
+                        'totalPrice' => 700.15,
+                        'rating' => 'EXPENSIVE',
+                    ],
+                    [
+                        'bounds' => [[
+                            'departureDates' => ['2026-07-18T18:35:00Z'],
+                        ]],
+                        'totalPrice' => 680.15,
+                        'rating' => 'AVERAGE',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $vdp = Mockery::mock(VdpFlightService::class);
+        $vdp->shouldReceive('getMinPriceFromCache')
+            ->times(3)
+            ->andReturn(null);
+        $this->app->instance(VdpFlightService::class, $vdp);
+
+        $response = $this->getJson(route('api.date-prices').'?'.http_build_query([
+            'departure' => 'bhz',
+            'arrival' => 'gru',
+            'cabin' => 'EC',
+            'adults' => 1,
+            'children' => 0,
+            'infants' => 0,
+            'date_from' => '2026-07-16',
+            'date_to' => '2026-07-18',
+            'trip_type' => 'oneway',
+            'inbound_offset' => 0,
+        ]))->assertOk();
+
+        $this->assertSame(236.56, $response->json('prices.2026-07-16'));
+        $this->assertSame(336.15, $response->json('prices.2026-07-17'));
+        $this->assertSame(680.15, $response->json('prices.2026-07-18'));
+        $this->assertSame('low', $response->json('levels.2026-07-16'));
+        $this->assertSame('medium', $response->json('levels.2026-07-17'));
+        $this->assertSame('medium', $response->json('levels.2026-07-18'));
+        $this->assertSame('123milhas', $response->json('source'));
+
+        Http::assertSent(function ($request): bool {
+            $data = $request->data();
+
+            return $request->url() === 'https://123milhas.com/api/flight/prices'
+                && $data['bounds'][0]['origin']['iatas'] === ['BHZ']
+                && $data['bounds'][0]['destination']['iatas'] === ['GRU']
+                && $data['bounds'][0]['departureDate']['start'] === '2026-07-16'
+                && $data['bounds'][0]['departureDate']['end'] === '2026-07-18';
+        });
     }
 
     public function test_provider_endpoint_handles_invalid_failing_and_patria_slots(): void

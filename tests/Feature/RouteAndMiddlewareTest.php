@@ -11,6 +11,7 @@ use App\Services\UnsplashService;
 use App\Services\VdpFlightService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\Support\CreatesCheckoutFixtures;
 use Tests\TestCase;
@@ -183,6 +184,10 @@ class RouteAndMiddlewareTest extends TestCase
 
     public function test_date_prices_reads_cached_prices_for_requested_range(): void
     {
+        Http::fake([
+            'https://123milhas.com/api/flight/prices' => Http::response(['currency' => 'BRL', 'offers' => []]),
+        ]);
+
         $vdp = Mockery::mock(VdpFlightService::class);
         $vdp->shouldReceive('getMinPriceFromCache')
             ->times(3)
@@ -207,11 +212,17 @@ class RouteAndMiddlewareTest extends TestCase
         ]))
             ->assertOk()
             ->assertExactJson([
+                'currency' => 'BRL',
+                'levels' => [
+                    '2026-06-01' => 'high',
+                    '2026-06-03' => 'low',
+                ],
                 'prices' => [
                     '2026-06-01' => 350.25,
                     '2026-06-02' => null,
                     '2026-06-03' => 299.99,
                 ],
+                'source' => 'cache',
             ]);
     }
 

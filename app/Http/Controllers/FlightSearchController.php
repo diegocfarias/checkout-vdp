@@ -7,6 +7,7 @@ use App\Models\FlightSearch;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Models\ShowcaseRoute;
+use App\Services\CalendarPriceService;
 use App\Services\VdpFlightService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class FlightSearchController extends Controller
 {
     public function __construct(
         private VdpFlightService $vdpService,
+        private CalendarPriceService $calendarPriceService,
     ) {}
 
     public function index()
@@ -74,7 +76,9 @@ class FlightSearchController extends Controller
         $inboundOffset = (int) $request->input('inbound_offset', 0);
 
         $prices = [];
+        $levels = [];
         $current = $dateFrom->copy();
+        $externalPrices = $this->calendarPriceService->datePrices($departure, $arrival, $dateFrom, $dateTo);
 
         while ($current->lte($dateTo)) {
             $dateStr = $current->format('Y-m-d');
@@ -97,7 +101,63 @@ class FlightSearchController extends Controller
             $current->addDay();
         }
 
-        return response()->json(['prices' => $prices]);
+        foreach ($externalPrices['prices'] as $date => $price) {
+            if (array_key_exists($date, $prices)) {
+                $prices[$date] = round((float) $price, 2);
+            }
+        }
+
+        foreach ($externalPrices['levels'] as $date => $level) {
+            if (array_key_exists($date, $prices)) {
+                $levels[$date] = $level;
+            }
+        }
+
+        $levels = array_replace($this->inferPriceLevels($prices), $levels);
+
+        return response()->json([
+            'prices' => $prices,
+            'levels' => $levels,
+            'source' => $externalPrices['source'],
+            'currency' => $externalPrices['currency'] ?? 'BRL',
+        ]);
+    }
+
+    private function inferPriceLevels(array $prices): array
+    {
+        $values = array_values(array_filter($prices, fn ($price): bool => $price !== null && (float) $price > 0));
+        sort($values);
+
+        if (empty($values)) {
+            return [];
+        }
+
+        if (count($values) === 1) {
+            return collect($prices)
+                ->filter(fn ($price): bool => $price !== null && (float) $price > 0)
+                ->map(fn (): string => 'medium')
+                ->all();
+        }
+
+        $lowThreshold = $values[(int) floor((count($values) - 1) * 0.33)];
+        $highThreshold = $values[(int) floor((count($values) - 1) * 0.66)];
+
+        $levels = [];
+        foreach ($prices as $date => $price) {
+            if ($price === null || (float) $price <= 0) {
+                continue;
+            }
+
+            if ((float) $price <= $lowThreshold) {
+                $levels[$date] = 'low';
+            } elseif ((float) $price > $highThreshold) {
+                $levels[$date] = 'high';
+            } else {
+                $levels[$date] = 'medium';
+            }
+        }
+
+        return $levels;
     }
 
     public function showcasePrice(ShowcaseRoute $showcaseRoute)
