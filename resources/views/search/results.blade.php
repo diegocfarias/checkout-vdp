@@ -641,6 +641,57 @@
         return html;
     }
 
+    function hasBaggageData(baggage) {
+        if (!baggage || typeof baggage !== 'object') return false;
+        return ['personal_item', 'carry_on', 'checked'].some(function(key) {
+            return baggage[key] && typeof baggage[key] === 'object';
+        });
+    }
+
+    function baggageLabel(key, item) {
+        var labels = {
+            personal_item: 'Item pessoal',
+            carry_on: 'Mala de mao',
+            checked: 'Mala despachada'
+        };
+        var base = labels[key] || 'Bagagem';
+        if (!item || !item.included) return base + ' nao inclusa';
+
+        var quantity = parseInt(item.quantity, 10) || 1;
+        var weight = item.weight ? String(item.weight) : '';
+        if (quantity > 1) return base + ' inclusa (' + quantity + ' pecas' + (weight ? ' de ' + weight : '') + ')';
+        if (weight) return base + ' inclusa (' + weight + ')';
+        return base + ' inclusa';
+    }
+
+    function baggageIconSvg(key) {
+        if (key === 'personal_item') {
+            return '<svg class="w-4 h-4 sm:w-[18px] sm:h-[18px]" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M7 9V7a5 5 0 0 1 10 0v2"></path><path d="M6 9h12l1 10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L6 9Z"></path><path d="M9 14h6"></path></svg>';
+        }
+        if (key === 'carry_on') {
+            return '<svg class="w-4 h-4 sm:w-[18px] sm:h-[18px]" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 6V4h6v2"></path><rect x="7" y="6" width="10" height="14" rx="2"></rect><path d="M10 20v2"></path><path d="M14 20v2"></path><path d="M10 10h4"></path><path d="M10 14h4"></path></svg>';
+        }
+        return '<svg class="w-4 h-4 sm:w-[18px] sm:h-[18px]" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M8 7V5a3 3 0 0 1 3-3h2a3 3 0 0 1 3 3v2"></path><rect x="5" y="7" width="14" height="14" rx="2"></rect><path d="M9 11h6"></path><path d="M9 15h6"></path><path d="M8 21v1"></path><path d="M16 21v1"></path></svg>';
+    }
+
+    function renderBaggageIcons(baggage) {
+        if (!hasBaggageData(baggage)) return '';
+
+        var html = '<div class="ml-auto flex items-center gap-1.5 shrink-0" aria-label="Bagagem">';
+        ['personal_item', 'carry_on', 'checked'].forEach(function(key) {
+            var item = baggage[key];
+            if (!item || typeof item !== 'object') return;
+
+            var label = baggageLabel(key, item);
+            var cls = item.included ? 'text-emerald-700' : 'text-gray-300';
+            html += '<span class="' + cls + '" title="' + escHtml(label) + '" aria-label="' + escHtml(label) + '">'
+                + baggageIconSvg(key)
+                + '</span>';
+        });
+        html += '</div>';
+        return html;
+    }
+
     function renderFlightOption(flight, fi, gIdx, dir, collapseAfter) {
         var conns = flight.connection || [];
         var isDirect = !Array.isArray(conns) || conns.length <= 1;
@@ -665,7 +716,8 @@
             + '<div class="flex items-center gap-2 mb-2 text-xs text-gray-500">'
             + '<span class="font-bold text-gray-700">' + escHtml(cia) + '</span>';
         if (flight.flight_number) html += '<span class="text-gray-400 text-[11px]">voo ' + escHtml(flight.flight_number) + '</span>';
-        html += '</div>'
+        html += renderBaggageIcons(flight.baggage)
+            + '</div>'
             + '<div class="flex items-center">'
             + '<div class="text-center shrink-0">'
             + '<p class="text-base sm:text-lg font-bold text-gray-800 leading-tight">' + escHtml(flight.departure_time) + '</p>'

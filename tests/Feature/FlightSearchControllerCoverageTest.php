@@ -163,6 +163,12 @@ class FlightSearchControllerCoverageTest extends TestCase
                                 'EXTRA' => 'remove',
                             ],
                         ],
+                        'baggage' => [
+                            'fare' => 'LIGHT',
+                            'personal_item' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                            'carry_on' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                            'checked' => ['included' => false, 'quantity' => 0, 'weight' => null],
+                        ],
                         'raw_payload' => ['remove' => true],
                     ]),
                 ],
@@ -200,6 +206,9 @@ class FlightSearchControllerCoverageTest extends TestCase
         $this->assertSame('PATRIA', $flight['_source_airlines']);
         $this->assertArrayNotHasKey('raw_payload', $flight);
         $this->assertArrayNotHasKey('EXTRA', $flight['connection'][0]);
+        $this->assertSame('LIGHT', $flight['baggage']['fare']);
+        $this->assertTrue($flight['baggage']['carry_on']['included']);
+        $this->assertFalse($flight['baggage']['checked']['included']);
         $this->assertGreaterThan(0, $flight['calculated_price']);
     }
 

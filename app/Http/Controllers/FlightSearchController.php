@@ -351,7 +351,7 @@ class FlightSearchController extends Controller
             'operator', 'flight_number', 'departure_time', 'arrival_time',
             'departure_location', 'arrival_location', 'departure_label', 'arrival_label',
             'boarding_tax', 'class_service', 'price_money', 'price_miles', 'price_miles_vip',
-            'total_flight_duration', 'unique_id', 'connection',
+            'total_flight_duration', 'unique_id', 'connection', 'baggage',
         ];
 
         $clean = [];
@@ -369,6 +369,28 @@ class FlightSearchController extends Controller
             $clean['connection'] = array_map(function ($seg) use ($allowedConn) {
                 return array_intersect_key($seg, array_flip($allowedConn));
             }, $clean['connection']);
+        }
+
+        if (isset($clean['baggage']) && is_array($clean['baggage'])) {
+            $clean['baggage'] = $this->sanitizeBaggage($clean['baggage']);
+        }
+
+        return $clean;
+    }
+
+    private function sanitizeBaggage(array $baggage): array
+    {
+        $clean = [
+            'fare' => isset($baggage['fare']) ? (string) $baggage['fare'] : null,
+        ];
+
+        foreach (['personal_item', 'carry_on', 'checked'] as $key) {
+            $item = isset($baggage[$key]) && is_array($baggage[$key]) ? $baggage[$key] : [];
+            $clean[$key] = [
+                'included' => (bool) ($item['included'] ?? false),
+                'quantity' => max(0, (int) ($item['quantity'] ?? 0)),
+                'weight' => isset($item['weight']) && $item['weight'] !== '' ? (string) $item['weight'] : null,
+            ];
         }
 
         return $clean;

@@ -144,6 +144,7 @@
                                             @if($flight['flight_number'] ?? null)
                                                 <span class="text-gray-400 text-[11px]">voo {{ $flight['flight_number'] }}</span>
                                             @endif
+                                            @include('partials._baggage_icons', ['baggage' => $flight['baggage'] ?? null])
                                         </div>
                                         <div class="flex items-center">
                                             <div class="text-center shrink-0">
@@ -241,6 +242,7 @@
                                                 @if($flight['flight_number'] ?? null)
                                                     <span class="text-gray-400 text-[11px]">voo {{ $flight['flight_number'] }}</span>
                                                 @endif
+                                                @include('partials._baggage_icons', ['baggage' => $flight['baggage'] ?? null])
                                             </div>
                                             <div class="flex items-center">
                                                 <div class="text-center shrink-0">
