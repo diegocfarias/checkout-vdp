@@ -43,11 +43,19 @@ class CustomerAreaControllerTest extends TestCase
         $other = $this->createCustomer(['email' => 'outro@example.com']);
         $ownOrder = $this->createOrder(['customer_id' => $customer->id]);
         $otherOrder = $this->createOrder(['customer_id' => $other->id]);
+        $this->addFlight($ownOrder, [
+            'baggage' => [
+                'personal_item' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                'carry_on' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                'checked' => ['included' => false, 'quantity' => 0, 'weight' => null],
+            ],
+        ]);
 
         $this->actingAs($customer, 'customer')
             ->get(route('customer.order.show', $ownOrder))
             ->assertOk()
-            ->assertViewIs('customer.order-detail');
+            ->assertViewIs('customer.order-detail')
+            ->assertSee('Mala de mao inclusa', false);
 
         $this->actingAs($customer, 'customer')
             ->get(route('customer.order.show', $otherOrder))

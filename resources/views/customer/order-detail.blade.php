@@ -123,8 +123,8 @@
                         }
                     @endphp
                     <div class="p-3 rounded-lg bg-gray-50 mb-2 last:mb-0">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center gap-2">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <span class="text-xs font-semibold px-2 py-0.5 rounded {{ $flight->direction === 'outbound' ? 'bg-slate-200 text-slate-700' : 'bg-blue-100 text-blue-700' }}">
                                     {{ $flight->direction === 'outbound' ? 'IDA' : 'VOLTA' }}
                                 </span>
@@ -132,6 +132,7 @@
                                 @if($flight->flight_number)
                                     <span class="text-xs text-gray-400">{{ $flight->flight_number }}</span>
                                 @endif
+                                @include('partials._baggage_icons', ['baggage' => $flight->baggage, 'class' => 'flex items-center gap-1.5 shrink-0'])
                             </div>
                             @if($flightDate)
                                 <span class="text-xs font-medium text-gray-600">{{ $flightDate->format('d/m/Y') }}</span>

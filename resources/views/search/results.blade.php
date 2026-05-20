@@ -72,29 +72,39 @@
                     <button type="button" onclick="clearFilters()" class="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors">Limpar</button>
                 </div>
 
-                <div id="desktop-cia-filter" class="px-5 py-4 border-b border-gray-100 hidden">
+                <div id="desktop-ob-cia-filter" class="px-5 py-4 border-b border-gray-100 hidden">
                     <div class="flex items-center gap-1.5 mb-3">
                         <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Companhia</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Companhia ida</p>
                     </div>
-                    <div class="flex flex-wrap gap-1.5" id="desktop-cia-pills"></div>
+                    <div class="flex flex-wrap gap-1.5" id="desktop-ob-cia-pills"></div>
                 </div>
+
+                @if($isRoundtrip)
+                <div id="desktop-ib-cia-filter" class="px-5 py-4 border-b border-gray-100 hidden">
+                    <div class="flex items-center gap-1.5 mb-3">
+                        <svg class="w-3.5 h-3.5 text-gray-400 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Companhia volta</p>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5" id="desktop-ib-cia-pills"></div>
+                </div>
+                @endif
 
                 <div class="px-5 py-4 border-b border-gray-100">
                     <div class="flex items-center gap-1.5 mb-3">
                         <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paradas</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paradas ida</p>
                     </div>
                     <div class="flex flex-wrap gap-1.5">
                         <label class="filter-pill cursor-pointer">
-                            <input type="checkbox" class="filter-stops sr-only" value="direct">
+                            <input type="checkbox" class="filter-ob-stops sr-only" value="direct">
                             <span class="filter-pill-label inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                                 Direto
                             </span>
                         </label>
                         <label class="filter-pill cursor-pointer">
-                            <input type="checkbox" class="filter-stops sr-only" value="connection">
+                            <input type="checkbox" class="filter-ob-stops sr-only" value="connection">
                             <span class="filter-pill-label inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h7m4 0h7"/></svg>
                                 Conexão
@@ -102,6 +112,31 @@
                         </label>
                     </div>
                 </div>
+
+                @if($isRoundtrip)
+                <div class="px-5 py-4 border-b border-gray-100">
+                    <div class="flex items-center gap-1.5 mb-3">
+                        <svg class="w-3.5 h-3.5 text-gray-400 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paradas volta</p>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <label class="filter-pill cursor-pointer">
+                            <input type="checkbox" class="filter-ib-stops sr-only" value="direct">
+                            <span class="filter-pill-label inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                                Direto
+                            </span>
+                        </label>
+                        <label class="filter-pill cursor-pointer">
+                            <input type="checkbox" class="filter-ib-stops sr-only" value="connection">
+                            <span class="filter-pill-label inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h7m4 0h7"/></svg>
+                                Conexão
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                @endif
 
                 <div class="px-5 py-4 {{ $isRoundtrip ? 'border-b border-gray-100' : '' }}">
                     <div class="flex items-center gap-1.5 mb-3">
@@ -258,30 +293,59 @@
             </div>
 
             <div class="overflow-y-auto flex-1 px-5 py-4 space-y-5">
-                <div id="mobile-cia-filter" class="hidden">
+                <div id="mobile-ob-cia-filter" class="hidden">
                     <div class="flex items-center gap-1.5 mb-3">
                         <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Companhia</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Companhia ida</p>
                     </div>
-                    <div class="flex flex-wrap gap-2" id="mobile-cia-pills"></div>
+                    <div class="flex flex-wrap gap-2" id="mobile-ob-cia-pills"></div>
                 </div>
+
+                @if($isRoundtrip)
+                <div id="mobile-ib-cia-filter" class="hidden">
+                    <div class="flex items-center gap-1.5 mb-3">
+                        <svg class="w-3.5 h-3.5 text-gray-400 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Companhia volta</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2" id="mobile-ib-cia-pills"></div>
+                </div>
+                @endif
 
                 <div>
                     <div class="flex items-center gap-1.5 mb-3">
                         <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paradas</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paradas ida</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <label class="filter-pill cursor-pointer">
-                            <input type="checkbox" class="filter-stops sr-only" value="direct">
+                            <input type="checkbox" class="filter-ob-stops sr-only" value="direct">
                             <span class="filter-pill-label inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all">Direto</span>
                         </label>
                         <label class="filter-pill cursor-pointer">
-                            <input type="checkbox" class="filter-stops sr-only" value="connection">
+                            <input type="checkbox" class="filter-ob-stops sr-only" value="connection">
                             <span class="filter-pill-label inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all">Conexão</span>
                         </label>
                     </div>
                 </div>
+
+                @if($isRoundtrip)
+                <div>
+                    <div class="flex items-center gap-1.5 mb-3">
+                        <svg class="w-3.5 h-3.5 text-gray-400 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paradas volta</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="filter-pill cursor-pointer">
+                            <input type="checkbox" class="filter-ib-stops sr-only" value="direct">
+                            <span class="filter-pill-label inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all">Direto</span>
+                        </label>
+                        <label class="filter-pill cursor-pointer">
+                            <input type="checkbox" class="filter-ib-stops sr-only" value="connection">
+                            <span class="filter-pill-label inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-all">Conexão</span>
+                        </label>
+                    </div>
+                </div>
+                @endif
 
                 <div>
                     <div class="flex items-center gap-1.5 mb-3">
@@ -397,6 +461,8 @@
     var renderTimer = null;
     var knownGroupKeys = {};
     var searchStarted = false;
+    var FILTER_SELECTOR = '.filter-ob-cia, .filter-ib-cia, .filter-ob-stops, .filter-ib-stops, .filter-ob-period, .filter-ib-period';
+    var FILTER_CHECKED_SELECTOR = '.filter-ob-cia:checked, .filter-ib-cia:checked, .filter-ob-stops:checked, .filter-ib-stops:checked, .filter-ob-period:checked, .filter-ib-period:checked';
 
     // --- Toggle inline search form ---
     var toggleBtn = document.getElementById('toggle-search-form');
@@ -482,6 +548,15 @@
         return code ? code[0] : 'CIA';
     }
 
+    function uniqueAirlinesFromFlights(flights) {
+        var airlines = {};
+        (flights || []).forEach(function(f) {
+            var cia = displayCia(f.operator, f.flight_number);
+            if (cia && cia !== 'PATRIA') airlines[cia] = true;
+        });
+        return Object.keys(airlines).sort();
+    }
+
     // ========================================
     // DEDUP (multi-provider: keep cheapest)
     // ========================================
@@ -551,6 +626,8 @@
                 var g = obByCiaPrice[k];
                 groups.push({
                     airlines: [g.cia],
+                    outbound_airlines: [g.cia],
+                    inbound_airlines: [],
                     same_cia: true,
                     total_price: g.price,
                     outbound_flights: g.flights,
@@ -584,6 +661,8 @@
                 if (ibG.cia !== obG.cia) airlines.push(ibG.cia);
                 groups.push({
                     airlines: airlines,
+                    outbound_airlines: [obG.cia],
+                    inbound_airlines: [ibG.cia],
                     same_cia: obG.cia === ibG.cia,
                     total_price: Math.round((obG.price + ibG.price) * 100) / 100,
                     outbound_flights: obG.flights,
@@ -763,11 +842,18 @@
         var hasInbound = ibFlights.length > 0;
         var collapseAfter = 2;
 
-        var hasDirect = false, hasConn = false;
-        obFlights.concat(ibFlights).forEach(function(f) {
+        var obHasDirect = false, obHasConn = false;
+        obFlights.forEach(function(f) {
             var c = f.connection || [];
-            if (!Array.isArray(c) || c.length <= 1) hasDirect = true; else hasConn = true;
+            if (!Array.isArray(c) || c.length <= 1) obHasDirect = true; else obHasConn = true;
         });
+        var ibHasDirect = false, ibHasConn = false;
+        ibFlights.forEach(function(f) {
+            var c = f.connection || [];
+            if (!Array.isArray(c) || c.length <= 1) ibHasDirect = true; else ibHasConn = true;
+        });
+        var hasDirect = obHasDirect || ibHasDirect;
+        var hasConn = obHasConn || ibHasConn;
 
         var obTax = parseTaxValue(obFlights[0] ? obFlights[0].boarding_tax : '0');
         var ibTax = hasInbound ? parseTaxValue(ibFlights[0] ? ibFlights[0].boarding_tax : '0') : 0;
@@ -783,6 +869,10 @@
         var obPeriodsStr = (group.outbound_periods || []).join(',');
         var ibPeriodsStr = (group.inbound_periods || []).join(',');
         var airlinesStr = airlines.map(function(a) { return a.toLowerCase(); }).join(',');
+        var obAirlines = group.outbound_airlines || uniqueAirlinesFromFlights(obFlights);
+        var ibAirlines = group.inbound_airlines || uniqueAirlinesFromFlights(ibFlights);
+        var obAirlinesStr = obAirlines.map(function(a) { return a.toLowerCase(); }).join(',');
+        var ibAirlinesStr = ibAirlines.map(function(a) { return a.toLowerCase(); }).join(',');
 
         var obFirst = obFlights[0] || {};
         var ibFirst = hasInbound ? (ibFlights[0] || {}) : {};
@@ -791,8 +881,14 @@
 
         var html = '<div class="combination-card bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 animate-fadeInUp"'
             + ' data-airlines="' + escHtml(airlinesStr) + '"'
+            + ' data-ob-airlines="' + escHtml(obAirlinesStr) + '"'
+            + ' data-ib-airlines="' + escHtml(ibAirlinesStr) + '"'
             + ' data-has-direct="' + (hasDirect ? '1' : '0') + '"'
             + ' data-has-connection="' + (hasConn ? '1' : '0') + '"'
+            + ' data-ob-has-direct="' + (obHasDirect ? '1' : '0') + '"'
+            + ' data-ob-has-connection="' + (obHasConn ? '1' : '0') + '"'
+            + ' data-ib-has-direct="' + (ibHasDirect ? '1' : '0') + '"'
+            + ' data-ib-has-connection="' + (ibHasConn ? '1' : '0') + '"'
             + ' data-outbound-period="' + escHtml(obPeriodsStr) + '"'
             + ' data-inbound-period="' + escHtml(ibPeriodsStr) + '"'
             + ' data-price="' + totalPrice + '"'
@@ -959,39 +1055,53 @@
     // AIRLINE FILTER PILLS (dynamic)
     // ========================================
     function updateAirlineFilters() {
-        var airlines = {};
+        var outboundAirlines = {};
+        var inboundAirlines = {};
         groupsData.forEach(function(g) {
-            (g.airlines || []).forEach(function(a) {
+            (g.outbound_airlines || uniqueAirlinesFromFlights(g.outbound_flights || [])).forEach(function(a) {
                 a = (a || '').toUpperCase();
-                if (a && a !== 'PATRIA') airlines[a] = true;
+                if (a && a !== 'PATRIA') outboundAirlines[a] = true;
+            });
+            (g.inbound_airlines || uniqueAirlinesFromFlights(g.inbound_flights || [])).forEach(function(a) {
+                a = (a || '').toUpperCase();
+                if (a && a !== 'PATRIA') inboundAirlines[a] = true;
             });
         });
-        var list = Object.keys(airlines).sort();
 
-        var checkedCias = getCheckedValues('.filter-cia');
+        renderAirlineFilter('desktop-ob-cia-filter', 'desktop-ob-cia-pills', 'filter-ob-cia', Object.keys(outboundAirlines).sort());
+        renderAirlineFilter('mobile-ob-cia-filter', 'mobile-ob-cia-pills', 'filter-ob-cia', Object.keys(outboundAirlines).sort());
 
-        ['desktop-cia-filter', 'mobile-cia-filter'].forEach(function(containerId) {
-            var container = document.getElementById(containerId);
-            var pillsId = containerId.replace('-filter', '-pills');
-            var pills = document.getElementById(pillsId);
-            if (list.length === 0) {
-                container.classList.add('hidden');
-                return;
-            }
-            container.classList.remove('hidden');
-            var html = '';
-            list.forEach(function(cia) {
-                var checked = checkedCias.indexOf(cia.toLowerCase()) !== -1;
-                var size = containerId.indexOf('mobile') !== -1 ? 'px-4 py-2 text-sm' : 'px-3 py-1.5 text-xs';
-                html += '<label class="filter-pill cursor-pointer">'
-                    + '<input type="checkbox" class="filter-cia sr-only" value="' + cia.toLowerCase() + '"' + (checked ? ' checked' : '') + '>'
-                    + '<span class="filter-pill-label inline-flex items-center ' + size + ' rounded-full font-medium border transition-all">' + escHtml(cia) + '</span>'
-                    + '</label>';
-            });
-            pills.innerHTML = html;
-        });
+        if (CONFIG.isRoundtrip) {
+            renderAirlineFilter('desktop-ib-cia-filter', 'desktop-ib-cia-pills', 'filter-ib-cia', Object.keys(inboundAirlines).sort());
+            renderAirlineFilter('mobile-ib-cia-filter', 'mobile-ib-cia-pills', 'filter-ib-cia', Object.keys(inboundAirlines).sort());
+        }
 
         bindFilterEvents();
+    }
+
+    function renderAirlineFilter(containerId, pillsId, inputClass, list) {
+        var container = document.getElementById(containerId);
+        var pills = document.getElementById(pillsId);
+        if (!container || !pills) return;
+
+        var checkedCias = getCheckedValues('.' + inputClass);
+        if (list.length === 0) {
+            container.classList.add('hidden');
+            pills.innerHTML = '';
+            return;
+        }
+
+        container.classList.remove('hidden');
+        var html = '';
+        list.forEach(function(cia) {
+            var checked = checkedCias.indexOf(cia.toLowerCase()) !== -1;
+            var size = containerId.indexOf('mobile') !== -1 ? 'px-4 py-2 text-sm' : 'px-3 py-1.5 text-xs';
+            html += '<label class="filter-pill cursor-pointer">'
+                + '<input type="checkbox" class="' + inputClass + ' sr-only" value="' + cia.toLowerCase() + '"' + (checked ? ' checked' : '') + '>'
+                + '<span class="filter-pill-label inline-flex items-center ' + size + ' rounded-full font-medium border transition-all">' + escHtml(cia) + '</span>'
+                + '</label>';
+        });
+        pills.innerHTML = html;
     }
 
     // ========================================
@@ -1003,26 +1113,48 @@
         return v;
     }
 
+    function splitDataList(value) {
+        if (!value) return [];
+        return value.split(',').filter(function(v) { return v !== ''; });
+    }
+
+    function airlineFilterOk(values, airlines) {
+        return values.length === 0 || airlines.some(function(a) { return values.indexOf(a) !== -1; });
+    }
+
+    function stopFilterOk(values, hasDirect, hasConnection) {
+        return values.length === 0
+            || (hasDirect && values.indexOf('direct') !== -1)
+            || (hasConnection && values.indexOf('connection') !== -1);
+    }
+
     function applyFilters() {
-        var ciaVals = getCheckedValues('.filter-cia');
-        var stopVals = getCheckedValues('.filter-stops');
+        var obCiaVals = getCheckedValues('.filter-ob-cia');
+        var ibCiaVals = getCheckedValues('.filter-ib-cia');
+        var obStopVals = getCheckedValues('.filter-ob-stops');
+        var ibStopVals = getCheckedValues('.filter-ib-stops');
         var obPeriodVals = getCheckedValues('.filter-ob-period');
         var ibPeriodVals = getCheckedValues('.filter-ib-period');
 
         var total = 0;
         document.querySelectorAll('.combination-card').forEach(function(card) {
-            var cardAirlines = card.dataset.airlines.split(',');
-            var hasDirect = card.dataset.hasDirect === '1';
-            var hasConn = card.dataset.hasConnection === '1';
-            var obPeriods = card.dataset.outboundPeriod ? card.dataset.outboundPeriod.split(',') : [];
-            var ibPeriods = card.dataset.inboundPeriod ? card.dataset.inboundPeriod.split(',') : [];
+            var obAirlines = splitDataList(card.dataset.obAirlines);
+            var ibAirlines = splitDataList(card.dataset.ibAirlines);
+            var obHasDirect = card.dataset.obHasDirect === '1';
+            var obHasConn = card.dataset.obHasConnection === '1';
+            var ibHasDirect = card.dataset.ibHasDirect === '1';
+            var ibHasConn = card.dataset.ibHasConnection === '1';
+            var obPeriods = splitDataList(card.dataset.outboundPeriod);
+            var ibPeriods = splitDataList(card.dataset.inboundPeriod);
 
-            var ciaOk = ciaVals.length === 0 || cardAirlines.some(function(a) { return ciaVals.indexOf(a) !== -1; });
-            var stopOk = stopVals.length === 0 || (hasDirect && stopVals.indexOf('direct') !== -1) || (hasConn && stopVals.indexOf('connection') !== -1);
+            var obCiaOk = airlineFilterOk(obCiaVals, obAirlines);
+            var ibCiaOk = !CONFIG.isRoundtrip || airlineFilterOk(ibCiaVals, ibAirlines);
+            var obStopOk = stopFilterOk(obStopVals, obHasDirect, obHasConn);
+            var ibStopOk = !CONFIG.isRoundtrip || stopFilterOk(ibStopVals, ibHasDirect, ibHasConn);
             var obOk = obPeriodVals.length === 0 || obPeriods.some(function(p) { return obPeriodVals.indexOf(p) !== -1; });
             var ibOk = !CONFIG.isRoundtrip || ibPeriodVals.length === 0 || ibPeriods.some(function(p) { return ibPeriodVals.indexOf(p) !== -1; });
 
-            var pass = ciaOk && stopOk && obOk && ibOk;
+            var pass = obCiaOk && ibCiaOk && obStopOk && ibStopOk && obOk && ibOk;
             card.dataset.filtered = pass ? '1' : '0';
             if (pass) total++;
         });
@@ -1071,7 +1203,7 @@
     }
 
     window.clearFilters = function() {
-        document.querySelectorAll('.filter-cia, .filter-stops, .filter-ob-period, .filter-ib-period').forEach(function(el) {
+        document.querySelectorAll(FILTER_SELECTOR).forEach(function(el) {
             el.checked = false;
         });
         applyFilters();
@@ -1080,7 +1212,7 @@
 
     function updateFilterCount() {
         var checked = 0;
-        document.querySelectorAll('.filter-cia:checked, .filter-stops:checked, .filter-ob-period:checked, .filter-ib-period:checked').forEach(function() { checked++; });
+        document.querySelectorAll(FILTER_CHECKED_SELECTOR).forEach(function() { checked++; });
         var deduped = Math.floor(checked / 2);
         ['active-filter-count', 'mobile-active-filter-count', 'mobile-btn-filter-count'].forEach(function(id) {
             var badge = document.getElementById(id);
@@ -1091,7 +1223,7 @@
     }
 
     function bindFilterEvents() {
-        document.querySelectorAll('.filter-cia, .filter-stops, .filter-ob-period, .filter-ib-period').forEach(function(el) {
+        document.querySelectorAll(FILTER_SELECTOR).forEach(function(el) {
             el.removeEventListener('change', onFilterChange);
             el.addEventListener('change', onFilterChange);
         });

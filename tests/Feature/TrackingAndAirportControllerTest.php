@@ -32,6 +32,13 @@ class TrackingAndAirportControllerTest extends TestCase
         $order = $this->createOrder([
             'tracking_code' => 'VDP-ABC1',
         ]);
+        $this->addFlight($order, [
+            'baggage' => [
+                'personal_item' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                'carry_on' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                'checked' => ['included' => false, 'quantity' => 0, 'weight' => null],
+            ],
+        ]);
         $this->addPassenger($order, [
             'document' => '529.982.247-25',
         ]);
@@ -46,7 +53,8 @@ class TrackingAndAirportControllerTest extends TestCase
         $this->get(route('tracking.show', 'vdp-abc1'))
             ->assertOk()
             ->assertViewIs('tracking.show')
-            ->assertViewHas('order', fn ($viewOrder): bool => $viewOrder->id === $order->id);
+            ->assertViewHas('order', fn ($viewOrder): bool => $viewOrder->id === $order->id)
+            ->assertSee('Mala de mao inclusa', false);
     }
 
     public function test_tracking_search_rejects_invalid_document_and_show_requires_verification(): void

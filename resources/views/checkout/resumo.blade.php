@@ -13,14 +13,19 @@
                 $obStops = max(0, count($obConns) - 1);
             @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <div class="flex items-center gap-2 mb-4">
+                <div class="flex flex-wrap items-center gap-2 mb-4">
                     <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded">IDA</span>
                     <span class="text-sm text-gray-600 font-medium uppercase">{{ $outbound->cia }}</span>
                     @if($outbound->flight_number)
                         <span class="text-sm text-gray-400">{{ $outbound->flight_number }}</span>
                     @endif
-                    @if($order->flightSearch && $order->flightSearch->outbound_date)
-                        <span class="ml-auto text-sm font-medium text-gray-700">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}</span>
+                    @if($outbound->baggage || ($order->flightSearch && $order->flightSearch->outbound_date))
+                        <div class="ml-auto flex items-center gap-2">
+                            @include('partials._baggage_icons', ['baggage' => $outbound->baggage, 'class' => 'flex items-center gap-1.5 shrink-0'])
+                            @if($order->flightSearch && $order->flightSearch->outbound_date)
+                                <span class="text-sm font-medium text-gray-700">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}</span>
+                            @endif
+                        </div>
                     @endif
                 </div>
                 <div class="flex items-center gap-3">
@@ -56,14 +61,19 @@
                 $ibStops = max(0, count($ibConns) - 1);
             @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <div class="flex items-center gap-2 mb-4">
+                <div class="flex flex-wrap items-center gap-2 mb-4">
                     <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded">VOLTA</span>
                     <span class="text-sm text-gray-600 font-medium uppercase">{{ $inbound->cia }}</span>
                     @if($inbound->flight_number)
                         <span class="text-sm text-gray-400">{{ $inbound->flight_number }}</span>
                     @endif
-                    @if($order->flightSearch && $order->flightSearch->inbound_date)
-                        <span class="ml-auto text-sm font-medium text-gray-700">{{ $order->flightSearch->inbound_date->format('d/m/Y') }}</span>
+                    @if($inbound->baggage || ($order->flightSearch && $order->flightSearch->inbound_date))
+                        <div class="ml-auto flex items-center gap-2">
+                            @include('partials._baggage_icons', ['baggage' => $inbound->baggage, 'class' => 'flex items-center gap-1.5 shrink-0'])
+                            @if($order->flightSearch && $order->flightSearch->inbound_date)
+                                <span class="text-sm font-medium text-gray-700">{{ $order->flightSearch->inbound_date->format('d/m/Y') }}</span>
+                            @endif
+                        </div>
                     @endif
                 </div>
                 <div class="flex items-center gap-3">

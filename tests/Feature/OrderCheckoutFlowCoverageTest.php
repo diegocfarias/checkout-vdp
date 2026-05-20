@@ -71,12 +71,21 @@ class OrderCheckoutFlowCoverageTest extends TestCase
         ]);
 
         $order = $this->createOrder();
-        $this->addFlight($order);
+        $this->addFlight($order, [
+            'baggage' => [
+                'fare' => 'LIGHT',
+                'personal_item' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                'carry_on' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                'checked' => ['included' => false, 'quantity' => 0, 'weight' => null],
+            ],
+        ]);
 
         $this->get("/r/{$order->token}")
             ->assertOk()
             ->assertViewIs('checkout.resumo')
-            ->assertViewHas('order', fn (Order $viewOrder): bool => $viewOrder->is($order));
+            ->assertViewHas('order', fn (Order $viewOrder): bool => $viewOrder->is($order))
+            ->assertSee('Mala de mao inclusa', false)
+            ->assertSee('Mala despachada nao inclusa', false);
 
         $this->actingAs($customer, 'customer')
             ->withCookie('ref_code', 'IND-COOKIE')
@@ -90,7 +99,8 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertViewHas('walletBalance', 75.0)
             ->assertViewHas('isAffiliate', true)
             ->assertViewHas('refCookie', 'IND-COOKIE')
-            ->assertViewHas('savedPassengers', fn ($passengers): bool => $passengers->count() === 1);
+            ->assertViewHas('savedPassengers', fn ($passengers): bool => $passengers->count() === 1)
+            ->assertSee('Mala de mao inclusa', false);
 
         $expired = $this->createOrder([
             'expires_at' => now()->subMinute(),

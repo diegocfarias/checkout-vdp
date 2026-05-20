@@ -12,7 +12,7 @@ class CalendarPriceService
     /**
      * Consulta a API externa de preços por data.
      *
-     * @return array{levels: array<string, string>, currency: string|null, source: string}
+     * @return array{levels: array<string, string>, currency: string|null}
      */
     public function datePrices(
         string $departure,
@@ -35,7 +35,7 @@ class CalendarPriceService
     }
 
     /**
-     * @return array{levels: array<string, string>, currency: string|null, source: string}
+     * @return array{levels: array<string, string>, currency: string|null}
      */
     private function requestDatePrices(
         string $departure,
@@ -92,7 +92,7 @@ class CalendarPriceService
     }
 
     /**
-     * @return array{levels: array<string, string>, currency: string|null, source: string}
+     * @return array{levels: array<string, string>, currency: string|null}
      */
     private function parseResponse(array $data): array
     {
@@ -132,7 +132,6 @@ class CalendarPriceService
         return [
             'levels' => $levels,
             'currency' => $data['currency'] ?? null,
-            'source' => ! empty($prices) ? '123milhas' : 'cache',
         ];
     }
 
@@ -156,14 +155,13 @@ class CalendarPriceService
     }
 
     /**
-     * @return array{levels: array<string, string>, currency: string|null, source: string}
+     * @return array{levels: array<string, string>, currency: string|null}
      */
     private function emptyResult(): array
     {
         return [
             'levels' => [],
             'currency' => null,
-            'source' => 'cache',
         ];
     }
 }

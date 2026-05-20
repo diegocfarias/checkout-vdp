@@ -28,6 +28,7 @@ class OrderFlight extends Model
         'unique_id',
         'loc',
         'connection',
+        'baggage',
         'miles_price',
         'money_price',
         'tax',
@@ -40,6 +41,7 @@ class OrderFlight extends Model
 
     protected $casts = [
         'connection' => 'array',
+        'baggage' => 'array',
         'paid_boarding_tax' => 'decimal:2',
     ];
 

@@ -225,7 +225,6 @@ class RouteAndMiddlewareTest extends TestCase
                     '2026-06-01' => 'high',
                     '2026-06-03' => 'low',
                 ],
-                'source' => '123milhas',
             ]);
     }
 

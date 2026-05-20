@@ -563,7 +563,7 @@
                             $obStopsModal = max(0, count($obConnsModal) - 1);
                         @endphp
                         <div class="bg-gray-50 rounded-lg p-4">
-                            <div class="flex items-center gap-2 mb-2">
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
                                 <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">IDA</span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
                                 @if($outbound->flight_number)
@@ -572,6 +572,7 @@
                                 <span class="text-xs px-1.5 py-0.5 rounded font-medium {{ $obStopsModal > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600' }}">
                                     {{ $obStopsModal > 0 ? $obStopsModal . ' conexão' : 'Direto' }}
                                 </span>
+                                @include('partials._baggage_icons', ['baggage' => $outbound->baggage, 'class' => 'flex items-center gap-1.5 shrink-0'])
                             </div>
                             @if($order->flightSearch && $order->flightSearch->outbound_date)
                                 <p class="text-xs font-medium text-gray-600 mb-1">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}</p>
@@ -604,7 +605,7 @@
                             $ibStopsModal = max(0, count($ibConnsModal) - 1);
                         @endphp
                         <div class="bg-gray-50 rounded-lg p-4">
-                            <div class="flex items-center gap-2 mb-2">
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
                                 <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">VOLTA</span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
                                 @if($inbound->flight_number)
@@ -613,6 +614,7 @@
                                 <span class="text-xs px-1.5 py-0.5 rounded font-medium {{ $ibStopsModal > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600' }}">
                                     {{ $ibStopsModal > 0 ? $ibStopsModal . ' conexão' : 'Direto' }}
                                 </span>
+                                @include('partials._baggage_icons', ['baggage' => $inbound->baggage, 'class' => 'flex items-center gap-1.5 shrink-0'])
                             </div>
                             @if($order->flightSearch && $order->flightSearch->inbound_date)
                                 <p class="text-xs font-medium text-gray-600 mb-1">{{ $order->flightSearch->inbound_date->format('d/m/Y') }}</p>

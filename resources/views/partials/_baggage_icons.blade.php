@@ -12,6 +12,7 @@
             break;
         }
     }
+    $wrapperClass = $class ?? 'ml-auto flex items-center gap-1.5 shrink-0';
     $labelFor = function (string $key, array $item) use ($items): string {
         $base = $items[$key] ?? 'Bagagem';
         $included = (bool) ($item['included'] ?? false);
@@ -34,7 +35,7 @@
 @endphp
 
 @if($hasBaggage)
-    <div class="ml-auto flex items-center gap-1.5 shrink-0" aria-label="Bagagem">
+    <div class="{{ $wrapperClass }}" aria-label="Bagagem">
         @foreach($items as $key => $defaultLabel)
             @php
                 $item = isset($baggage[$key]) && is_array($baggage[$key]) ? $baggage[$key] : null;

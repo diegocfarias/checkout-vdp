@@ -1223,6 +1223,27 @@ class VdpFlightService
             'total_flight_duration' => $flight['total_flight_duration'] ?? null,
             'unique_id' => $flight['unique_id'] ?? null,
             'connection' => $flight['connection'] ?? null,
+            'baggage' => isset($flight['baggage']) && is_array($flight['baggage'])
+                ? $this->sanitizeBaggage($flight['baggage'])
+                : null,
         ];
+    }
+
+    private function sanitizeBaggage(array $baggage): array
+    {
+        $clean = [
+            'fare' => isset($baggage['fare']) ? (string) $baggage['fare'] : null,
+        ];
+
+        foreach (['personal_item', 'carry_on', 'checked'] as $key) {
+            $item = isset($baggage[$key]) && is_array($baggage[$key]) ? $baggage[$key] : [];
+            $clean[$key] = [
+                'included' => (bool) ($item['included'] ?? false),
+                'quantity' => max(0, (int) ($item['quantity'] ?? 0)),
+                'weight' => isset($item['weight']) && $item['weight'] !== '' ? (string) $item['weight'] : null,
+            ];
+        }
+
+        return $clean;
     }
 }

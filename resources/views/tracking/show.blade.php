@@ -156,13 +156,14 @@
 
                 @if($outbound)
                     <div class="bg-gray-50 rounded-lg p-4 mb-3">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center gap-2">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">IDA</span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
                                 @if($outbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
                                 @endif
+                                @include('partials._baggage_icons', ['baggage' => $outbound->baggage, 'class' => 'flex items-center gap-1.5 shrink-0'])
                             </div>
                             @if($order->flightSearch && $order->flightSearch->outbound_date)
                                 <span class="text-xs font-medium text-gray-600">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}</span>
@@ -189,13 +190,14 @@
 
                 @if($inbound)
                     <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center gap-2">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">VOLTA</span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
                                 @if($inbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
                                 @endif
+                                @include('partials._baggage_icons', ['baggage' => $inbound->baggage, 'class' => 'flex items-center gap-1.5 shrink-0'])
                             </div>
                             @if($order->flightSearch && $order->flightSearch->inbound_date)
                                 <span class="text-xs font-medium text-gray-600">{{ $order->flightSearch->inbound_date->format('d/m/Y') }}</span>

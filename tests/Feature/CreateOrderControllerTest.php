@@ -69,6 +69,12 @@ class CreateOrderControllerTest extends TestCase
                     'price_miles' => '10000',
                     'total_flight_duration' => '01:00',
                     'unique_id' => 'azul-outbound',
+                    'baggage' => [
+                        'fare' => 'LIGHT',
+                        'personal_item' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                        'carry_on' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                        'checked' => ['included' => false, 'quantity' => 0, 'weight' => null],
+                    ],
                     'money_price' => '383.31',
                     'tax' => '99.73',
                 ],
@@ -99,7 +105,10 @@ class CreateOrderControllerTest extends TestCase
         ]);
 
         $order = \App\Models\Order::firstOrFail();
+        $flight = $order->flights()->firstOrFail();
         $this->assertTrue($order->expires_at->equalTo(Carbon::parse('2026-05-14 09:45:00')));
+        $this->assertSame('LIGHT', $flight->baggage['fare']);
+        $this->assertTrue($flight->baggage['personal_item']['included']);
 
         Http::assertSent(function ($request): bool {
             return $request->url() === 'https://botpress.test/webhook'

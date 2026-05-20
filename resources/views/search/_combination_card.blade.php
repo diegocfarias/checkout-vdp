@@ -4,23 +4,31 @@
     $totalPrice = $group['total_price'];
     $sameCia = $group['same_cia'] ?? false;
     $airlines = $group['airlines'] ?? [];
+    $hasInbound = count($ibFlights) > 0;
+    $obAirlines = $group['outbound_airlines'] ?? $airlines;
+    $ibAirlines = $group['inbound_airlines'] ?? ($hasInbound ? $airlines : []);
     $airlinesStr = implode(',', array_map('strtolower', $airlines));
+    $obAirlinesStr = implode(',', array_map('strtolower', $obAirlines));
+    $ibAirlinesStr = implode(',', array_map('strtolower', $ibAirlines));
     $obPeriods = implode(',', $group['outbound_periods'] ?? []);
     $ibPeriods = implode(',', $group['inbound_periods'] ?? []);
-    $hasInbound = count($ibFlights) > 0;
     $groupIdx = $groupIdx ?? 0;
     $collapseAfter = 2;
 
-    $hasDirect = false;
-    $hasConnection = false;
+    $obHasDirect = false;
+    $obHasConnection = false;
     foreach ($obFlights as $f) {
         $c = $f['connection'] ?? [];
-        if (!is_array($c) || count($c) <= 1) { $hasDirect = true; } else { $hasConnection = true; }
+        if (!is_array($c) || count($c) <= 1) { $obHasDirect = true; } else { $obHasConnection = true; }
     }
+    $ibHasDirect = false;
+    $ibHasConnection = false;
     foreach ($ibFlights as $f) {
         $c = $f['connection'] ?? [];
-        if (!is_array($c) || count($c) <= 1) { $hasDirect = true; } else { $hasConnection = true; }
+        if (!is_array($c) || count($c) <= 1) { $ibHasDirect = true; } else { $ibHasConnection = true; }
     }
+    $hasDirect = $obHasDirect || $ibHasDirect;
+    $hasConnection = $obHasConnection || $ibHasConnection;
 
     $obDateFormatted = isset($params['outbound_date'])
         ? \Carbon\Carbon::parse($params['outbound_date'])->translatedFormat('D, d/m/Y')
@@ -63,8 +71,14 @@
 
 <div class="combination-card bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 animate-fadeIn"
      data-airlines="{{ $airlinesStr }}"
+     data-ob-airlines="{{ $obAirlinesStr }}"
+     data-ib-airlines="{{ $ibAirlinesStr }}"
      data-has-direct="{{ $hasDirect ? '1' : '0' }}"
      data-has-connection="{{ $hasConnection ? '1' : '0' }}"
+     data-ob-has-direct="{{ $obHasDirect ? '1' : '0' }}"
+     data-ob-has-connection="{{ $obHasConnection ? '1' : '0' }}"
+     data-ib-has-direct="{{ $ibHasDirect ? '1' : '0' }}"
+     data-ib-has-connection="{{ $ibHasConnection ? '1' : '0' }}"
      data-outbound-period="{{ $obPeriods }}"
      data-inbound-period="{{ $ibPeriods }}"
      data-price="{{ $totalPrice }}"

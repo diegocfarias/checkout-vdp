@@ -73,7 +73,6 @@ class FlightSearchController extends Controller
 
         return response()->json([
             'levels' => $externalPrices['levels'],
-            'source' => $externalPrices['source'],
             'currency' => $externalPrices['currency'] ?? 'BRL',
         ]);
     }
@@ -234,6 +233,8 @@ class FlightSearchController extends Controller
                 $periods = $this->groupPeriods($obGroup['flights']);
                 $groups[] = [
                     'airlines' => [$obGroup['cia']],
+                    'outbound_airlines' => [$obGroup['cia']],
+                    'inbound_airlines' => [],
                     'same_cia' => true,
                     'total_price' => $obGroup['price'],
                     'outbound_flights' => $obGroup['flights'],
@@ -267,6 +268,8 @@ class FlightSearchController extends Controller
 
                 $groups[] = [
                     'airlines' => $airlines,
+                    'outbound_airlines' => [$obGroup['cia']],
+                    'inbound_airlines' => [$ibGroup['cia']],
                     'same_cia' => $sameCia,
                     'total_price' => round($obGroup['price'] + $ibGroup['price'], 2),
                     'outbound_flights' => $obGroup['flights'],
@@ -586,6 +589,7 @@ class FlightSearchController extends Controller
             'total_flight_duration' => $data['total_flight_duration'] ?? null,
             'unique_id' => $data['unique_id'] ?? null,
             'connection' => $data['connection'] ?? null,
+            'baggage' => isset($data['baggage']) && is_array($data['baggage']) ? $data['baggage'] : null,
             'miles_price' => $data['price_miles'] ?? '0',
             'money_price' => $this->vdpService->calculateBasePrice($data),
             'tax' => $this->vdpService->parseMoneyValue($data['boarding_tax']),

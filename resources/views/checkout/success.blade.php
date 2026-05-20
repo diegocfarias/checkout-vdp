@@ -37,6 +37,7 @@
                     @if($outbound->departure_time)
                         <p class="text-xs text-gray-500 mt-1">{{ $outbound->departure_time }} - {{ $outbound->arrival_time }}</p>
                     @endif
+                    @include('partials._baggage_icons', ['baggage' => $outbound->baggage, 'class' => 'mt-2 flex items-center gap-1.5 shrink-0'])
                 </div>
             @endif
 
@@ -57,6 +58,7 @@
                     @if($inbound->departure_time)
                         <p class="text-xs text-gray-500 mt-1">{{ $inbound->departure_time }} - {{ $inbound->arrival_time }}</p>
                     @endif
+                    @include('partials._baggage_icons', ['baggage' => $inbound->baggage, 'class' => 'mt-2 flex items-center gap-1.5 shrink-0'])
                 </div>
             @endif
 

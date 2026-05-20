@@ -56,7 +56,6 @@ class FlightSearchControllerCoverageTest extends TestCase
         $response->assertExactJson([
             'currency' => 'BRL',
             'levels' => [],
-            'source' => 'cache',
         ]);
 
         Http::assertSent(function ($request) use ($firstDate, $lastAllowedDate): bool {
@@ -122,7 +121,7 @@ class FlightSearchControllerCoverageTest extends TestCase
         $this->assertSame('low', $response->json('levels.2026-07-16'));
         $this->assertSame('medium', $response->json('levels.2026-07-17'));
         $this->assertSame('medium', $response->json('levels.2026-07-18'));
-        $this->assertSame('123milhas', $response->json('source'));
+        $response->assertJsonMissingPath('source');
 
         Http::assertSent(function ($request): bool {
             $data = $request->data();
@@ -279,6 +278,12 @@ class FlightSearchControllerCoverageTest extends TestCase
                 'operator' => 'PATRIA',
                 'flight_number' => 'G31234',
                 'unique_id' => 'patria-gol',
+                'baggage' => [
+                    'fare' => 'LIGHT',
+                    'personal_item' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                    'carry_on' => ['included' => true, 'quantity' => 1, 'weight' => '10kg'],
+                    'checked' => ['included' => false, 'quantity' => 0, 'weight' => null],
+                ],
             ])),
             'inbound' => json_encode($this->flightPayload([
                 'operator' => 'PATRIA',
@@ -303,6 +308,9 @@ class FlightSearchControllerCoverageTest extends TestCase
         $this->assertSame('AZUL', $inbound->operator);
         $this->assertSame('bds_crawler', $outbound->source_provider);
         $this->assertSame('PATRIA', $inbound->source_airlines);
+        $this->assertSame('LIGHT', $outbound->baggage['fare']);
+        $this->assertTrue($outbound->baggage['carry_on']['included']);
+        $this->assertFalse($outbound->baggage['checked']['included']);
     }
 
     private function providerQuery(array $overrides = []): array
