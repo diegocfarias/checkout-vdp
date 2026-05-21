@@ -7,6 +7,15 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Ambientes
+
+- `master`: producao.
+- `develop`: desenvolvimento/homologacao.
+- `feature/<descricao>`: novas demandas a partir de `develop`.
+- `hotfix/<descricao>`: correcao urgente a partir de `master`.
+
+Veja o guia completo em [docs/environments.md](docs/environments.md).
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

@@ -1,15 +1,6 @@
-cd /home/forge/checkout-dev.voedeprimeira.com
+#!/usr/bin/env bash
+set -euo pipefail
 
-git pull origin master
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-
-php artisan migrate --force
-
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-
-php artisan queue:restart
-
-echo "Deploy concluído com sucesso."
+exec "$SCRIPT_DIR/deploy/development.sh"
