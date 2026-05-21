@@ -13,6 +13,8 @@ O ambiente dev deve ter banco, cache, sessoes, filas e credenciais proprias. Ele
 
 Use PHP 8.4 no ambiente dev. Hoje uma dependencia do painel (`openspout`, via Filament) nao aceita PHP 8.5, entao Composer falha quando o deploy roda com PHP 8.5.
 
+No Forge, instale/habilite PHP 8.4 na instancia antes do primeiro deploy. Se o comando `php8.4` nao existir no terminal do servidor, o deploy vai falhar antes do Composer.
+
 Checklist de infra:
 
 1. Criar um site separado, por exemplo `checkout-dev.voedeprimeira.com`.
@@ -36,6 +38,12 @@ No Forge, o script de deploy do ambiente dev pode ser:
 
 ```bash
 PHP_BIN=php8.4 bash deploy/development.sh
+```
+
+Se o Forge tiver PHP 8.4 instalado com outro caminho, defina o caminho completo:
+
+```bash
+PHP_BIN=/usr/bin/php8.4 bash deploy/development.sh
 ```
 
 Em deploy com releases do Forge, o script deve rodar dentro do diretorio da release e nao precisa fazer `git pull`; por isso `UPDATE_GIT` fica desligado por padrao.
