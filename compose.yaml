@@ -1,11 +1,11 @@
 services:
     laravel.test:
         build:
-            context: './vendor/laravel/sail/runtimes/8.5'
+            context: './vendor/laravel/sail/runtimes/8.4'
             dockerfile: Dockerfile
             args:
                 WWWGROUP: '${WWWGROUP}'
-        image: 'sail-8.5/app'
+        image: 'sail-8.4/app'
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         ports:
@@ -20,7 +20,7 @@ services:
             IGNITION_LOCAL_SITES_PATH: '${PWD}'
         volumes:
             - '.:/var/www/html'
-            - './docker/php/sail-temp-fix.ini:/etc/php/8.5/cli/conf.d/99-temp-fix.ini:ro'
+            - './docker/php/sail-temp-fix.ini:/etc/php/8.4/cli/conf.d/99-temp-fix.ini:ro'
         networks:
             - sail
         depends_on:
