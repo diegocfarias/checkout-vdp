@@ -539,7 +539,7 @@
 
     function displayCia(operator, flightNumber) {
         var op = (operator || '').toUpperCase().trim();
-        if (op !== 'PATRIA') return op;
+        if (op !== 'PATRIA' && op !== 'INTERLINE') return op;
         var fn = (flightNumber || '').toUpperCase();
         if (fn.indexOf('G3') === 0) return 'GOL';
         if (fn.indexOf('AD') === 0) return 'AZUL';

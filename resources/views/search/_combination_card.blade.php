@@ -57,7 +57,7 @@
 
     $displayCia = function($operator, $flightNumber) {
         $op = strtoupper(trim((string) $operator));
-        if ($op !== 'PATRIA') return $op;
+        if ($op !== 'PATRIA' && $op !== 'INTERLINE') return $op;
 
         $fn = strtoupper(trim((string) $flightNumber));
         if (str_starts_with($fn, 'G3')) return 'GOL';

@@ -40,6 +40,28 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $this->assertSame('1150.00', $service->calculateBasePrice($flight));
     }
 
+    public function test_interline_ad_flight_uses_azul_percentage_pricing(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_miles_enabled' => true,
+            'pricing_pct_enabled' => true,
+            'pricing_pct_azul' => '15',
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $flight = [
+            'operator' => 'AZUL',
+            '_source_airlines' => 'INTERLINE',
+            'flight_number' => 'AD4110',
+            'price_money' => '1.000,00',
+            'price_miles' => '203.000',
+            'boarding_tax' => '50,00',
+        ];
+
+        $this->assertSame(1200.0, round($service->calculateFlightPrice($flight), 2));
+        $this->assertSame('1150.00', $service->calculateBasePrice($flight));
+    }
+
     public function test_miles_price_has_priority_over_percentage_pricing(): void
     {
         Cache::forever('app_settings', [
@@ -210,6 +232,18 @@ class VdpFlightServicePriceCacheTest extends TestCase
             'provider' => 'bds_crawler',
             'airlines' => 'PATRIA',
             'patria' => true,
+        ], $slots);
+
+        $this->assertContains([
+            'provider' => 'bds_crawler',
+            'airlines' => 'INTERLINE',
+            'patria' => false,
+        ], $slots);
+
+        $this->assertContains([
+            'provider' => 'bds_crawler',
+            'airlines' => 'TAP',
+            'patria' => false,
         ], $slots);
     }
 

@@ -603,7 +603,7 @@ class FlightSearchController extends Controller
     private function resolveDisplayCia(string $operator, string $flightNumber): string
     {
         $upper = strtoupper(trim($operator));
-        if ($upper !== 'PATRIA') {
+        if (! in_array($upper, ['PATRIA', 'INTERLINE'], true)) {
             return $operator;
         }
 
@@ -629,7 +629,11 @@ class FlightSearchController extends Controller
         return match ($provider) {
             'vdp' => 'VDP',
             'latam_crawler' => 'LATAM Crawler',
-            'bds_crawler' => strtoupper($airlines) === 'PATRIA' ? 'BDS Convencional' : 'BDS Crawler',
+            'bds_crawler' => match (strtoupper($airlines)) {
+                'PATRIA' => 'BDS Convencional',
+                'INTERLINE' => 'BDS Interline',
+                default => 'BDS Crawler',
+            },
             default => $provider,
         };
     }

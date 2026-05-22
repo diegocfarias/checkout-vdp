@@ -538,11 +538,27 @@ class VdpFlightService
             $slots[] = ['provider' => 'vdp', 'airlines' => implode(',', array_map('strtoupper', $vdpCias)), 'patria' => false];
         }
 
+        if ($this->shouldIncludeBdsExtraAirlines($bdsCias)) {
+            foreach ($this->bdsExtraAirlines() as $airline) {
+                $slots[] = ['provider' => 'bds_crawler', 'airlines' => $airline, 'patria' => false];
+            }
+        }
+
         if ($this->shouldIncludeBdsPatria($bdsCias)) {
             $slots[] = ['provider' => 'bds_crawler', 'airlines' => 'PATRIA', 'patria' => true];
         }
 
         return $slots;
+    }
+
+    private function shouldIncludeBdsExtraAirlines(array $bdsCias = []): bool
+    {
+        return ! empty($bdsCias) || (bool) Setting::get('bds_patria_enabled', false);
+    }
+
+    private function bdsExtraAirlines(): array
+    {
+        return ['INTERLINE', 'TAP'];
     }
 
     private function shouldIncludeBdsPatria(array $bdsCias = []): bool
@@ -1025,7 +1041,7 @@ class VdpFlightService
 
         $pctEnabled = Setting::get('pricing_pct_enabled', false);
 
-        $miles = $this->parseMilesValue($flight['price_miles'] ?? null);
+        $miles = $this->shouldIgnoreMilesPricing($flight) ? 0.0 : $this->parseMilesValue($flight['price_miles'] ?? null);
         if ($miles > 0) {
             $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
             $price = ($miles / 1000) * $valorMilheiro + $tax;
@@ -1066,7 +1082,7 @@ class VdpFlightService
 
         $pctEnabled = Setting::get('pricing_pct_enabled', false);
 
-        $miles = $this->parseMilesValue($flight['price_miles'] ?? null);
+        $miles = $this->shouldIgnoreMilesPricing($flight) ? 0.0 : $this->parseMilesValue($flight['price_miles'] ?? null);
         if ($miles > 0) {
             $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
 
@@ -1100,6 +1116,12 @@ class VdpFlightService
         }
 
         return $this->parseMoneyFloat($clean);
+    }
+
+    private function shouldIgnoreMilesPricing(array $flight): bool
+    {
+        return strtoupper(trim((string) ($flight['operator'] ?? ''))) === 'INTERLINE'
+            || strtoupper(trim((string) ($flight['_source_airlines'] ?? ''))) === 'INTERLINE';
     }
 
     private function parseMoneyFloat(mixed $value): float
@@ -1185,7 +1207,7 @@ class VdpFlightService
     {
         $operator = strtoupper(trim((string) ($flight['operator'] ?? '')));
 
-        if ($operator === 'PATRIA') {
+        if (in_array($operator, ['PATRIA', 'INTERLINE'], true)) {
             $flightNumber = strtoupper(trim((string) ($flight['flight_number'] ?? '')));
 
             if (str_starts_with($flightNumber, 'G3')) {
