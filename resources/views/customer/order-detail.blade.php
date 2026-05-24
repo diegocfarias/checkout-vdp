@@ -204,6 +204,87 @@
             </div>
         @endif
 
+        @php
+            $openCancellationTicket = $order->supportTickets
+                ->first(fn($ticket) => $ticket->subject === 'cancellation' && $ticket->is_open);
+        @endphp
+
+        <div class="mb-4">
+            @include('partials._cancellation_policy_summary', ['compact' => true])
+        </div>
+
+        {{-- Solicitação de cancelamento --}}
+        <div class="bg-white rounded-xl shadow-sm border {{ ($cancellationEvaluation['within_policy'] ?? false) ? 'border-amber-300' : 'border-gray-200' }} p-5 mb-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h3 class="font-semibold text-gray-800 text-sm">Solicitar cancelamento</h3>
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ $cancellationEvaluation['rule'] ?? 'Nossa equipe vai analisar as regras da companhia e fornecedor antes de efetivar.' }}
+                    </p>
+                </div>
+                @if($cancellationEvaluation['within_policy'] ?? false)
+                    <span class="inline-flex w-fit items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                        Prioridade
+                    </span>
+                @endif
+            </div>
+
+            @if($openCancellationTicket)
+                <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                    Já existe uma solicitação de cancelamento aberta para este pedido:
+                    <a href="{{ route('customer.support.show', $openCancellationTicket) }}" class="font-semibold underline">acompanhar atendimento #{{ $openCancellationTicket->id }}</a>.
+                </div>
+            @else
+                @if($errors->any())
+                    <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                        Confira os campos da solicitação de cancelamento.
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('customer.order.cancellation.store', $order) }}" enctype="multipart/form-data" class="mt-4 space-y-4">
+                    @csrf
+                    <div>
+                        <label for="cancellation_reason" class="block text-sm font-medium text-gray-700 mb-1.5">Motivo</label>
+                        <select id="cancellation_reason" name="reason" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Selecione...</option>
+                            @foreach($cancellationReasons as $key => $label)
+                                <option value="{{ $key }}" @selected(old('reason') === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('reason')
+                            <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="cancellation_message" class="block text-sm font-medium text-gray-700 mb-1.5">Detalhes <span class="font-normal text-gray-400">(opcional)</span></label>
+                        <textarea id="cancellation_message" name="message" rows="4" maxlength="5000" placeholder="Conte se deseja cancelar todos os passageiros/trechos ou informe qualquer detalhe importante."
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none">{{ old('message') }}</textarea>
+                        @error('message')
+                            <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Anexos</label>
+                        <input type="file" name="attachments[]" multiple
+                            class="block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
+                        <p class="text-xs text-gray-400 mt-1">Até 5 arquivos de 10 MB.</p>
+                        @error('attachments')
+                            <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                        @enderror
+                        @error('attachments.*')
+                            <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <button type="submit" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors text-sm">
+                        Abrir solicitação de cancelamento
+                    </button>
+                </form>
+            @endif
+        </div>
+
         {{-- Botão Atendimento --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
             <div class="flex items-center justify-between">

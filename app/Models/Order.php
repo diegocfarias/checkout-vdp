@@ -109,6 +109,11 @@ class Order extends Model
         return $this->hasOne(OrderEmission::class);
     }
 
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class)->latest();
+    }
+
     protected function passengersCount(): Attribute
     {
         return Attribute::get(fn () => $this->total_adults + $this->total_children + $this->total_babies);

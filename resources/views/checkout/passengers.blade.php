@@ -337,6 +337,10 @@
                     <input type="hidden" name="coupon_code" id="coupon_code" value="">
                 </div>
 
+                <div class="mt-8 pt-8 border-t border-gray-200">
+                    @include('partials._cancellation_policy_summary', ['compact' => true])
+                </div>
+
                 {{-- Forma de pagamento --}}
                 <div class="mt-8 pt-8 border-t border-gray-200">
                     <div class="flex items-center gap-2 mb-4">

@@ -6,9 +6,11 @@ use App\Mail\SupportTicketCreatedMail;
 use App\Models\Order;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
+use App\Services\CancellationPolicyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 
 class SupportTicketController extends Controller
 {
@@ -91,6 +93,68 @@ class SupportTicketController extends Controller
             ->with('success', 'Sua solicitação foi aberta com sucesso! Responderemos em breve.');
     }
 
+    public function storeCancellation(Request $request, Order $order, CancellationPolicyService $cancellationPolicy)
+    {
+        $customer = auth('customer')->user();
+
+        if ($order->customer_id !== $customer->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', Rule::in(array_keys(CancellationPolicyService::REASONS))],
+            'message' => 'nullable|string|max:5000',
+            'attachments' => 'nullable|array|max:' . self::MAX_ATTACHMENTS,
+            'attachments.*' => 'file|max:' . self::MAX_ATTACHMENT_KB . '|mimes:' . self::ATTACHMENT_MIMES,
+        ]);
+
+        $existingTicket = SupportTicket::where('customer_id', $customer->id)
+            ->where('order_id', $order->id)
+            ->where('subject', 'cancellation')
+            ->open()
+            ->latest()
+            ->first();
+
+        if ($existingTicket) {
+            return redirect()->route('customer.support.show', $existingTicket)
+                ->with('success', 'Já existe uma solicitação de cancelamento aberta para este pedido.');
+        }
+
+        $policy = $cancellationPolicy->evaluate($order, $validated['reason']);
+        $message = $this->buildCancellationMessage($order, $policy, (string) ($validated['message'] ?? ''));
+
+        $ticket = SupportTicket::create([
+            'customer_id' => $customer->id,
+            'order_id' => $order->id,
+            'subject' => 'cancellation',
+            'message' => $message,
+            'status' => 'open',
+            'priority' => $policy['priority'],
+            'cancellation_reason' => $validated['reason'],
+            'cancellation_within_policy' => $policy['within_policy'],
+            'cancellation_policy_snapshot' => $policy,
+            'cancellation_requested_at' => now(),
+        ]);
+
+        $this->storeUploadedAttachments($request, $ticket);
+
+        try {
+            Mail::to($customer->email)->send(new SupportTicketCreatedMail($ticket));
+        } catch (\Throwable $e) {
+            Log::error('Falha ao enviar email de confirmação do cancelamento', [
+                'ticket_id' => $ticket->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $successMessage = $policy['within_policy']
+            ? 'Solicitação de cancelamento aberta com prioridade. Nossa equipe vai tratar conforme as regras aplicáveis.'
+            : 'Solicitação de cancelamento aberta. Vamos consultar as regras da companhia/fornecedor antes de confirmar valores.';
+
+        return redirect()->route('customer.support.show', $ticket)
+            ->with('success', $successMessage);
+    }
+
     public function reply(Request $request, SupportTicket $ticket)
     {
         $customer = auth('customer')->user();
@@ -151,5 +215,34 @@ class SupportTicketController extends Controller
                 'is_internal' => false,
             ]);
         }
+    }
+
+    private function buildCancellationMessage(Order $order, array $policy, string $customerMessage): string
+    {
+        $lines = [
+            'Solicitação de cancelamento',
+            '',
+            'Pedido: ' . $order->tracking_code,
+            'Motivo: ' . $policy['reason_label'],
+            'Enquadramento: ' . $policy['rule'],
+            'Prioridade: ' . ($policy['within_policy'] ? 'Dentro das regras prioritárias' : 'Análise operacional'),
+        ];
+
+        if ($policy['purchase_reference_at']) {
+            $lines[] = 'Referência da compra/pagamento: ' . $policy['purchase_reference_at'];
+        }
+
+        if ($policy['first_departure_date']) {
+            $lines[] = 'Primeiro embarque: ' . $policy['first_departure_date'];
+        }
+
+        $customerMessage = trim($customerMessage);
+        if ($customerMessage !== '') {
+            $lines[] = '';
+            $lines[] = 'Detalhes informados pelo cliente:';
+            $lines[] = $customerMessage;
+        }
+
+        return implode("\n", $lines);
     }
 }

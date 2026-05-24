@@ -22,6 +22,7 @@ use App\Models\Order;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [FlightSearchController::class, 'index'])->name('search.home');
+Route::view('/politica-de-cancelamento', 'pages.cancellation-policy')->name('cancellation-policy');
 
 Route::get('/api/showcase/{showcaseRoute}/price', [FlightSearchController::class, 'showcasePrice'])->name('showcase.price');
 Route::get('/api/date-prices', [FlightSearchController::class, 'datePrices'])->name('api.date-prices');
@@ -125,6 +126,7 @@ Route::middleware(['auth:customer', EnsureCustomerIsActive::class])->group(funct
     Route::get('/minha-conta', [CustomerAreaController::class, 'dashboard'])->name('customer.dashboard');
     Route::get('/minha-conta/pedidos', [CustomerAreaController::class, 'orders'])->name('customer.orders');
     Route::get('/minha-conta/pedidos/{order}', [CustomerAreaController::class, 'orderDetail'])->name('customer.order.show');
+    Route::post('/minha-conta/pedidos/{order}/cancelamento', [SupportTicketController::class, 'storeCancellation'])->name('customer.order.cancellation.store');
     Route::get('/minha-conta/perfil', [CustomerAreaController::class, 'profile'])->name('customer.profile');
     Route::put('/minha-conta/perfil', [CustomerAreaController::class, 'updateProfile'])->name('customer.profile.update');
     Route::get('/minha-conta/passageiros', [CustomerAreaController::class, 'passengers'])->name('customer.passengers');

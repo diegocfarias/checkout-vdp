@@ -20,6 +20,10 @@ class SupportTicket extends Model
         'subject',
         'status',
         'priority',
+        'cancellation_reason',
+        'cancellation_within_policy',
+        'cancellation_policy_snapshot',
+        'cancellation_requested_at',
         'message',
         'first_response_at',
         'resolved_at',
@@ -27,6 +31,9 @@ class SupportTicket extends Model
     ];
 
     protected $casts = [
+        'cancellation_within_policy' => 'boolean',
+        'cancellation_policy_snapshot' => 'array',
+        'cancellation_requested_at' => 'datetime',
         'first_response_at' => 'datetime',
         'resolved_at' => 'datetime',
         'closed_at' => 'datetime',
@@ -131,6 +138,19 @@ class SupportTicket extends Model
     public function scopeByAgent($query, int $userId)
     {
         return $query->where('assigned_to', $userId);
+    }
+
+    public function scopePriorityCancellations($query)
+    {
+        return $query
+            ->where('subject', 'cancellation')
+            ->where('cancellation_within_policy', true)
+            ->open();
+    }
+
+    public function getIsCancellationRequestAttribute(): bool
+    {
+        return $this->subject === 'cancellation' && $this->cancellation_reason !== null;
     }
 
     public function getRouteKeyName(): string

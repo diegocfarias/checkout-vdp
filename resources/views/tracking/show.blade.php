@@ -224,6 +224,23 @@
             </div>
         @endif
 
+        {{-- Cancelamento --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            @include('partials._cancellation_policy_summary', ['compact' => true])
+            <div class="mt-4 text-sm text-gray-600">
+                @if(auth('customer')->check() && auth('customer')->id() === $order->customer_id)
+                    <a href="{{ route('customer.order.show', $order) }}" class="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-red-700">
+                        Solicitar cancelamento
+                    </a>
+                @else
+                    <p>Para abrir uma solicitação de cancelamento com motivo e anexos, acesse sua conta e entre no detalhe do pedido.</p>
+                    <a href="{{ route('customer.login') }}" class="mt-3 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700">
+                        Entrar na minha conta
+                    </a>
+                @endif
+            </div>
+        </div>
+
         {{-- Timeline --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-5">Histórico</h3>

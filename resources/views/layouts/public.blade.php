@@ -279,6 +279,7 @@
                     <ul class="space-y-2">
                         <li><a href="{{ route('search.home') }}" class="text-sm text-gray-500 hover:text-blue-600 transition-colors">Buscar passagens</a></li>
                         <li><a href="{{ route('tracking.form') }}" class="text-sm text-gray-500 hover:text-blue-600 transition-colors">Acompanhar pedido</a></li>
+                        <li><a href="{{ route('cancellation-policy') }}" class="text-sm text-gray-500 hover:text-blue-600 transition-colors">Cancelamento e reembolso</a></li>
                         @auth('customer')
                             <li><a href="{{ route('customer.dashboard') }}" class="text-sm text-gray-500 hover:text-blue-600 transition-colors">Minha conta</a></li>
                         @else

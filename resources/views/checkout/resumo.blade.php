@@ -180,6 +180,8 @@
             @endif
         </div>
 
+        @include('partials._cancellation_policy_summary', ['compact' => true])
+
         <a href="{{ route('checkout.passengers', $order->token) }}"
            class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
             Continuar

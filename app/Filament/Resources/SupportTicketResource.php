@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\SupportTicketResource\Pages;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Services\CancellationPolicyService;
 use BackedEnum;
 use Filament\Actions;
 use Filament\Infolists;
@@ -80,6 +81,15 @@ class SupportTicketResource extends Resource
                     ->badge()
                     ->color('info'),
 
+                Tables\Columns\TextColumn::make('cancellation_within_policy')
+                    ->label('Regra')
+                    ->getStateUsing(fn (SupportTicket $record): ?string => $record->subject === 'cancellation'
+                        ? ($record->cancellation_within_policy ? 'Prioritário' : 'Analisar')
+                        : null)
+                    ->badge()
+                    ->color(fn (?string $state): string => $state === 'Prioritário' ? 'danger' : 'gray')
+                    ->placeholder('—'),
+
                 Tables\Columns\TextColumn::make('customer.name')
                     ->label('Cliente')
                     ->searchable()
@@ -146,6 +156,16 @@ class SupportTicketResource extends Resource
                 Tables\Filters\SelectFilter::make('subject')
                     ->label('Assunto')
                     ->options(SupportTicket::SUBJECTS),
+
+                Tables\Filters\TernaryFilter::make('cancellation_within_policy')
+                    ->label('Cancelamento prioritário')
+                    ->placeholder('Todos')
+                    ->trueLabel('Dentro das regras')
+                    ->falseLabel('Fora da regra automática')
+                    ->queries(
+                        true: fn (Builder $query) => $query->where('subject', 'cancellation')->where('cancellation_within_policy', true),
+                        false: fn (Builder $query) => $query->where('subject', 'cancellation')->where('cancellation_within_policy', false),
+                    ),
 
                 Tables\Filters\SelectFilter::make('assigned_to')
                     ->label('Atendente')
@@ -258,6 +278,39 @@ class SupportTicketResource extends Resource
                         Infolists\Components\ViewEntry::make('initial_attachments')
                             ->label('')
                             ->view('filament.components.support-ticket-attachments'),
+                    ]),
+
+                Section::make('Cancelamento')
+                    ->icon('heroicon-o-exclamation-triangle')
+                    ->visible(fn (SupportTicket $record): bool => $record->is_cancellation_request)
+                    ->columns(2)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('cancellation_reason')
+                            ->label('Motivo')
+                            ->formatStateUsing(fn (?string $state): string => CancellationPolicyService::REASONS[$state] ?? 'Outro motivo'),
+
+                        Infolists\Components\TextEntry::make('cancellation_within_policy')
+                            ->label('Enquadramento')
+                            ->formatStateUsing(fn (bool $state): string => $state ? 'Dentro das regras prioritárias' : 'Análise operacional')
+                            ->badge()
+                            ->color(fn (bool $state): string => $state ? 'danger' : 'gray'),
+
+                        Infolists\Components\TextEntry::make('cancellation_policy_snapshot.rule')
+                            ->label('Regra aplicada')
+                            ->columnSpanFull(),
+
+                        Infolists\Components\TextEntry::make('cancellation_policy_snapshot.purchase_reference_at')
+                            ->label('Referência compra/pagamento')
+                            ->placeholder('—'),
+
+                        Infolists\Components\TextEntry::make('cancellation_policy_snapshot.first_departure_date')
+                            ->label('Primeiro embarque')
+                            ->placeholder('—'),
+
+                        Infolists\Components\TextEntry::make('cancellation_requested_at')
+                            ->label('Solicitado em')
+                            ->dateTime('d/m/Y H:i')
+                            ->placeholder('—'),
                     ]),
 
                 Section::make('Respostas')

@@ -50,6 +50,7 @@ class SupportDashboard extends Page implements HasTable
 
         $openNow = SupportTicket::open()->count();
         $awaitingResponse = SupportTicket::whereIn('status', ['open', 'in_progress'])->count();
+        $priorityCancellations = SupportTicket::priorityCancellations()->count();
 
         $totalPeriod = SupportTicket::whereBetween('created_at', [$from, $to])->count();
         $resolvedPeriod = SupportTicket::whereIn('status', ['resolved', 'closed'])
@@ -81,6 +82,12 @@ class SupportDashboard extends Page implements HasTable
                 'value' => $awaitingResponse,
                 'color' => 'warning',
                 'icon' => 'heroicon-o-clock',
+            ],
+            [
+                'label' => 'Cancelamentos prioritários',
+                'value' => $priorityCancellations,
+                'color' => 'danger',
+                'icon' => 'heroicon-o-exclamation-triangle',
             ],
             [
                 'label' => 'Total no período',
@@ -171,6 +178,15 @@ class SupportDashboard extends Page implements HasTable
                     ->formatStateUsing(fn (string $state) => SupportTicket::SUBJECTS[$state] ?? $state)
                     ->badge()
                     ->color('info'),
+
+                Tables\Columns\TextColumn::make('cancellation_within_policy')
+                    ->label('Regra')
+                    ->getStateUsing(fn (SupportTicket $record): ?string => $record->subject === 'cancellation'
+                        ? ($record->cancellation_within_policy ? 'Prioritário' : 'Analisar')
+                        : null)
+                    ->badge()
+                    ->color(fn (?string $state): string => $state === 'Prioritário' ? 'danger' : 'gray')
+                    ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('customer.name')
                     ->label('Cliente'),

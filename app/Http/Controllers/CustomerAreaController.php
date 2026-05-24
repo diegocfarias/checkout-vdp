@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\SavedPassenger;
+use App\Services\CancellationPolicyService;
 use App\Services\ReferralService;
 use Illuminate\Http\Request;
 
@@ -32,7 +33,7 @@ class CustomerAreaController extends Controller
         return view('customer.orders', compact('customer', 'orders'));
     }
 
-    public function orderDetail(Order $order)
+    public function orderDetail(Order $order, CancellationPolicyService $cancellationPolicy)
     {
         $customer = auth('customer')->user();
 
@@ -40,9 +41,11 @@ class CustomerAreaController extends Controller
             abort(404);
         }
 
-        $order->load(['flights', 'passengers', 'payments', 'flightSearch', 'coupon']);
+        $order->load(['flights', 'passengers', 'payments', 'flightSearch', 'coupon', 'supportTickets']);
+        $cancellationEvaluation = $cancellationPolicy->evaluate($order);
+        $cancellationReasons = CancellationPolicyService::REASONS;
 
-        return view('customer.order-detail', compact('customer', 'order'));
+        return view('customer.order-detail', compact('customer', 'order', 'cancellationEvaluation', 'cancellationReasons'));
     }
 
     public function profile()
