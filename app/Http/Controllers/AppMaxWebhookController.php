@@ -59,10 +59,12 @@ class AppMaxWebhookController extends Controller
                     'gateway_response' => array_merge($payment->gateway_response ?? [], $request->all()),
                 ]);
 
-                $order->update([
-                    'status' => 'awaiting_emission',
-                    'paid_at' => now(),
-                ]);
+                if ($this->canConfirmOrderPayment($order->status)) {
+                    $order->update([
+                        'status' => 'awaiting_emission',
+                        'paid_at' => now(),
+                    ]);
+                }
 
                 Log::info('AppMax webhook: pagamento confirmado', [
                     'event' => $event,
@@ -73,7 +75,10 @@ class AppMaxWebhookController extends Controller
         } elseif ($this->isCancelledEvent($event) || $this->isCancelledStatus($status)) {
             if ($payment->status === 'pending') {
                 $payment->update(['status' => 'cancelled']);
-                $order->update(['status' => 'cancelled']);
+
+                if ($this->canCancelOrderFromPayment($order->status)) {
+                    $order->update(['status' => 'cancelled']);
+                }
 
                 Log::info('AppMax webhook: pagamento cancelado/recusado', [
                     'event' => $event,
@@ -110,6 +115,16 @@ class AppMaxWebhookController extends Controller
             'order_authorized',
             'order_paid_by_pix',
         ], true);
+    }
+
+    private function canConfirmOrderPayment(?string $status): bool
+    {
+        return in_array($status, ['pending', 'awaiting_payment'], true);
+    }
+
+    private function canCancelOrderFromPayment(?string $status): bool
+    {
+        return in_array($status, ['pending', 'awaiting_payment'], true);
     }
 
     private function isPaidStatus(?string $status): bool

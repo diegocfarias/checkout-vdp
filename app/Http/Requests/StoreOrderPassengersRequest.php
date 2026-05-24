@@ -44,6 +44,7 @@ class StoreOrderPassengersRequest extends FormRequest
 
             if (strlen($cpf) !== 11 || preg_match('/^(\d)\1{10}$/', $cpf)) {
                 $fail('CPF inválido.');
+
                 return;
             }
 
@@ -55,6 +56,7 @@ class StoreOrderPassengersRequest extends FormRequest
                 $digit = ((10 * $sum) % 11) % 10;
                 if ((int) $cpf[$t] !== $digit) {
                     $fail('CPF inválido.');
+
                     return;
                 }
             }
@@ -118,9 +120,9 @@ class StoreOrderPassengersRequest extends FormRequest
             'card_number' => ['required', 'string', 'min:13'],
             'card_cvv' => ['required', 'string', 'min:2', 'max:4'],
             'card_month' => ['required', 'integer', 'min:1', 'max:12'],
-            'card_year' => ['required', 'integer', 'min:' . (int) date('y'), 'max:' . ((int) date('y') + 15)],
+            'card_year' => ['required', 'integer', 'min:'.(int) date('y'), 'max:'.((int) date('y') + 15)],
             'card_name' => ['required', 'string', 'min:2', 'max:255'],
-            'installments' => ['required', 'integer', 'min:1', 'max:' . $this->resolveMaxInstallments()],
+            'installments' => ['required', 'integer', 'min:1', 'max:'.$this->resolveMaxInstallments()],
         ] : []);
     }
 
@@ -176,14 +178,14 @@ class StoreOrderPassengersRequest extends FormRequest
             $methods[] = 'credit_card';
         }
 
-        return $methods ?: ['pix', 'credit_card'];
+        return $methods;
     }
 
     private function resolveMaxInstallments(): int
     {
         $ccGateway = Setting::get('gateway_credit_card') ?: config('services.payment.gateway', 'appmax');
 
-        return (int) Setting::get('max_installments_' . $ccGateway, Setting::get('max_installments', 12));
+        return (int) Setting::get('max_installments_'.$ccGateway, Setting::get('max_installments', 12));
     }
 
     public function after(): array

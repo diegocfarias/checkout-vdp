@@ -47,10 +47,12 @@ class AbacatePayWebhookController extends Controller
                     'gateway_response' => array_merge($payment->gateway_response ?? [], $request->all()),
                 ]);
 
-                $order->update([
-                    'status' => 'awaiting_emission',
-                    'paid_at' => now(),
-                ]);
+                if ($this->canConfirmOrderPayment($order->status)) {
+                    $order->update([
+                        'status' => 'awaiting_emission',
+                        'paid_at' => now(),
+                    ]);
+                }
 
                 Log::info('AbacatePay webhook: pagamento confirmado', [
                     'event' => $event,
@@ -73,7 +75,10 @@ class AbacatePayWebhookController extends Controller
         } elseif (in_array($event, ['billing.failed']) || in_array($status, ['EXPIRED', 'CANCELLED'])) {
             if ($payment->status === 'pending') {
                 $payment->update(['status' => 'cancelled']);
-                $order->update(['status' => 'cancelled']);
+
+                if ($this->canCancelOrderFromPayment($order->status)) {
+                    $order->update(['status' => 'cancelled']);
+                }
 
                 Log::info('AbacatePay webhook: pagamento cancelado/expirado', [
                     'event' => $event,
@@ -84,5 +89,15 @@ class AbacatePayWebhookController extends Controller
         }
 
         return response()->json(['received' => true], 200);
+    }
+
+    private function canConfirmOrderPayment(?string $status): bool
+    {
+        return in_array($status, ['pending', 'awaiting_payment'], true);
+    }
+
+    private function canCancelOrderFromPayment(?string $status): bool
+    {
+        return in_array($status, ['pending', 'awaiting_payment'], true);
     }
 }

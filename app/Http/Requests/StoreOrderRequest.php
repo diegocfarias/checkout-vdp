@@ -40,13 +40,23 @@ class StoreOrderRequest extends FormRequest
             'volta.cia' => 'required_with:volta|string',
 
             'departure_iata' => 'required|string|size:3',
-            'arrival_iata' => 'required|string|size:3',
-            'total_adults' => 'required|integer|min:1',
-            'total_children' => 'required|integer|min:0',
-            'total_babies' => 'required|integer|min:0',
+            'arrival_iata' => 'required|string|size:3|different:departure_iata',
+            'total_adults' => 'required|integer|min:1|max:9',
+            'total_children' => 'required|integer|min:0|max:9',
+            'total_babies' => 'required|integer|min:0|max:9|lte:total_adults',
             'userId' => 'required|string',
             'conversationId' => 'required|string',
-            'cabin' => 'required|string',
+            'cabin' => 'required|string|in:EC,EX',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'arrival_iata.different' => 'O destino deve ser diferente da origem.',
+            'total_adults.min' => 'É necessário pelo menos 1 adulto.',
+            'total_babies.lte' => 'O número de bebês não pode exceder o de adultos.',
+            'cabin.in' => 'Classe inválida.',
         ];
     }
 }

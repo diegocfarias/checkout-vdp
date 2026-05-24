@@ -31,7 +31,7 @@ class ReferralService
                 $referralCandidates[] = $suffix;
             }
         } else {
-            $referralCandidates[] = 'IND-' . $code;
+            $referralCandidates[] = 'IND-'.$code;
         }
         $referralCandidates = array_values(array_unique($referralCandidates));
 
@@ -195,7 +195,7 @@ class ReferralService
             $balance = $this->getAvailableBalance($customer);
 
             if ($balance < $amount) {
-                throw new \RuntimeException('Saldo insuficiente. Disponível: R$ ' . number_format($balance, 2, ',', '.'));
+                throw new \RuntimeException('Saldo insuficiente. Disponível: R$ '.number_format($balance, 2, ',', '.'));
             }
 
             $newBalance = round($balance - $amount, 2);
@@ -205,7 +205,7 @@ class ReferralService
                 'type' => 'debit',
                 'amount' => $amount,
                 'balance_after' => $newBalance,
-                'description' => 'Uso de créditos no pedido ' . $order->tracking_code,
+                'description' => 'Uso de créditos no pedido '.$order->tracking_code,
                 'order_id' => $order->id,
             ]);
         });
@@ -217,6 +217,26 @@ class ReferralService
     public function creditWallet(Customer $customer, Referral $referral): WalletTransaction
     {
         return DB::transaction(function () use ($customer, $referral) {
+            $referral = Referral::whereKey($referral->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($referral->affiliate_id !== $customer->id) {
+                throw new \RuntimeException('Indicação não pertence ao afiliado informado.');
+            }
+
+            if ($referral->credit_status !== 'pending') {
+                $existingTransaction = WalletTransaction::where('referral_id', $referral->id)
+                    ->where('type', 'credit')
+                    ->first();
+
+                if ($existingTransaction) {
+                    return $existingTransaction;
+                }
+
+                throw new \RuntimeException('Crédito de indicação não está pendente.');
+            }
+
             $balance = $this->getAvailableBalance($customer);
             $newBalance = round($balance + (float) $referral->credit_amount, 2);
 
@@ -225,7 +245,7 @@ class ReferralService
                 'type' => 'credit',
                 'amount' => $referral->credit_amount,
                 'balance_after' => $newBalance,
-                'description' => 'Crédito por indicação — pedido ' . $referral->referredOrder->tracking_code,
+                'description' => 'Crédito por indicação — pedido '.$referral->referredOrder->tracking_code,
                 'referral_id' => $referral->id,
             ]);
 
@@ -289,7 +309,7 @@ class ReferralService
                 'type' => 'credit',
                 'amount' => $order->wallet_amount_used,
                 'balance_after' => $newBalance,
-                'description' => 'Devolução de créditos — pedido ' . $order->tracking_code . ' cancelado',
+                'description' => 'Devolução de créditos — pedido '.$order->tracking_code.' cancelado',
                 'order_id' => $order->id,
             ]);
 

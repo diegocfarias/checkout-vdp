@@ -43,7 +43,7 @@ class ExpireCheckouts extends Command
                 $payment->update(['status' => 'expired']);
 
                 $order = $payment->order;
-                if ($order && in_array($order->status, ['pending', 'awaiting_payment'])) {
+                if ($order && in_array($order->status, ['pending', 'awaiting_payment']) && ! $this->orderHasActivePayment($order)) {
                     try {
                         $paymentResolver->resolveForPayment($payment)->cancelCheckout($payment);
                     } catch (\Throwable $e) {
@@ -73,6 +73,22 @@ class ExpireCheckouts extends Command
                 $this->error("Erro ao expirar PIX #{$payment->id}: {$e->getMessage()}");
             }
         }
+    }
+
+    private function orderHasActivePayment(Order $order): bool
+    {
+        return $order->payments()
+            ->where(function ($query) {
+                $query->where('status', 'paid')
+                    ->orWhere(function ($query) {
+                        $query->where('status', 'pending')
+                            ->where(function ($query) {
+                                $query->whereNull('expires_at')
+                                    ->orWhere('expires_at', '>=', now());
+                            });
+                    });
+            })
+            ->exists();
     }
 
     private function expireOrders(PaymentGatewayResolver $paymentResolver): void

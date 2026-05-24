@@ -9,6 +9,7 @@ use App\Models\FlightSearch;
 use App\Models\Order;
 use App\Models\SavedPassenger;
 use App\Models\Setting;
+use App\Services\CheckoutPricingService;
 use App\Services\CustomerService;
 use App\Services\PaymentGatewayResolver;
 use App\Services\ReferralService;
@@ -23,6 +24,7 @@ class OrderCheckoutController extends Controller
         private VdpFlightService $vdpService,
         private CustomerService $customerService,
         private ReferralService $referralService,
+        private CheckoutPricingService $pricingService,
     ) {}
 
     public function show(string $token)
@@ -38,7 +40,7 @@ class OrderCheckoutController extends Controller
         }
 
         $pixDiscount = (float) Setting::get('pix_discount', 0);
-        $pixEnabled = ! empty(Setting::get('gateway_pix', config('services.payment.gateway')));
+        $pixEnabled = $this->pixEnabled();
 
         return view('checkout.resumo', [
             'order' => $order,
@@ -61,11 +63,10 @@ class OrderCheckoutController extends Controller
             return response()->view('checkout.not-found', [], 404);
         }
 
-        $gatewayPix = Setting::get('gateway_pix');
-        $gatewayCc = Setting::get('gateway_credit_card');
+        $pixEnabled = $this->pixEnabled();
+        $creditCardEnabled = $this->creditCardEnabled();
 
-        $pixEnabled = $gatewayPix !== null ? ! empty($gatewayPix) : Setting::get('pix_enabled', true);
-        $creditCardEnabled = $gatewayCc !== null ? ! empty($gatewayCc) : Setting::get('credit_card_enabled', true);
+        $gatewayCc = Setting::get('gateway_credit_card');
         $pixDiscount = (float) Setting::get('pix_discount', 0);
 
         $ccGateway = $gatewayCc ?: config('services.payment.gateway', 'appmax');
@@ -282,33 +283,40 @@ class OrderCheckoutController extends Controller
             }
         }
 
-        $baseTotal = $this->calculateBaseTotal($order);
-        $discountableTotal = $this->calculateDiscountableTotal($order);
-        $totalAfterDiscount = max($baseTotal - $discountAmount - $walletAmountUsed, 0);
+        $canApplyPixDiscount = true;
 
         if ($paymentMethod === 'pix') {
-            $canApplyPixDiscount = true;
-
             if (isset($referral)) {
                 $canApplyPixDiscount = (bool) Setting::get('referral_cumulative_with_pix', true);
             } elseif (isset($coupon)) {
                 $canApplyPixDiscount = false;
             }
+        }
 
-            $pixDiscountPct = (float) Setting::get('pix_discount', 0);
-            if ($pixDiscountPct > 0 && $canApplyPixDiscount) {
-                $remainingDiscountableTotal = max($discountableTotal - $discountAmount, 0);
-                $pixDiscountBase = min($remainingDiscountableTotal, $totalAfterDiscount);
-                $pixDiscountAmount = round($pixDiscountBase * ($pixDiscountPct / 100), 2);
-                $totalAfterDiscount = max(round($totalAfterDiscount - $pixDiscountAmount, 2), 0);
-            }
-            $cardData['total_with_interest'] = round($totalAfterDiscount, 2);
-        } else {
+        $interestRate = 0;
+        if ($paymentMethod === 'credit_card') {
             $ccGateway = Setting::get('gateway_credit_card') ?: config('services.payment.gateway', 'appmax');
             $installments = (int) ($cardData['installments'] ?? 1);
             $allRates = Setting::get('interest_rates_'.$ccGateway, Setting::get('interest_rates', []));
-            $rate = $allRates[$installments] ?? 0;
-            $cardData['total_with_interest'] = round($totalAfterDiscount * (1 + $rate / 100), 2);
+            $interestRate = (float) ($allRates[$installments] ?? 0);
+        }
+
+        $pricing = $this->pricingService->calculate($order, [
+            'discount_amount' => $discountAmount,
+            'wallet_amount' => $walletAmountUsed,
+            'payment_method' => $paymentMethod,
+            'pix_discount_pct' => (float) Setting::get('pix_discount', 0),
+            'can_apply_pix_discount' => $canApplyPixDiscount,
+            'interest_rate' => $interestRate,
+        ]);
+
+        $totalAfterDiscount = $pricing['payable_total'];
+        $cardData['total_with_interest'] = $pricing['total_with_interest'];
+
+        if ($paymentMethod === 'credit_card') {
+            $cardData['interest_amount'] = $pricing['interest_amount'];
+        } else {
+            $cardData['pix_discount_amount'] = $pricing['pix_discount_amount'];
         }
 
         if ($totalAfterDiscount <= 0 && $walletAmountUsed > 0) {
@@ -531,33 +539,30 @@ class OrderCheckoutController extends Controller
 
     private function calculateBaseTotal(Order $order): float
     {
-        $payingPax = $order->total_adults + $order->total_children;
-        if ($payingPax < 1) {
-            $payingPax = 1;
-        }
-
-        $total = 0;
-        foreach ($order->flights as $flight) {
-            $perPax = (float) ($flight->money_price ?? 0) + (float) ($flight->tax ?? 0);
-            $total += $perPax * $payingPax;
-        }
-
-        return round($total, 2);
+        return $this->pricingService->grossTotal($order);
     }
 
     private function calculateDiscountableTotal(Order $order): float
     {
-        $payingPax = $order->total_adults + $order->total_children;
-        if ($payingPax < 1) {
-            $payingPax = 1;
-        }
+        return $this->pricingService->discountableTotal($order);
+    }
 
-        $total = 0;
-        foreach ($order->flights as $flight) {
-            $total += (float) ($flight->money_price ?? 0) * $payingPax;
-        }
+    private function pixEnabled(): bool
+    {
+        $gatewayPix = Setting::get('gateway_pix');
 
-        return round($total, 2);
+        return $gatewayPix !== null
+            ? ! empty($gatewayPix)
+            : (bool) Setting::get('pix_enabled', true);
+    }
+
+    private function creditCardEnabled(): bool
+    {
+        $gatewayCc = Setting::get('gateway_credit_card');
+
+        return $gatewayCc !== null
+            ? ! empty($gatewayCc)
+            : (bool) Setting::get('credit_card_enabled', true);
     }
 
     private function checkPriceChange(Order $order): ?array

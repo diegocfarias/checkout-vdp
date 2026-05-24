@@ -67,7 +67,8 @@ class OrderObserver
 
     private function buildWhatsAppMessage(Order $order, string $status): ?string
     {
-        $trackingUrl = url("/pedido/{$order->tracking_code}");
+        $trackingUrl = route('tracking.show', ['trackingCode' => $order->tracking_code])
+            .'?'.http_build_query(['token' => $order->token]);
         $code = $order->tracking_code;
 
         return match ($status) {

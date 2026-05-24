@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Customer;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RegisterRequest extends FormRequest
@@ -15,7 +16,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:customers,email'],
+            'email' => ['required', 'email', 'max:255', $this->availableEmailValidation()],
             'document' => ['required', 'string', 'regex:/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/', $this->cpfValidation()],
             'phone' => ['required', 'string', 'min:8', 'max:20'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -32,6 +33,17 @@ class RegisterRequest extends FormRequest
         ];
     }
 
+    private function availableEmailValidation(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) {
+            $customer = Customer::where('email', $value)->first();
+
+            if ($customer && ! $customer->isPending()) {
+                $fail('Este e-mail já está cadastrado.');
+            }
+        };
+    }
+
     private function cpfValidation(): \Closure
     {
         return function (string $attribute, mixed $value, \Closure $fail) {
@@ -39,6 +51,7 @@ class RegisterRequest extends FormRequest
 
             if (strlen($cpf) !== 11 || preg_match('/^(\d)\1{10}$/', $cpf)) {
                 $fail('CPF inválido.');
+
                 return;
             }
 
@@ -50,6 +63,7 @@ class RegisterRequest extends FormRequest
                 $digit = ((10 * $sum) % 11) % 10;
                 if ((int) $cpf[$t] !== $digit) {
                     $fail('CPF inválido.');
+
                     return;
                 }
             }

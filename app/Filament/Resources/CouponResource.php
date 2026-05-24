@@ -11,10 +11,10 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Infolists;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -85,11 +85,6 @@ class CouponResource extends Resource
                     ->label('Ativo')
                     ->default(true),
 
-                Toggle::make('cumulative_with_pix')
-                    ->label('Cumulativo com desconto PIX')
-                    ->helperText('Se desativado, o desconto PIX não será aplicado quando este cupom for usado.')
-                    ->default(true),
-
                 DateTimePicker::make('starts_at')
                     ->label('Válido a partir de')
                     ->displayFormat('d/m/Y H:i'),
@@ -115,7 +110,7 @@ class CouponResource extends Resource
                             ->limit(20)
                             ->get()
                             ->mapWithKeys(fn (Customer $c) => [
-                                $c->id => $c->name . ($c->document ? ' — ' . $c->document : '') . ' (' . $c->email . ')',
+                                $c->id => $c->name.($c->document ? ' — '.$c->document : '').' ('.$c->email.')',
                             ])
                             ->toArray();
                     })
@@ -153,17 +148,17 @@ class CouponResource extends Resource
                 Tables\Columns\TextColumn::make('value')
                     ->label('Valor')
                     ->formatStateUsing(fn (Coupon $record): string => $record->type === 'percent'
-                        ? number_format($record->value, 0) . '%'
-                        : 'R$ ' . number_format($record->value, 2, ',', '.')),
+                        ? number_format($record->value, 0).'%'
+                        : 'R$ '.number_format($record->value, 2, ',', '.')),
 
                 Tables\Columns\TextColumn::make('max_discount')
                     ->label('Desc. máx.')
-                    ->formatStateUsing(fn (?string $state): string => $state ? 'R$ ' . number_format((float) $state, 2, ',', '.') : '-')
+                    ->formatStateUsing(fn (?string $state): string => $state ? 'R$ '.number_format((float) $state, 2, ',', '.') : '-')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('usage')
                     ->label('Usos')
-                    ->getStateUsing(fn (Coupon $record): string => $record->usage_count . ($record->usage_limit ? ' / ' . $record->usage_limit : ' / ∞')),
+                    ->getStateUsing(fn (Coupon $record): string => $record->usage_count.($record->usage_limit ? ' / '.$record->usage_limit : ' / ∞')),
 
                 Tables\Columns\IconColumn::make('active')
                     ->label('Ativo')
@@ -231,11 +226,11 @@ class CouponResource extends Resource
                         Infolists\Components\TextEntry::make('value')
                             ->label('Valor')
                             ->formatStateUsing(fn (Coupon $record): string => $record->type === 'percent'
-                                ? number_format($record->value, 0) . '%'
-                                : 'R$ ' . number_format($record->value, 2, ',', '.')),
+                                ? number_format($record->value, 0).'%'
+                                : 'R$ '.number_format($record->value, 2, ',', '.')),
                         Infolists\Components\TextEntry::make('max_discount')
                             ->label('Desconto máximo')
-                            ->formatStateUsing(fn (?string $state): string => $state ? 'R$ ' . number_format((float) $state, 2, ',', '.') : '-'),
+                            ->formatStateUsing(fn (?string $state): string => $state ? 'R$ '.number_format((float) $state, 2, ',', '.') : '-'),
                         Infolists\Components\TextEntry::make('usage_count')
                             ->label('Usos')
                             ->badge()
@@ -245,9 +240,6 @@ class CouponResource extends Resource
                             ->placeholder('Ilimitado'),
                         Infolists\Components\IconEntry::make('active')
                             ->label('Ativo')
-                            ->boolean(),
-                        Infolists\Components\IconEntry::make('cumulative_with_pix')
-                            ->label('Cumulativo c/ PIX')
                             ->boolean(),
                         Infolists\Components\TextEntry::make('starts_at')
                             ->label('Início')
@@ -293,10 +285,10 @@ class CouponResource extends Resource
                                     ->color('gray'),
                                 Infolists\Components\TextEntry::make('route')
                                     ->label('Rota')
-                                    ->getStateUsing(fn ($record) => strtoupper($record->departure_iata) . ' → ' . strtoupper($record->arrival_iata)),
+                                    ->getStateUsing(fn ($record) => strtoupper($record->departure_iata).' → '.strtoupper($record->arrival_iata)),
                                 Infolists\Components\TextEntry::make('discount_amount')
                                     ->label('Desconto')
-                                    ->formatStateUsing(fn (?string $state) => $state ? 'R$ ' . number_format((float) $state, 2, ',', '.') : '-'),
+                                    ->formatStateUsing(fn (?string $state) => $state ? 'R$ '.number_format((float) $state, 2, ',', '.') : '-'),
                                 Infolists\Components\TextEntry::make('status')
                                     ->label('Status')
                                     ->badge()
