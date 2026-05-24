@@ -291,7 +291,7 @@ class SupportTicketResource extends Resource
 
                         Infolists\Components\TextEntry::make('cancellation_within_policy')
                             ->label('Enquadramento')
-                            ->formatStateUsing(fn (bool $state): string => $state ? 'Dentro das regras prioritárias' : 'Análise operacional')
+                            ->formatStateUsing(fn (bool $state): string => $state ? 'Dentro das regras prioritárias' : 'Fora do prazo sem custo')
                             ->badge()
                             ->color(fn (bool $state): string => $state ? 'danger' : 'gray'),
 

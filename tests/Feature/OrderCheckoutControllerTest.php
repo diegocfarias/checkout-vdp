@@ -194,14 +194,14 @@ class OrderCheckoutControllerTest extends TestCase
 
         $this->get(route('checkout.show', $order->token))
             ->assertOk()
-            ->assertSee('Regras de cancelamento')
+            ->assertSee('Cancelamento da viagem')
             ->assertSee('Ver política completa')
-            ->assertSee('Cancelamento sem custo em até 24h');
+            ->assertSee('Depois desse prazo, cancelamento voluntário não gera reembolso');
 
         $this->get(route('checkout.passengers', $order->token))
             ->assertOk()
-            ->assertSee('Regras de cancelamento')
-            ->assertSee('Fora da janela sem custo');
+            ->assertSee('Cancelamento da viagem')
+            ->assertSee('Pedido que ainda não foi pago pode ser cancelado sem cobrança');
     }
 
     public function test_store_creates_passenger_customer_coupon_and_pix_payment_with_discounted_total(): void

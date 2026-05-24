@@ -134,23 +134,21 @@ Este documento registra as regras esperadas para os fluxos principais. Os testes
 - Se pedido sem pagamento confirmado tiver usado Wallet pre-autorizada ou debitada, o saldo deve ser liberado/devolvido uma unica vez.
 - Cancelamento sem custo deve ser permitido quando solicitado em ate 24 horas da compra/pagamento confirmado e o primeiro embarque estiver a 7 dias ou mais.
 - Cancelamento sem custo deve devolver 100% do valor efetivamente pago pelo cliente, incluindo taxa, respeitando o mesmo meio de pagamento quando possivel.
-- Cancelamento voluntario fora da janela de 24 horas/7 dias deve seguir a regra da companhia, tarifa, integracao ou fornecedor usado na emissao.
-- Cancelamento voluntario fora da janela sem custo nunca deve ser executado automaticamente: o painel deve registrar cotacao de multa, valor liquido estimado e aceite do cliente antes de efetivar.
-- Pedido pago e ainda nao emitido deve tentar cancelamento operacional antes da emissao; se nao houver custo irreversivel, o reembolso deve descontar somente multas/taxas explicitamente aplicaveis.
+- Cancelamento voluntario fora da janela de 24 horas/7 dias nao gera reembolso ao cliente.
+- Cancelamento voluntario fora da janela sem custo pode ser registrado para acompanhamento operacional, mas deve comunicar claramente que nao havera devolucao de valores.
+- Pedido pago e ainda nao emitido, quando fora da janela sem custo, pode ser encerrado operacionalmente sem reembolso ao cliente.
 - Pedido em emissao ou emitido so pode ser cancelado apos consulta operacional ao fornecedor/companhia e registro do retorno recebido.
-- Tarifa nao reembolsavel pode zerar o reembolso da passagem, mas nao pode impedir a devolucao das taxas de embarque reembolsaveis quando o bilhete nao for utilizado.
-- Taxa de embarque, tarifa aeroportuaria e valores governamentais devem ser tratados separadamente da passagem e reembolsados integralmente sempre que a regra aplicavel exigir.
-- Taxas internas, taxa de servico, custo de intermediacao ou custo operacional da VDP nao sao reembolsaveis em cancelamento voluntario fora da janela sem custo, salvo decisao manual, falha operacional da VDP ou cancelamento involuntario sem alternativa aceita.
-- Cancelamento involuntario por cancelamento de voo, alteracao relevante de horario, pretericao, interrupcao de servico, erro de emissao ou indisponibilidade nao causada pelo cliente deve oferecer reembolso integral ou alternativa/remarcacao sem taxa interna da VDP.
+- Fora da janela sem custo, passagem, taxas, servicos internos e valores pagos por Wallet/gateway nao devem ser devolvidos em cancelamento voluntario.
+- Cancelamento involuntario por cancelamento de voo, alteracao relevante de horario, pretericao, interrupcao de servico, erro de emissao ou indisponibilidade nao causada pelo cliente deve ser tratado como excecao e analisado separadamente pela equipe.
 - Alteracao relevante de horario deve considerar, no minimo, os limites regulatorios: mais de 30 minutos em voo nacional ou mais de 1 hora em voo internacional.
 - Se o cliente aceitar reacomodacao, remarcacao ou credito em vez de reembolso, o aceite deve ser registrado com valor, validade, fornecedor e condicoes.
-- No-show sem solicitacao previa nao garante reembolso de tarifa ou milhas; o sistema deve permitir solicitar devolucao das taxas de embarque quando cabivel.
+- No-show sem solicitacao previa dentro da janela sem custo nao gera reembolso pela politica de cancelamento voluntario.
 - Cancelamento parcial por passageiro, trecho ou sentido so deve ser permitido se a companhia/fornecedor permitir e se o valor liquido puder ser calculado de forma auditavel.
 - Reembolso nunca pode exceder o valor efetivamente pago pelo cliente.
 - Desconto Pix, cupom, indicacao ou promocao nao viram credito em dinheiro no cancelamento.
 - Cupom usado em pedido cancelado por falha operacional da VDP ou cancelamento involuntario pode ser reativado manualmente; em cancelamento voluntario, nao deve ser reativado automaticamente.
 - Credito de indicacao vinculado a pedido cancelado deve ser revertido quando estiver pendente ou estornado quando ja tiver sido liberado.
-- Valor pago com Wallet deve voltar para Wallet quando o cancelamento for reembolsavel, respeitando estorno unico e proporcional em reembolso parcial.
+- Valor pago com Wallet deve voltar para Wallet somente quando o cancelamento for reembolsavel, respeitando estorno unico e proporcional em reembolso parcial.
 - Reembolso de pagamento misto deve preservar a origem dos valores: gateway externo, Wallet, taxa, passagem, multa, taxa interna e valor liquido devolvido.
 - Pedido concluido nao deve mudar diretamente para cancelado por webhook tardio; cancelamento pos-conclusao deve ocorrer por fluxo formal de cancelamento/estorno com logs proprios.
 - Toda solicitacao de cancelamento deve registrar status operacional, motivo, canal, solicitante, data da solicitacao, data limite do voo, regra aplicada, anexos, logs internos e historico de comunicacao com o cliente.
@@ -158,7 +156,7 @@ Este documento registra as regras esperadas para os fluxos principais. Os testes
 - Cliente deve conseguir abrir solicitacao de cancelamento no detalhe do pedido, informando motivo, detalhes opcionais e anexos.
 - Solicitacao de cancelamento dentro das regras prioritarias deve virar ticket de atendimento com prioridade `urgent` e destaque no painel.
 - Pedido com solicitacao de cancelamento aberta nao deve criar outra solicitacao aberta duplicada para o mesmo cliente e pedido.
-- Prazos de reembolso devem ser exibidos como prazo estimado conforme companhia, fornecedor e gateway; quando o valor estiver sob controle da VDP, o estorno aprovado deve ser processado em ate 7 dias corridos.
+- Prazos de reembolso devem aparecer somente quando o cancelamento for reembolsavel; quando o valor estiver sob controle da VDP, o estorno aprovado deve ser processado em ate 7 dias corridos.
 - O cliente deve visualizar no pos-venda o resumo do cancelamento, valores aprovados, meio de devolucao, prazo estimado e motivo quando houver rejeicao.
 
 ## Emissao

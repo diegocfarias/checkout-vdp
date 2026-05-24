@@ -54,6 +54,7 @@ class CancellationPolicyServiceTest extends TestCase
         $this->assertFalse($policy['within_policy']);
         $this->assertFalse($policy['free_cancellation_window']);
         $this->assertSame('normal', $policy['priority']);
+        $this->assertSame('Fora do prazo de cancelamento sem custo: cancelamentos voluntarios nao geram reembolso.', $policy['rule']);
     }
 
     public function test_unpaid_and_involuntary_requests_are_priority(): void

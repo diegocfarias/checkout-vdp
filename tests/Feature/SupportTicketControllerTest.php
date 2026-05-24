@@ -414,12 +414,13 @@ class SupportTicketControllerTest extends TestCase
                 'message' => 'Preciso verificar multas.',
             ])
             ->assertRedirect()
-            ->assertSessionHas('success', 'Solicitação de cancelamento aberta. Vamos consultar as regras da companhia/fornecedor antes de confirmar valores.');
+            ->assertSessionHas('success', 'Solicitação de cancelamento registrada. Como está fora do prazo de cancelamento sem custo, não há reembolso para cancelamento voluntário.');
 
         $ticket = SupportTicket::firstOrFail();
         $this->assertSame('normal', $ticket->priority);
         $this->assertFalse($ticket->cancellation_within_policy);
-        $this->assertStringContainsString('Fora da janela automatica', $ticket->message);
+        $this->assertStringContainsString('Fora do prazo de cancelamento sem custo', $ticket->message);
+        $this->assertStringContainsString('nao geram reembolso', $ticket->message);
     }
 
     public function test_cancellation_request_requires_owner_and_reuses_existing_open_ticket(): void

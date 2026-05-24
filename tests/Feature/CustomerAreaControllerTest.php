@@ -56,7 +56,7 @@ class CustomerAreaControllerTest extends TestCase
             ->assertOk()
             ->assertViewIs('customer.order-detail')
             ->assertSee('Mala de mao inclusa', false)
-            ->assertSee('Regras de cancelamento')
+            ->assertSee('Cancelamento da viagem')
             ->assertSee('Solicitar cancelamento')
             ->assertSee('Desisti da compra');
 

@@ -149,7 +149,7 @@ class SupportTicketController extends Controller
 
         $successMessage = $policy['within_policy']
             ? 'Solicitação de cancelamento aberta com prioridade. Nossa equipe vai tratar conforme as regras aplicáveis.'
-            : 'Solicitação de cancelamento aberta. Vamos consultar as regras da companhia/fornecedor antes de confirmar valores.';
+            : 'Solicitação de cancelamento registrada. Como está fora do prazo de cancelamento sem custo, não há reembolso para cancelamento voluntário.';
 
         return redirect()->route('customer.support.show', $ticket)
             ->with('success', $successMessage);
@@ -225,7 +225,7 @@ class SupportTicketController extends Controller
             'Pedido: ' . $order->tracking_code,
             'Motivo: ' . $policy['reason_label'],
             'Enquadramento: ' . $policy['rule'],
-            'Prioridade: ' . ($policy['within_policy'] ? 'Dentro das regras prioritárias' : 'Análise operacional'),
+            'Prioridade: ' . ($policy['within_policy'] ? 'Dentro das regras prioritárias' : 'Fora do prazo sem custo'),
         ];
 
         if ($policy['purchase_reference_at']) {

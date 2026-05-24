@@ -14,7 +14,9 @@ class CancellationPolicyPageTest extends TestCase
         $this->get(route('cancellation-policy'))
             ->assertOk()
             ->assertSee('Política de cancelamento e reembolso')
-            ->assertSee('Cancelamento sem custo')
+            ->assertSee('Quando cancelamos sem custo')
+            ->assertSee('Fora do prazo')
+            ->assertSee('não tem reembolso')
             ->assertSee('Como solicitar');
     }
 }

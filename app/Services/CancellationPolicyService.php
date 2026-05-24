@@ -43,8 +43,8 @@ class CancellationPolicyService
         $rule = match (true) {
             $withoutConfirmedPayment => 'Pedido sem pagamento confirmado: pode ser cancelado sem multa e sem estorno externo.',
             $freeCancellationWindow => 'Dentro da janela de cancelamento sem custo: ate 24 horas da compra e embarque em 7 dias ou mais.',
-            $involuntaryReason => 'Cancelamento involuntario informado pelo cliente: analisar reembolso integral ou alternativa sem taxa interna.',
-            default => 'Fora da janela automatica: depende da regra da companhia, tarifa, fornecedor e aceite do cliente.',
+            $involuntaryReason => 'Alteracao ou cancelamento pela companhia: nossa equipe vai analisar as alternativas disponiveis.',
+            default => 'Fora do prazo de cancelamento sem custo: cancelamentos voluntarios nao geram reembolso.',
         };
 
         return [
