@@ -132,6 +132,26 @@ class CreateOrderControllerTest extends TestCase
             ->assertJson(['message' => 'Voo selecionado não encontrado.']);
     }
 
+    public function test_it_rejects_invalid_route_cabin_and_infant_count_before_searching_provider(): void
+    {
+        $vdp = Mockery::mock(VdpFlightService::class);
+        $vdp->shouldNotReceive('searchAndFilter');
+        $this->app->instance(VdpFlightService::class, $vdp);
+
+        $this->withHeader('X-API-KEY', 'api-secret')
+            ->postJson('/api/orders', $this->validPayload([
+                'arrival_iata' => 'CNF',
+                'total_babies' => 2,
+                'cabin' => 'INVALID',
+            ]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'arrival_iata',
+                'total_babies',
+                'cabin',
+            ]);
+    }
+
     private function validPayload(array $overrides = []): array
     {
         return array_replace_recursive([

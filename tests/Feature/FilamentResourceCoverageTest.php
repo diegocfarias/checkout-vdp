@@ -47,6 +47,7 @@ class FilamentResourceCoverageTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test(CreateCoupon::class)
+            ->assertDontSee('Cumulativo com desconto PIX')
             ->fillForm([
                 'code' => 'save15',
                 'type' => 'percent',
@@ -54,7 +55,6 @@ class FilamentResourceCoverageTest extends TestCase
                 'max_discount' => '80',
                 'usage_limit' => 3,
                 'active' => true,
-                'cumulative_with_pix' => false,
                 'starts_at' => '2026-05-01 10:00:00',
                 'expires_at' => '2026-06-01 10:00:00',
                 'customers' => [$customer->id],
@@ -65,7 +65,6 @@ class FilamentResourceCoverageTest extends TestCase
         $coupon = Coupon::where('code', 'SAVE15')->firstOrFail();
 
         $this->assertEqualsWithDelta(15, (float) $coupon->value, 0.01);
-        $this->assertFalse($coupon->cumulative_with_pix);
         $this->assertTrue($coupon->customers()->whereKey($customer->id)->exists());
 
         Livewire::actingAs($admin)
@@ -76,6 +75,7 @@ class FilamentResourceCoverageTest extends TestCase
         Livewire::actingAs($admin)
             ->test(ViewCoupon::class, ['record' => $coupon->getRouteKey()])
             ->assertSee('SAVE15')
+            ->assertDontSee('Cumulativo c/ PIX')
             ->assertSee('Clientes vinculados');
 
         Livewire::actingAs($admin)
@@ -87,7 +87,6 @@ class FilamentResourceCoverageTest extends TestCase
                 'max_discount' => null,
                 'usage_limit' => 4,
                 'active' => true,
-                'cumulative_with_pix' => true,
                 'starts_at' => null,
                 'expires_at' => null,
                 'customers' => [],

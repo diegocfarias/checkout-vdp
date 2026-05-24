@@ -89,6 +89,47 @@ class CommandTest extends TestCase
         ]);
     }
 
+    public function test_expired_pix_does_not_cancel_order_when_another_payment_is_active(): void
+    {
+        Carbon::setTestNow('2026-05-14 10:00:00');
+        $order = $this->createOrder([
+            'status' => 'awaiting_payment',
+            'expires_at' => now()->addHour(),
+        ]);
+        $expiredPix = $this->addPayment($order, [
+            'gateway' => 'appmax',
+            'status' => 'pending',
+            'payment_method' => 'pix',
+            'expires_at' => now()->subMinute(),
+        ]);
+        $activeCard = $this->addPayment($order, [
+            'gateway' => 'c6bank',
+            'status' => 'pending',
+            'payment_method' => 'credit_card',
+            'expires_at' => null,
+        ]);
+
+        $resolver = Mockery::mock(PaymentGatewayResolver::class);
+        $resolver->shouldNotReceive('resolveForPayment');
+        $this->app->instance(PaymentGatewayResolver::class, $resolver);
+
+        $this->artisan('orders:expire-checkouts')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('order_payments', [
+            'id' => $expiredPix->id,
+            'status' => 'expired',
+        ]);
+        $this->assertDatabaseHas('order_payments', [
+            'id' => $activeCard->id,
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => 'awaiting_payment',
+        ]);
+    }
+
     public function test_refresh_showcase_dispatches_jobs_for_active_routes(): void
     {
         Carbon::setTestNow('2026-05-14 10:00:00');

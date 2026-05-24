@@ -36,6 +36,61 @@ class CustomerAuthControllerTest extends TestCase
         ]);
     }
 
+    public function test_pending_checkout_customer_can_complete_registration_with_same_email(): void
+    {
+        $customer = Customer::create([
+            'name' => 'Nome Checkout',
+            'email' => 'checkout@example.com',
+            'document' => '11144477735',
+            'phone' => '11911112222',
+            'status' => 'pending',
+        ]);
+
+        $this->post(route('customer.register.submit'), [
+            'name' => 'Nome Cadastro',
+            'email' => 'checkout@example.com',
+            'document' => '529.982.247-25',
+            'phone' => '11999999999',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])
+            ->assertRedirect(route('customer.dashboard'));
+
+        $customer->refresh();
+        $this->assertAuthenticatedAs($customer, 'customer');
+        $this->assertSame('Nome Cadastro', $customer->name);
+        $this->assertSame('52998224725', $customer->document);
+        $this->assertSame('active', $customer->status);
+        $this->assertTrue(Hash::check('password123', $customer->password));
+        $this->assertDatabaseCount('customers', 1);
+    }
+
+    public function test_register_rejects_email_from_active_customer(): void
+    {
+        Customer::create([
+            'name' => 'Cliente Ativo',
+            'email' => 'ativo@example.com',
+            'password' => Hash::make('password123'),
+            'document' => '52998224725',
+            'status' => 'active',
+        ]);
+
+        $this->from(route('customer.register'))
+            ->post(route('customer.register.submit'), [
+                'name' => 'Outro Cliente',
+                'email' => 'ativo@example.com',
+                'document' => '390.533.447-05',
+                'phone' => '11999999999',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+            ])
+            ->assertRedirect(route('customer.register'))
+            ->assertSessionHasErrors('email');
+
+        $this->assertDatabaseCount('customers', 1);
+        $this->assertGuest('customer');
+    }
+
     public function test_login_activates_pending_customer_with_valid_password(): void
     {
         $customer = Customer::create([

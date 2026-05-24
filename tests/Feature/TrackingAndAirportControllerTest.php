@@ -94,6 +94,59 @@ class TrackingAndAirportControllerTest extends TestCase
             ->assertSessionHas("tracking_verified_{$order->tracking_code}", true);
     }
 
+    public function test_tracking_show_rejects_invalid_token_without_prior_session(): void
+    {
+        $order = $this->createOrder([
+            'tracking_code' => 'VDP-TOK2',
+        ]);
+
+        $this->get(route('tracking.show', [
+            'trackingCode' => 'VDP-TOK2',
+            'token' => $order->token.'-invalid',
+        ]))
+            ->assertRedirect(route('tracking.form'))
+            ->assertSessionHasErrors('tracking_code')
+            ->assertSessionMissing("tracking_verified_{$order->tracking_code}");
+    }
+
+    public function test_tracking_show_displays_completed_loc_and_status_history(): void
+    {
+        $order = $this->createOrder([
+            'tracking_code' => 'VDP-DONE',
+            'status' => 'completed',
+        ]);
+        $this->addFlight($order, [
+            'direction' => 'outbound',
+            'cia' => 'LATAM',
+            'flight_number' => 'LA1234',
+            'departure_location' => 'GRU',
+            'arrival_location' => 'MIA',
+            'loc' => 'XYZ789',
+            'price_miles' => '987654',
+            'paid_boarding_tax' => 456.78,
+        ]);
+        $order->statusHistories()->create([
+            'status' => 'awaiting_emission',
+            'description' => 'Pagamento confirmado',
+        ]);
+        $order->statusHistories()->create([
+            'status' => 'completed',
+            'description' => 'Passagens emitidas',
+        ]);
+
+        $this->get(route('tracking.show', [
+            'trackingCode' => 'VDP-DONE',
+            'token' => $order->token,
+        ]))
+            ->assertOk()
+            ->assertSee('Passagens emitidas')
+            ->assertSee('LOC Ida')
+            ->assertSee('XYZ789')
+            ->assertSee('Pagamento confirmado')
+            ->assertDontSee('987654')
+            ->assertDontSee('456,78');
+    }
+
     public function test_airport_search_posts_to_vdp_api_and_caches_results(): void
     {
         config()->set('services.vdp.url', 'https://vdp.test/');

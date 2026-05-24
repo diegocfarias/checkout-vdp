@@ -182,6 +182,39 @@ class FilamentAdminTest extends TestCase
         $this->assertSame((string) now()->timestamp, Setting::get('pricing_version'));
     }
 
+    public function test_manage_settings_invalidates_search_cache_when_provider_configuration_changes(): void
+    {
+        Carbon::setTestNow('2026-05-20 10:00:00');
+        $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+
+        Setting::set('pricing_version', 'old-version', 'string');
+        Setting::set('mix_enabled', true, 'boolean');
+        Setting::set('provider_gol', ['vdp'], 'json');
+        Setting::set('provider_azul', ['vdp'], 'json');
+        Setting::set('provider_latam', ['latam_crawler'], 'json');
+        Setting::set('bds_patria_enabled', false, 'boolean');
+        Setting::set('pricing_miles_enabled', true, 'boolean');
+        Setting::set('pricing_pct_enabled', false, 'boolean');
+        Setting::set('pricing_miles_azul', '30.00', 'string');
+        Setting::set('pricing_miles_gol', '30.00', 'string');
+        Setting::set('pricing_miles_latam', '30.00', 'string');
+        Setting::set('pricing_pct_azul', '80', 'string');
+        Setting::set('pricing_pct_gol', '80', 'string');
+        Setting::set('pricing_pct_latam', '80', 'string');
+        Setting::set('boarding_tax_fallback_pct', '10', 'string');
+        Setting::set('pix_discount', '0', 'string');
+
+        Livewire::actingAs($admin)
+            ->test(ManageSettings::class)
+            ->fillForm($this->settingsPayload([
+                'provider_gol' => ['bds_crawler'],
+            ]))
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame((string) now()->timestamp, Setting::get('pricing_version'));
+    }
+
     public function test_support_ticket_resource_scopes_support_agent_visibility(): void
     {
         $support = User::factory()->create(['role' => 'support', 'is_active' => true]);
@@ -257,5 +290,53 @@ class FilamentAdminTest extends TestCase
             'priority' => 'normal',
             'message' => 'Mensagem inicial',
         ], $attributes));
+    }
+
+    private function settingsPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'mix_enabled' => true,
+            'pricing_miles_enabled' => true,
+            'pricing_pct_enabled' => false,
+            'pricing_miles_azul' => '30.00',
+            'pricing_miles_gol' => '30.00',
+            'pricing_miles_latam' => '30.00',
+            'pricing_pct_azul' => '80',
+            'pricing_pct_gol' => '80',
+            'pricing_pct_latam' => '80',
+            'boarding_tax_fallback_pct' => '10',
+            'gateway_pix' => '',
+            'pix_discount' => '0',
+            'gateway_credit_card' => 'appmax',
+            'max_installments_appmax' => 12,
+            'max_installments_c6bank' => 12,
+            'interest_rates_appmax' => [],
+            'interest_rates_c6bank' => [],
+            'pix_expiration_minutes' => 30,
+            'order_expiration_minutes' => 30,
+            'whatsapp_number' => '',
+            'emission_value_per_order' => '0',
+            'pushover_app_token' => '',
+            'referral_enabled' => false,
+            'referral_discount_pct' => '5',
+            'referral_credit_pct' => '5',
+            'referral_credit_release_mode' => 'after_purchase',
+            'referral_credit_release_hours' => 24,
+            'referral_cookie_days' => 30,
+            'referral_cumulative_with_pix' => true,
+            'showcase_refresh_minutes' => 60,
+            'showcase_max_searches_per_minute' => 6,
+            'showcase_wait_seconds' => 10,
+            'showcase_max_cards' => 9,
+            'showcase_sort_mode' => 'manual',
+            'calendar_prices_enabled' => true,
+            'provider_gol' => ['vdp'],
+            'provider_azul' => ['vdp'],
+            'provider_latam' => ['latam_crawler'],
+            'vdp_timeout' => 35,
+            'crawler_timeout' => 35,
+            'bds_crawler_timeout' => 60,
+            'bds_patria_enabled' => false,
+        ], $overrides);
     }
 }

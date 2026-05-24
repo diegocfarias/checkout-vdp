@@ -84,6 +84,7 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertOk()
             ->assertViewIs('checkout.resumo')
             ->assertViewHas('order', fn (Order $viewOrder): bool => $viewOrder->is($order))
+            ->assertViewHas('pixEnabled', false)
             ->assertSee('Mala de mao inclusa', false)
             ->assertSee('Mala despachada nao inclusa', false);
 
@@ -113,6 +114,21 @@ class OrderCheckoutFlowCoverageTest extends TestCase
         $this->get("/r/{$expired->token}/passageiros")
             ->assertNotFound()
             ->assertViewIs('checkout.not-found');
+
+        foreach (['cancelled', 'awaiting_payment', 'awaiting_emission', 'completed'] as $status) {
+            $unavailable = $this->createOrder([
+                'status' => $status,
+                'expires_at' => now()->addHour(),
+            ]);
+
+            $this->get("/r/{$unavailable->token}")
+                ->assertNotFound()
+                ->assertViewIs('checkout.not-found');
+
+            $this->get("/r/{$unavailable->token}/passageiros")
+                ->assertNotFound()
+                ->assertViewIs('checkout.not-found');
+        }
     }
 
     public function test_payment_callback_covers_terminal_missing_expired_exception_paid_and_failed_states(): void
@@ -237,6 +253,32 @@ class OrderCheckoutFlowCoverageTest extends TestCase
         ]);
     }
 
+    public function test_store_rejects_payment_method_when_all_checkout_gateways_are_disabled(): void
+    {
+        Setting::set('gateway_pix', '', 'string');
+        Setting::set('gateway_credit_card', '', 'string');
+        Setting::set('pix_enabled', false, 'boolean');
+        Setting::set('credit_card_enabled', false, 'boolean');
+
+        $order = $this->createOrder();
+        $this->addFlight($order);
+
+        $resolver = Mockery::mock(PaymentGatewayResolver::class);
+        $resolver->shouldNotReceive('resolveForMethod');
+        $this->app->instance(PaymentGatewayResolver::class, $resolver);
+
+        $this->from(route('checkout.passengers', $order->token))
+            ->post("/r/{$order->token}", $this->validCheckoutPayload([
+                'payment_method' => 'pix',
+            ]))
+            ->assertRedirect(route('checkout.passengers', $order->token))
+            ->assertSessionHasErrors('payment_method');
+
+        $this->assertDatabaseCount('order_passengers', 0);
+        $this->assertDatabaseCount('order_payments', 0);
+        $this->assertSame('pending', $order->fresh()->status);
+    }
+
     public function test_store_saves_logged_customer_passenger_and_falls_back_when_gateway_creation_fails(): void
     {
         $customer = Customer::create([
@@ -284,6 +326,68 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             'status' => 'awaiting_payment',
         ]);
         $this->assertDatabaseCount('order_payments', 0);
+    }
+
+    public function test_store_saves_foreign_passenger_by_passport_for_logged_customer(): void
+    {
+        $customer = Customer::create([
+            'name' => 'Cliente Internacional',
+            'email' => 'internacional@example.com',
+            'document' => '52998224725',
+            'status' => 'active',
+        ]);
+        $order = $this->createOrder([
+            'departure_iata' => 'GRU',
+            'arrival_iata' => 'DXB',
+        ]);
+        $this->addFlight($order, [
+            'arrival_location' => 'DXB',
+            'arrival_label' => 'Dubai (DXB)',
+        ]);
+
+        $resolver = Mockery::mock(PaymentGatewayResolver::class);
+        $resolver->shouldReceive('resolveForMethod')
+            ->once()
+            ->with('pix')
+            ->andThrow(new \RuntimeException('gateway indisponivel'));
+        $this->app->instance(PaymentGatewayResolver::class, $resolver);
+
+        $this->actingAs($customer, 'customer')
+            ->post("/r/{$order->token}", $this->validCheckoutPayload([
+                'passengers' => [
+                    [
+                        'nationality' => 'US',
+                        'full_name' => 'John Smith',
+                        'document' => '',
+                        'passport_number' => 'US123456',
+                        'passport_expiry' => '31/12/2030',
+                        'birth_date' => '10/10/1990',
+                        'email' => 'john@example.com',
+                        'phone' => '11999999998',
+                        'save_passenger' => '1',
+                    ],
+                ],
+            ]))
+            ->assertOk()
+            ->assertViewIs('checkout.awaiting-payment');
+
+        $this->assertDatabaseHas('saved_passengers', [
+            'customer_id' => $customer->id,
+            'nationality' => 'US',
+            'passport_number' => 'US123456',
+            'document' => null,
+            'full_name' => 'John Smith',
+        ]);
+        $this->assertDatabaseHas('order_passengers', [
+            'order_id' => $order->id,
+            'nationality' => 'US',
+            'passport_number' => 'US123456',
+            'document' => null,
+        ]);
+
+        $saved = SavedPassenger::where('customer_id', $customer->id)->firstOrFail();
+        $this->assertSame('2030-12-31', $saved->passport_expiry->format('Y-m-d'));
+        $this->assertSame('2030-12-31', $order->passengers()->firstOrFail()->passport_expiry->format('Y-m-d'));
     }
 
     public function test_apply_coupon_covers_missing_expired_referral_self_use_and_exception_paths(): void

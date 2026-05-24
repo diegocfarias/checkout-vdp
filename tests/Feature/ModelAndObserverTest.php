@@ -14,6 +14,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\Support\CreatesCheckoutFixtures;
 use Tests\TestCase;
@@ -215,5 +216,33 @@ class ModelAndObserverTest extends TestCase
         ]);
         Bus::assertDispatched(NotifyIssuersNewEmission::class);
         Mail::assertSent(OrderStatusMail::class, fn (OrderStatusMail $mail): bool => $mail->hasTo('passageiro@example.com'));
+    }
+
+    public function test_order_status_whatsapp_notification_uses_tokenized_tracking_link(): void
+    {
+        Bus::fake();
+        config()->set('app.url', 'https://checkout.test');
+        config()->set('services.botpress.webhook_url', 'https://botpress.test/webhook');
+        Http::fake([
+            'https://botpress.test/webhook' => Http::response(['ok' => true]),
+        ]);
+
+        $order = $this->createOrder([
+            'conversation_id' => 'conversation-123',
+            'user_id' => 'user-123',
+        ]);
+
+        $order->update(['status' => 'awaiting_emission']);
+
+        $expectedUrl = route('tracking.show', ['trackingCode' => $order->tracking_code])
+            .'?'.http_build_query(['token' => $order->token]);
+
+        Http::assertSent(function ($request) use ($order, $expectedUrl): bool {
+            return $request->url() === 'https://botpress.test/webhook'
+                && $request['conversationId'] === 'conversation-123'
+                && $request['userId'] === 'user-123'
+                && str_contains($request['message'], $order->tracking_code)
+                && str_contains($request['message'], $expectedUrl);
+        });
     }
 }

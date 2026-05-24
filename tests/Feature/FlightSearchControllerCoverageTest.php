@@ -66,6 +66,32 @@ class FlightSearchControllerCoverageTest extends TestCase
         });
     }
 
+    public function test_date_prices_returns_empty_levels_without_external_call_when_disabled(): void
+    {
+        Setting::set('calendar_prices_enabled', false, 'boolean');
+        Http::fake();
+
+        $this->getJson(route('api.date-prices').'?'.http_build_query([
+            'departure' => 'gru',
+            'arrival' => 'sdu',
+            'cabin' => 'EC',
+            'adults' => 1,
+            'children' => 0,
+            'infants' => 0,
+            'date_from' => '2026-07-16',
+            'date_to' => '2026-07-18',
+            'trip_type' => 'oneway',
+            'inbound_offset' => 0,
+        ]))
+            ->assertOk()
+            ->assertExactJson([
+                'currency' => 'BRL',
+                'levels' => [],
+            ]);
+
+        Http::assertNothingSent();
+    }
+
     public function test_date_prices_uses_external_calendar_prices_and_levels(): void
     {
         Http::fake([

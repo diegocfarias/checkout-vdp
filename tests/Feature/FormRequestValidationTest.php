@@ -129,6 +129,101 @@ class FormRequestValidationTest extends TestCase
             ->assertSessionHasErrors('passengers');
     }
 
+    public function test_store_order_passengers_request_requires_passport_for_international_route(): void
+    {
+        $order = $this->createOrder([
+            'departure_iata' => 'GRU',
+            'arrival_iata' => 'DXB',
+        ]);
+        $this->addFlight($order, [
+            'arrival_location' => 'DXB',
+            'arrival_label' => 'Dubai (DXB)',
+        ]);
+
+        $this->from(route('checkout.passengers', $order->token))
+            ->post(route('checkout.store', $order), [
+                'passengers' => [
+                    $this->passengerPayload('Maria Silva'),
+                ],
+                'payment_method' => 'pix',
+                'payer_name' => 'Maria Silva',
+                'payer_email' => 'maria@example.com',
+                'payer_document' => '529.982.247-25',
+            ])
+            ->assertRedirect(route('checkout.passengers', $order->token))
+            ->assertSessionHasErrors([
+                'passengers.0.passport_number',
+                'passengers.0.passport_expiry',
+            ]);
+    }
+
+    public function test_store_order_passengers_request_rejects_duplicate_passports_and_future_birth_date(): void
+    {
+        $order = $this->createOrder([
+            'departure_iata' => 'GRU',
+            'arrival_iata' => 'DXB',
+            'total_adults' => 2,
+            'total_children' => 0,
+        ]);
+        $this->addFlight($order, [
+            'arrival_location' => 'DXB',
+            'arrival_label' => 'Dubai (DXB)',
+        ]);
+
+        $this->from(route('checkout.passengers', $order->token))
+            ->post(route('checkout.store', $order), [
+                'passengers' => [
+                    array_merge($this->passengerPayload('Maria Silva'), [
+                        'passport_number' => 'AB123456',
+                        'passport_expiry' => '2030-01-01',
+                    ]),
+                    [
+                        'nationality' => 'US',
+                        'full_name' => 'John Smith',
+                        'document' => '',
+                        'passport_number' => 'ab123456',
+                        'passport_expiry' => '2030-01-01',
+                        'birth_date' => now()->addDay()->format('Y-m-d'),
+                        'email' => 'john@example.com',
+                        'phone' => '11999999998',
+                    ],
+                ],
+                'payment_method' => 'pix',
+                'payer_name' => 'Maria Silva',
+                'payer_email' => 'maria@example.com',
+                'payer_document' => '529.982.247-25',
+            ])
+            ->assertRedirect(route('checkout.passengers', $order->token))
+            ->assertSessionHasErrors([
+                'passengers.1.passport_number',
+                'passengers.1.birth_date',
+            ]);
+    }
+
+    public function test_store_order_passengers_request_requires_br_cpf_on_mercosul_route(): void
+    {
+        $order = $this->createOrder([
+            'departure_iata' => 'GRU',
+            'arrival_iata' => 'SDU',
+        ]);
+        $this->addFlight($order);
+
+        $this->from(route('checkout.passengers', $order->token))
+            ->post(route('checkout.store', $order), [
+                'passengers' => [
+                    array_merge($this->passengerPayload('Maria Silva'), [
+                        'document' => '',
+                    ]),
+                ],
+                'payment_method' => 'pix',
+                'payer_name' => 'Maria Silva',
+                'payer_email' => 'maria@example.com',
+                'payer_document' => '529.982.247-25',
+            ])
+            ->assertRedirect(route('checkout.passengers', $order->token))
+            ->assertSessionHasErrors('passengers.0.document');
+    }
+
     public function test_flight_search_request_rejects_invalid_routes_dates_and_infants(): void
     {
         $request = new FlightSearchRequest;
@@ -137,7 +232,7 @@ class FormRequestValidationTest extends TestCase
             'departure' => 'GRU',
             'arrival' => 'GRU',
             'outbound_date' => now()->subDay()->format('Y-m-d'),
-            'inbound_date' => now()->subDays(2)->format('Y-m-d'),
+            'inbound_date' => null,
             'adults' => 1,
             'children' => 0,
             'infants' => 2,

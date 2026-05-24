@@ -230,6 +230,18 @@ class VdpFlightServicePriceCacheTest extends TestCase
 
         $this->assertContains([
             'provider' => 'bds_crawler',
+            'airlines' => 'AZUL',
+            'patria' => false,
+        ], $slots);
+
+        $this->assertContains([
+            'provider' => 'bds_crawler',
+            'airlines' => 'LATAM',
+            'patria' => false,
+        ], $slots);
+
+        $this->assertContains([
+            'provider' => 'bds_crawler',
             'airlines' => 'PATRIA',
             'patria' => true,
         ], $slots);
@@ -245,6 +257,43 @@ class VdpFlightServicePriceCacheTest extends TestCase
             'airlines' => 'TAP',
             'patria' => false,
         ], $slots);
+    }
+
+    public function test_bds_search_queries_all_direct_airlines_and_patria_when_any_bds_provider_is_active(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_version' => 'test',
+            'provider_gol' => 'bds_crawler',
+            'provider_azul' => 'disabled',
+            'provider_latam' => 'disabled',
+            'bds_patria_enabled' => false,
+            'pricing_pct_enabled' => false,
+        ]);
+        config()->set('services.bds_crawler.url', 'https://bds.test');
+        config()->set('services.bds_crawler.api_key', 'secret-key');
+
+        Http::fake([
+            'https://bds.test/api/search*' => Http::response([
+                'outbound' => [],
+                'inbound' => [],
+            ]),
+        ]);
+
+        app(VdpFlightService::class)->searchFlightsWithCacheInfo($this->searchParams([
+            'inbound_date' => '2026-06-15',
+        ]));
+
+        foreach (['GOL', 'AZUL', 'LATAM', 'INTERLINE', 'TAP', 'PATRIA'] as $airline) {
+            Http::assertSent(function ($request) use ($airline): bool {
+                $query = [];
+                parse_str(parse_url($request->url(), PHP_URL_QUERY) ?? '', $query);
+
+                return $request->url() !== null
+                    && str_starts_with($request->url(), 'https://bds.test/api/search?')
+                    && $request->hasHeader('X-API-KEY', 'secret-key')
+                    && ($query['airlines'] ?? null) === $airline;
+            });
+        }
     }
 
     public function test_forget_search_caches_clears_search_and_provider_search_caches(): void

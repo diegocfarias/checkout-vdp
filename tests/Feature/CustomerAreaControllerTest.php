@@ -55,11 +55,52 @@ class CustomerAreaControllerTest extends TestCase
             ->get(route('customer.order.show', $ownOrder))
             ->assertOk()
             ->assertViewIs('customer.order-detail')
-            ->assertSee('Mala de mao inclusa', false);
+            ->assertSee('Mala de mao inclusa', false)
+            ->assertSee('Regras de cancelamento')
+            ->assertSee('Solicitar cancelamento')
+            ->assertSee('Desisti da compra');
 
         $this->actingAs($customer, 'customer')
             ->get(route('customer.order.show', $otherOrder))
             ->assertNotFound();
+    }
+
+    public function test_order_detail_shows_post_sale_passenger_and_emission_details(): void
+    {
+        $customer = $this->createCustomer(['email' => 'cliente@example.com']);
+        $order = $this->createOrder([
+            'customer_id' => $customer->id,
+            'status' => 'completed',
+        ]);
+        $this->addFlight($order, [
+            'direction' => 'outbound',
+            'cia' => 'AZUL',
+            'flight_number' => 'AD1234',
+            'departure_location' => 'CNF',
+            'arrival_location' => 'VIX',
+            'loc' => 'ABC123',
+            'price_miles' => '987654',
+            'paid_boarding_tax' => 456.78,
+        ]);
+        $this->addPassenger($order, [
+            'full_name' => 'John Passport',
+            'nationality' => 'US',
+            'document' => null,
+            'passport_number' => 'XP123456',
+            'passport_expiry' => '2031-12-31',
+            'email' => 'john@example.com',
+        ]);
+
+        $this->actingAs($customer, 'customer')
+            ->get(route('customer.order.show', $order))
+            ->assertOk()
+            ->assertSee('Pedido '.$order->tracking_code)
+            ->assertSee('LOC: ABC123')
+            ->assertSee('John Passport')
+            ->assertSee('Passaporte: XP123456')
+            ->assertSee('john@example.com')
+            ->assertDontSee('987654')
+            ->assertDontSee('456,78');
     }
 
     public function test_update_profile_changes_allowed_fields(): void
@@ -167,6 +208,54 @@ class CustomerAreaControllerTest extends TestCase
             ->assertSessionHasErrors('field');
 
         $this->assertSame(1, CustomerChangeRequest::where('customer_id', $customer->id)->count());
+    }
+
+    public function test_change_request_validates_requested_email_and_document_before_admin_review(): void
+    {
+        $customer = $this->createCustomer([
+            'email' => 'cliente@example.com',
+            'document' => '52998224725',
+        ]);
+        $this->createCustomer([
+            'email' => 'usado@example.com',
+            'document' => '11144477735',
+        ]);
+
+        $this->actingAs($customer, 'customer')
+            ->post(route('customer.change-request'), [
+                'field' => 'email',
+                'requested_value' => 'email-invalido',
+            ])
+            ->assertSessionHasErrors('requested_value');
+
+        $this->actingAs($customer, 'customer')
+            ->post(route('customer.change-request'), [
+                'field' => 'email',
+                'requested_value' => 'usado@example.com',
+            ])
+            ->assertSessionHasErrors('requested_value');
+
+        $this->actingAs($customer, 'customer')
+            ->post(route('customer.change-request'), [
+                'field' => 'document',
+                'requested_value' => '123',
+            ])
+            ->assertSessionHasErrors('requested_value');
+
+        $this->actingAs($customer, 'customer')
+            ->post(route('customer.change-request'), [
+                'field' => 'document',
+                'requested_value' => '390.533.447-05',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('status', 'Solicitação enviada. Você será notificado quando for analisada.');
+
+        $this->assertDatabaseHas('customer_change_requests', [
+            'customer_id' => $customer->id,
+            'field' => 'document',
+            'requested_value' => '39053344705',
+            'status' => 'pending',
+        ]);
     }
 
     private function createCustomer(array $attributes = []): Customer

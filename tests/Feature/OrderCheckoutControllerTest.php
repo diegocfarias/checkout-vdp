@@ -67,9 +67,19 @@ class OrderCheckoutControllerTest extends TestCase
                 'cumulative_with_pix' => false,
                 'message' => 'Cupom aplicado!',
             ]);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'coupon_id' => null,
+            'discount_amount' => null,
+        ]);
+        $this->assertDatabaseHas('coupons', [
+            'id' => $coupon->id,
+            'usage_count' => 0,
+        ]);
     }
 
-    public function test_apply_coupon_rejects_unknown_or_restricted_coupon(): void
+    public function test_apply_coupon_rejects_unknown_restricted_inactive_future_or_usage_limited_coupon(): void
     {
         $order = $this->createOrder();
         $this->addFlight($order);
@@ -86,6 +96,27 @@ class OrderCheckoutControllerTest extends TestCase
             'document' => '111.444.777-35',
             'status' => 'active',
         ]));
+        Coupon::create([
+            'code' => 'INACTIVE',
+            'type' => 'fixed',
+            'value' => 10,
+            'active' => false,
+        ]);
+        Coupon::create([
+            'code' => 'FUTURE',
+            'type' => 'fixed',
+            'value' => 10,
+            'active' => true,
+            'starts_at' => now()->addDay(),
+        ]);
+        Coupon::create([
+            'code' => 'LIMIT',
+            'type' => 'fixed',
+            'value' => 10,
+            'active' => true,
+            'usage_limit' => 1,
+            'usage_count' => 1,
+        ]);
 
         $this->postJson("/r/{$order->token}/apply-coupon", [
             'coupon_code' => 'UNKNOWN',
@@ -106,6 +137,71 @@ class OrderCheckoutControllerTest extends TestCase
                 'success' => false,
                 'message' => 'Este cupom não está disponível para você.',
             ]);
+
+        foreach (['INACTIVE', 'FUTURE', 'LIMIT'] as $code) {
+            $this->postJson("/r/{$order->token}/apply-coupon", [
+                'coupon_code' => $code,
+                'payer_document' => '529.982.247-25',
+            ])
+                ->assertOk()
+                ->assertJson([
+                    'success' => false,
+                    'message' => 'Cupom inválido ou expirado.',
+                ]);
+        }
+    }
+
+    public function test_apply_restricted_coupon_accepts_authenticated_customer_document(): void
+    {
+        $order = $this->createOrder();
+        $this->addFlight($order, [
+            'money_price' => '100.00',
+            'tax' => '30.00',
+        ]);
+        $customer = Customer::create([
+            'name' => 'Cliente VIP',
+            'email' => 'vip@example.com',
+            'document' => '11144477735',
+            'status' => 'active',
+        ]);
+        $coupon = Coupon::create([
+            'code' => 'VIPLOGADO',
+            'type' => 'fixed',
+            'value' => 10,
+            'active' => true,
+        ]);
+        $coupon->customers()->attach($customer);
+
+        $this->actingAs($customer, 'customer')
+            ->postJson("/r/{$order->token}/apply-coupon", [
+                'coupon_code' => 'VIPLOGADO',
+                'payer_document' => '529.982.247-25',
+            ])
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'type' => 'coupon',
+                'coupon_code' => 'VIPLOGADO',
+                'discount_amount' => 10,
+                'new_total' => 120,
+            ]);
+    }
+
+    public function test_checkout_pages_expose_cancellation_policy_summary(): void
+    {
+        $order = $this->createOrder();
+        $this->addFlight($order);
+
+        $this->get(route('checkout.show', $order->token))
+            ->assertOk()
+            ->assertSee('Regras de cancelamento')
+            ->assertSee('Ver política completa')
+            ->assertSee('Cancelamento sem custo em até 24h');
+
+        $this->get(route('checkout.passengers', $order->token))
+            ->assertOk()
+            ->assertSee('Regras de cancelamento')
+            ->assertSee('Fora da janela sem custo');
     }
 
     public function test_store_creates_passenger_customer_coupon_and_pix_payment_with_discounted_total(): void
@@ -183,6 +279,133 @@ class OrderCheckoutControllerTest extends TestCase
             'order_id' => $order->id,
             'gateway' => 'fake',
             'amount' => 100,
+            'payment_method' => 'pix',
+        ]);
+    }
+
+    public function test_store_applies_pix_discount_only_to_fare_amount(): void
+    {
+        Setting::set('pix_discount', '3');
+
+        $order = $this->createOrder([
+            'total_adults' => 1,
+            'total_children' => 0,
+        ]);
+        $this->addFlight($order, [
+            'money_price' => '1000.00',
+            'tax' => '100.00',
+        ]);
+
+        $gateway = Mockery::mock(PaymentGatewayInterface::class);
+        $gateway->shouldReceive('createCheckout')
+            ->once()
+            ->with(
+                Mockery::on(fn ($checkoutOrder): bool => $checkoutOrder->is($order)),
+                'pix',
+                Mockery::on(function (array $cardData): bool {
+                    return abs($cardData['pix_discount_amount'] - 30) < 0.01
+                        && abs($cardData['total_with_interest'] - 1070) < 0.01;
+                }),
+            )
+            ->andReturnUsing(fn ($checkoutOrder) => $checkoutOrder->payments()->create([
+                'gateway' => 'fake',
+                'external_checkout_id' => 'fake-pix',
+                'payment_url' => '000201PIX',
+                'status' => 'pending',
+                'payment_method' => 'pix',
+                'amount' => 1070,
+                'currency' => 'BRL',
+            ]));
+
+        $resolver = Mockery::mock(PaymentGatewayResolver::class);
+        $resolver->shouldReceive('resolveForMethod')->once()->with('pix')->andReturn($gateway);
+        $this->app->instance(PaymentGatewayResolver::class, $resolver);
+
+        $this->post("/r/{$order->token}", $this->validCheckoutPayload())
+            ->assertOk()
+            ->assertViewIs('checkout.awaiting-payment');
+
+        $this->assertDatabaseHas('order_payments', [
+            'order_id' => $order->id,
+            'amount' => 1070,
+            'payment_method' => 'pix',
+        ]);
+    }
+
+    public function test_store_combines_wallet_with_pix_on_remaining_fare_amount(): void
+    {
+        Setting::set('pix_discount', '3');
+
+        $customer = Customer::create([
+            'name' => 'Cliente Wallet Parcial',
+            'email' => 'wallet-parcial@example.com',
+            'document' => '529.982.247-25',
+            'status' => 'active',
+        ]);
+        WalletTransaction::create([
+            'customer_id' => $customer->id,
+            'type' => 'credit',
+            'amount' => 200,
+            'balance_after' => 200,
+            'description' => 'Credito inicial',
+        ]);
+
+        $order = $this->createOrder([
+            'total_adults' => 1,
+            'total_children' => 0,
+        ]);
+        $this->addFlight($order, [
+            'money_price' => '1000.00',
+            'tax' => '100.00',
+        ]);
+
+        $gateway = Mockery::mock(PaymentGatewayInterface::class);
+        $gateway->shouldReceive('createCheckout')
+            ->once()
+            ->with(
+                Mockery::on(fn ($checkoutOrder): bool => $checkoutOrder->is($order)),
+                'pix',
+                Mockery::on(function (array $cardData): bool {
+                    return abs($cardData['pix_discount_amount'] - 27) < 0.01
+                        && abs($cardData['total_with_interest'] - 873) < 0.01;
+                }),
+            )
+            ->andReturnUsing(fn ($checkoutOrder) => $checkoutOrder->payments()->create([
+                'gateway' => 'fake',
+                'external_checkout_id' => 'fake-pix-wallet',
+                'payment_url' => '000201PIX',
+                'status' => 'pending',
+                'payment_method' => 'pix',
+                'amount' => 873,
+                'currency' => 'BRL',
+            ]));
+
+        $resolver = Mockery::mock(PaymentGatewayResolver::class);
+        $resolver->shouldReceive('resolveForMethod')->once()->with('pix')->andReturn($gateway);
+        $this->app->instance(PaymentGatewayResolver::class, $resolver);
+
+        $this->actingAs($customer, 'customer')
+            ->post("/r/{$order->token}", $this->validCheckoutPayload([
+                'use_wallet' => '1',
+            ]))
+            ->assertOk()
+            ->assertViewIs('checkout.awaiting-payment');
+
+        $this->assertDatabaseHas('wallet_transactions', [
+            'customer_id' => $customer->id,
+            'type' => 'debit',
+            'amount' => 200,
+            'balance_after' => 0,
+            'order_id' => $order->id,
+        ]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'wallet_amount_used' => 200,
+            'status' => 'awaiting_payment',
+        ]);
+        $this->assertDatabaseHas('order_payments', [
+            'order_id' => $order->id,
+            'amount' => 873,
             'payment_method' => 'pix',
         ]);
     }
