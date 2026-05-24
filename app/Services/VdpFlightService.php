@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 class VdpFlightService
 {
+    private const BDS_DIRECT_AIRLINES = ['GOL', 'AZUL', 'LATAM', 'INTERLINE', 'TAP'];
+
     private ?LatamCrawlerService $crawlerService = null;
 
     private ?BdsCrawlerService $bdsCrawlerService = null;
@@ -169,12 +171,7 @@ class VdpFlightService
 
             if (count($providers) === 1) {
                 if ($providers[0] === 'bds_crawler') {
-                    $bdsCias = [$normalized];
-                    if ($this->shouldIncludeBdsPatria($bdsCias)) {
-                        $bdsCias[] = 'patria';
-                    }
-
-                    return $this->fetchParallel($params, [], [], array_values(array_unique($bdsCias)));
+                    return $this->fetchParallel($params, [], [], $this->bdsAirlinesForSearch([$normalized]));
                 }
 
                 return $this->callForProvider($providers[0], $params);
@@ -194,7 +191,7 @@ class VdpFlightService
             }
 
             if ($this->shouldIncludeBdsPatria($bdsCias)) {
-                $bdsCias[] = 'patria';
+                $bdsCias = $this->bdsAirlinesForSearch($bdsCias);
             }
 
             return $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
@@ -222,9 +219,7 @@ class VdpFlightService
         $crawlerCias = array_unique($crawlerCias);
         $bdsCias = array_unique($bdsCias);
 
-        if ($this->shouldIncludeBdsPatria($bdsCias)) {
-            $bdsCias[] = 'patria';
-        }
+        $bdsCias = $this->bdsAirlinesForSearch($bdsCias);
 
         $needVdp = ! empty($vdpCias);
         $needCrawler = ! empty($crawlerCias);
@@ -528,7 +523,6 @@ class VdpFlightService
                     $slots[] = ['provider' => 'latam_crawler', 'airlines' => strtoupper($c), 'patria' => false];
                 } elseif ($provider === 'bds_crawler') {
                     $bdsCias[] = $c;
-                    $slots[] = ['provider' => 'bds_crawler', 'airlines' => strtoupper($c), 'patria' => false];
                 }
             }
         }
@@ -538,10 +532,8 @@ class VdpFlightService
             $slots[] = ['provider' => 'vdp', 'airlines' => implode(',', array_map('strtoupper', $vdpCias)), 'patria' => false];
         }
 
-        if ($this->shouldIncludeBdsExtraAirlines($bdsCias)) {
-            foreach ($this->bdsExtraAirlines() as $airline) {
-                $slots[] = ['provider' => 'bds_crawler', 'airlines' => $airline, 'patria' => false];
-            }
+        foreach ($this->bdsDirectAirlinesFor($bdsCias) as $airline) {
+            $slots[] = ['provider' => 'bds_crawler', 'airlines' => $airline, 'patria' => false];
         }
 
         if ($this->shouldIncludeBdsPatria($bdsCias)) {
@@ -551,14 +543,33 @@ class VdpFlightService
         return $slots;
     }
 
-    private function shouldIncludeBdsExtraAirlines(array $bdsCias = []): bool
+    private function bdsAirlinesForSearch(array $bdsCias): array
     {
-        return ! empty($bdsCias) || (bool) Setting::get('bds_patria_enabled', false);
+        $airlines = $this->bdsDirectAirlinesFor($bdsCias);
+
+        if ($this->shouldIncludeBdsPatria($bdsCias)) {
+            $airlines[] = 'PATRIA';
+        }
+
+        return array_values(array_unique($airlines));
     }
 
-    private function bdsExtraAirlines(): array
+    private function bdsDirectAirlinesFor(array $bdsCias): array
     {
-        return ['INTERLINE', 'TAP'];
+        if (empty($bdsCias)) {
+            return [];
+        }
+
+        $configured = array_map(
+            fn (string $cia): string => strtoupper($this->normalizeCia($cia)),
+            $bdsCias
+        );
+        $configured = array_values(array_filter(
+            $configured,
+            fn (string $cia): bool => $cia !== '' && $cia !== 'PATRIA'
+        ));
+
+        return array_values(array_unique(array_merge($configured, self::BDS_DIRECT_AIRLINES)));
     }
 
     private function shouldIncludeBdsPatria(array $bdsCias = []): bool

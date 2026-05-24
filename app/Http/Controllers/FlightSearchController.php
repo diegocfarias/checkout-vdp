@@ -69,6 +69,13 @@ class FlightSearchController extends Controller
         $departure = strtoupper($request->input('departure'));
         $arrival = strtoupper($request->input('arrival'));
 
+        if (! Setting::get('calendar_prices_enabled', true)) {
+            return response()->json([
+                'levels' => [],
+                'currency' => 'BRL',
+            ]);
+        }
+
         $externalPrices = $this->calendarPriceService->datePrices($departure, $arrival, $dateFrom, $dateTo);
 
         return response()->json([

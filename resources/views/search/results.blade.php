@@ -776,6 +776,7 @@
         var isDirect = !Array.isArray(conns) || conns.length <= 1;
         var connCount = Array.isArray(conns) ? Math.max(0, conns.length - 1) : 0;
         var cia = displayCia(flight.operator, flight.flight_number);
+        var period = getTimePeriod(flight.departure_time || '');
         var isFirst = fi === 0;
         var isHidden = fi >= collapseAfter;
         var connId = 'conn-' + dir + '-' + gIdx + '-' + fi;
@@ -786,7 +787,7 @@
         var dotInner = isFirst ? 'bg-blue-600' : '';
 
         var html = '<div class="' + wrapClass + '">'
-            + '<label class="flight-option block p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ' + borderClass + '" data-group="' + gIdx + '" data-dir="' + dir + '">'
+            + '<label class="flight-option block p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ' + borderClass + '" data-group="' + gIdx + '" data-dir="' + dir + '" data-is-direct="' + (isDirect ? '1' : '0') + '" data-airline="' + escHtml(cia.toLowerCase()) + '" data-period="' + escHtml(period) + '" data-conn-target="' + (isDirect ? '' : connId) + '">'
             + '<input type="radio" name="group_' + gIdx + '_' + dir + '" value="' + fi + '" class="sr-only ' + dir + '-radio" data-group="' + gIdx + '"' + (isFirst ? ' checked' : '') + '>'
             + '<div class="flex items-start gap-2 sm:gap-3">'
             + '<div class="radio-dot w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center mt-1 ' + dotBorder + '">'
@@ -1128,6 +1129,106 @@
             || (hasConnection && values.indexOf('connection') !== -1);
     }
 
+    function syncSelectedFlight(radio) {
+        if (!radio) return;
+
+        var gIdx = parseInt(radio.dataset.group, 10);
+        var dir = radio.classList.contains('ob-radio') ? 'ob' : 'ib';
+        var group = groupsData[gIdx];
+        if (!group) return;
+
+        var flights = dir === 'ob' ? group.outbound_flights : group.inbound_flights;
+        var flight = flights[parseInt(radio.value, 10)];
+        if (!flight) return;
+
+        radio.checked = true;
+
+        document.querySelectorAll('.group-form[data-group="' + gIdx + '"]').forEach(function(form) {
+            var input = form.querySelector(dir === 'ob' ? '.selected-ob' : '.selected-ib');
+            if (input) input.value = JSON.stringify(flight);
+            var provInput = form.querySelector(dir === 'ob' ? '.meta-ob-provider' : '.meta-ib-provider');
+            if (provInput) provInput.value = flight._provider || '';
+            var ptInput = form.querySelector(dir === 'ob' ? '.meta-ob-pricing' : '.meta-ib-pricing');
+            if (ptInput) ptInput.value = flight._pricing_type || '';
+        });
+
+        var container = radio.closest('.space-y-2');
+        if (container) {
+            container.querySelectorAll('.flight-option[data-dir="' + dir + '"]').forEach(function(opt) {
+                opt.classList.remove('border-blue-400', 'bg-blue-50/60', 'shadow-sm');
+                opt.classList.add('border-gray-200');
+                var d = opt.querySelector('.radio-dot');
+                if (d) { d.classList.remove('border-blue-600'); d.classList.add('border-gray-300'); }
+                var inner = opt.querySelector('.radio-dot-inner');
+                if (inner) inner.classList.remove('bg-blue-600');
+            });
+        }
+
+        var flightOpt = radio.closest('.flight-option');
+        if (flightOpt) {
+            flightOpt.classList.remove('border-gray-200');
+            flightOpt.classList.add('border-blue-400', 'bg-blue-50/60', 'shadow-sm');
+            var dot = flightOpt.querySelector('.radio-dot');
+            if (dot) { dot.classList.remove('border-gray-300'); dot.classList.add('border-blue-600'); }
+            var innerDot = flightOpt.querySelector('.radio-dot-inner');
+            if (innerDot) innerDot.classList.add('bg-blue-600');
+        }
+    }
+
+    function optionMatchesDirectionFilters(option, ciaVals, stopVals, periodVals) {
+        var airline = option.dataset.airline || '';
+        var isDirect = option.dataset.isDirect === '1';
+        var hasConnection = !isDirect;
+        var period = option.dataset.period || '';
+
+        return airlineFilterOk(ciaVals, [airline])
+            && stopFilterOk(stopVals, isDirect, hasConnection)
+            && (periodVals.length === 0 || periodVals.indexOf(period) !== -1);
+    }
+
+    function applyOptionFilters() {
+        var filters = {
+            ob: {
+                cia: getCheckedValues('.filter-ob-cia'),
+                stops: getCheckedValues('.filter-ob-stops'),
+                periods: getCheckedValues('.filter-ob-period')
+            },
+            ib: {
+                cia: getCheckedValues('.filter-ib-cia'),
+                stops: getCheckedValues('.filter-ib-stops'),
+                periods: getCheckedValues('.filter-ib-period')
+            }
+        };
+
+        document.querySelectorAll('.combination-card').forEach(function(card) {
+            ['ob', 'ib'].forEach(function(dir) {
+                var options = Array.from(card.querySelectorAll('.flight-option[data-dir="' + dir + '"]'));
+                if (!options.length) return;
+
+                options.forEach(function(option) {
+                    var cfg = filters[dir];
+                    var matches = optionMatchesDirectionFilters(option, cfg.cia, cfg.stops, cfg.periods);
+                    var wrapper = option.parentElement;
+                    if (wrapper) wrapper.style.display = matches ? '' : 'none';
+                    option.classList.toggle('option-filter-hidden', !matches);
+
+                    var connTarget = option.dataset.connTarget;
+                    if (!matches && connTarget) {
+                        var conn = document.getElementById(connTarget);
+                        if (conn) conn.classList.add('hidden');
+                    }
+                });
+
+                var checked = card.querySelector('.flight-option[data-dir="' + dir + '"] input[type="radio"]:checked');
+                var checkedOption = checked ? checked.closest('.flight-option') : null;
+                if (checkedOption && checkedOption.classList.contains('option-filter-hidden')) {
+                    var firstVisible = card.querySelector('.flight-option[data-dir="' + dir + '"]:not(.option-filter-hidden) input[type="radio"]');
+                    syncSelectedFlight(firstVisible);
+                }
+            });
+        });
+    }
+
     function applyFilters() {
         var obCiaVals = getCheckedValues('.filter-ob-cia');
         var ibCiaVals = getCheckedValues('.filter-ib-cia');
@@ -1159,6 +1260,7 @@
             if (pass) total++;
         });
 
+        applyOptionFilters();
         currentPage = 1;
         paginate();
         document.getElementById('results-count').textContent = total + ' resultado' + (total !== 1 ? 's' : '');
@@ -1637,6 +1739,7 @@
         renderProgressBar();
         renderGroups();
         restoreSelectionState(selState);
+        applyOptionFilters();
     }
 
     function rebuildAndRender() {

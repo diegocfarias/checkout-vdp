@@ -502,16 +502,21 @@ class ManageSettings extends Page
         $data = $this->form->getState();
 
         Setting::set('mix_enabled', (bool) $data['mix_enabled'], 'boolean');
-        $pricingFields = [
+        $cacheVersionFields = [
+            'mix_enabled',
+            'provider_gol',
+            'provider_azul',
+            'provider_latam',
+            'bds_patria_enabled',
             'pricing_miles_enabled', 'pricing_pct_enabled',
             'pricing_miles_azul', 'pricing_miles_gol', 'pricing_miles_latam',
             'pricing_pct_azul', 'pricing_pct_gol', 'pricing_pct_latam',
             'boarding_tax_fallback_pct', 'pix_discount',
         ];
 
-        $oldPricing = [];
-        foreach ($pricingFields as $field) {
-            $oldPricing[$field] = Setting::get($field);
+        $oldSearchConfig = [];
+        foreach ($cacheVersionFields as $field) {
+            $oldSearchConfig[$field] = Setting::get($field);
         }
 
         Setting::set('pricing_miles_enabled', (bool) $data['pricing_miles_enabled'], 'boolean');
@@ -579,12 +584,12 @@ class ManageSettings extends Page
         Setting::set('bds_crawler_timeout', (int) ($data['bds_crawler_timeout'] ?? 60), 'integer');
         Setting::set('bds_patria_enabled', (bool) ($data['bds_patria_enabled'] ?? false), 'boolean');
 
-        $newPricing = [];
-        foreach ($pricingFields as $field) {
-            $newPricing[$field] = Setting::get($field);
+        $newSearchConfig = [];
+        foreach ($cacheVersionFields as $field) {
+            $newSearchConfig[$field] = Setting::get($field);
         }
 
-        if ($oldPricing !== $newPricing) {
+        if ($oldSearchConfig !== $newSearchConfig) {
             Setting::set('pricing_version', (string) now()->timestamp, 'string');
         }
 
