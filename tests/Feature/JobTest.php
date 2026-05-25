@@ -156,6 +156,9 @@ class JobTest extends TestCase
         $vdpService->shouldReceive('calculateFlightPrice')
             ->twice()
             ->andReturnUsing(fn (array $flight): float => (float) $flight['price']);
+        $vdpService->shouldReceive('normalizeTaxForAppliedPricing')
+            ->twice()
+            ->andReturnUsing(fn (array $flight): array => $flight);
         $vdpService->shouldReceive('resolveBoardingTax')
             ->twice()
             ->andReturn('0');

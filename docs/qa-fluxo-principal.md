@@ -418,6 +418,7 @@ Validar:
 - Precos no calendario liga/desliga barras no calendario.
 - Valor do milheiro altera preco de voos com milhas.
 - Margem percentual de milhas altera preco de voos com milhas conforme a prioridade configurada.
+- Em voos BDS com margem percentual de milhas, a taxa usada deve ser a taxa normal da cia, sem taxa de servico de milhas.
 - Percentual altera preco de voos convencionais quando aplicavel.
 - Historico de precificacao permite restaurar uma configuracao anterior.
 - Fallback de taxa e usado quando integracao retorna taxa vazia/zero.

@@ -997,6 +997,22 @@ class VdpFlightService
         return $flight;
     }
 
+    public function normalizeTaxForAppliedPricing(array $flight): array
+    {
+        $flight = $this->normalizeFlightFields($flight);
+
+        if ($this->appliedMilesPricingMethod($flight) === PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE) {
+            $airlineTax = $this->resolveAirlineBoardingTax($flight);
+            if ($airlineTax > 0) {
+                $flight['boarding_tax'] = number_format($airlineTax, 2, '.', '');
+            }
+        }
+
+        unset($flight['airline_boarding_tax'], $flight['miles_service_tax']);
+
+        return $flight;
+    }
+
     public function resolveBoardingTax(array $flight, mixed $fallback = null): string
     {
         $candidate = $this->explicitBoardingTaxCandidate($flight);
@@ -1034,6 +1050,18 @@ class VdpFlightService
             ['taxes', 'total'],
             ['taxes', 'totalAmount'],
         ]);
+    }
+
+    private function resolveAirlineBoardingTax(array $flight): float
+    {
+        $candidate = $this->firstMoneyCandidate($flight, [
+            ['airline_boarding_tax'],
+            ['airlineBoardingTax'],
+            ['airline_tax'],
+            ['airlineTax'],
+        ]);
+
+        return $candidate !== null ? $this->parseMoneyFloat($candidate) : 0.0;
     }
 
     private function calculateFallbackBoardingTax(array $flight): string
@@ -1130,7 +1158,8 @@ class VdpFlightService
 
             if ($method === PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE
                 && Setting::get('pricing_miles_pct_enabled', false)) {
-                $apiTotal = $this->apiTotalForMargin($flight, $tax);
+                $pricingTax = $this->taxForMilesPercentage($flight, $tax);
+                $apiTotal = $this->apiTotalForMargin($flight, $pricingTax);
                 if ($apiTotal <= 0) {
                     continue;
                 }
@@ -1140,7 +1169,7 @@ class VdpFlightService
 
                 Log::debug('Pricing: milhas por percentual no total da API', [
                     'cia' => $cia, 'api_total' => $apiTotal,
-                    'pct' => $pct, 'tax' => $tax, 'price' => $price,
+                    'pct' => $pct, 'tax' => $pricingTax, 'price' => $price,
                 ]);
 
                 return $price;
@@ -1169,7 +1198,10 @@ class VdpFlightService
 
             if ($method === PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE
                 && Setting::get('pricing_miles_pct_enabled', false)) {
-                $explicitTax = $this->parseMoneyFloat($this->explicitBoardingTaxCandidate($flight) ?? '0');
+                $explicitTax = $this->taxForMilesPercentage(
+                    $flight,
+                    $this->parseMoneyFloat($this->explicitBoardingTaxCandidate($flight) ?? '0')
+                );
                 $apiTotal = $this->apiTotalForMargin($flight, $explicitTax);
                 if ($apiTotal <= 0) {
                     continue;
@@ -1189,6 +1221,41 @@ class VdpFlightService
         }
 
         return null;
+    }
+
+    private function appliedMilesPricingMethod(array $flight): ?string
+    {
+        $miles = $this->shouldIgnoreMilesPricing($flight) ? 0.0 : $this->parseMilesValue($flight['price_miles'] ?? null);
+        if ($miles <= 0) {
+            return null;
+        }
+
+        foreach (app(PricingSettingsService::class)->milesPriority() as $method) {
+            if ($method === PricingSettingsService::MILES_METHOD_MILHEIRO
+                && Setting::get('pricing_miles_enabled', true)) {
+                return $method;
+            }
+
+            if ($method === PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE
+                && Setting::get('pricing_miles_pct_enabled', false)
+                && $this->apiTotalForMargin($flight, $this->taxForMilesPercentage($flight, 0)) > 0) {
+                return $method;
+            }
+
+            if ($method === PricingSettingsService::MILES_METHOD_API_ORIGINAL
+                && $this->parseMoneyFloat($flight['price_money'] ?? '0') > 0) {
+                return $method;
+            }
+        }
+
+        return null;
+    }
+
+    private function taxForMilesPercentage(array $flight, float $fallbackTax): float
+    {
+        $airlineTax = $this->resolveAirlineBoardingTax($flight);
+
+        return $airlineTax > 0 ? $airlineTax : $fallbackTax;
     }
 
     private function apiTotalForMargin(array $flight, float $tax): float
@@ -1325,7 +1392,7 @@ class VdpFlightService
 
     private function mapFlightData(array $flight): array
     {
-        $flight = $this->normalizeFlightFields($flight);
+        $flight = $this->normalizeTaxForAppliedPricing($flight);
 
         return [
             'operator' => $flight['operator'] ?? null,

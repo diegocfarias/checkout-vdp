@@ -100,6 +100,7 @@ class RefreshShowcaseRoute implements ShouldQueue
                     $outboundFlights = $results['outbound'] ?? [];
 
                     foreach ($outboundFlights as $flight) {
+                        $flight = $vdpService->normalizeTaxForAppliedPricing($flight);
                         $price = $vdpService->calculateFlightPrice($flight);
                         $tax = (float) $vdpService->parseMoneyValue($vdpService->resolveBoardingTax($flight));
 
@@ -112,6 +113,7 @@ class RefreshShowcaseRoute implements ShouldQueue
                             $cheapestInboundPrice = PHP_FLOAT_MAX;
                             $cheapestInboundTax = 0.0;
                             foreach ($inboundFlights as $ibFlight) {
+                                $ibFlight = $vdpService->normalizeTaxForAppliedPricing($ibFlight);
                                 $ibPrice = $vdpService->calculateFlightPrice($ibFlight);
                                 if ($ibPrice < $cheapestInboundPrice) {
                                     $cheapestInboundPrice = $ibPrice;

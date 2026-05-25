@@ -84,7 +84,8 @@ Este documento registra as regras esperadas para os fluxos principais. Os testes
 - BDS `INTERLINE` deve ser exibido pela companhia aparente quando `CompanhiaAparente` vier preenchida.
 - Voos `INTERLINE` com `CompanhiaAparente=AZUL` devem entrar no site como Azul.
 - Para `INTERLINE`, quando o melhor valor da BDS for monetario de emissao, o checkout deve usar o valor monetario informado e nao recalcular pelo campo bruto de milhas.
-- Taxa final da BDS deve ser `MelhorValor.TotalTaxaEmbarque + TaxaServicoMilha`.
+- Taxa final padrao da BDS deve ser `MelhorValor.TotalTaxaEmbarque + TaxaServicoMilha`.
+- Quando um voo em milhas da BDS usar precificacao por margem percentual sobre o total da API, a taxa usada nessa precificacao deve ser somente `MelhorValor.TotalTaxaEmbarque`; `TaxaServicoMilha` nao deve entrar no preco final nem na taxa congelada do pedido.
 - Quando uma integracao nao retornar taxa preenchida, deve ser aplicada a taxa interna configurada como percentual do valor base da passagem.
 - Resultados em milhas e convencionais devem ser exibidos quando a integracao retornar preco valido.
 - Deduplicacao ou agrupamento de resultados nao pode descartar voos convencionais ou voos em dinheiro apenas por nao terem milhas.
@@ -106,7 +107,8 @@ Este documento registra as regras esperadas para os fluxos principais. Os testes
 - A precificacao operacional fica em menu proprio no painel: `Precificacao`.
 - Voos em milhas podem ser precificados por milheiro ou por margem percentual sobre o total retornado pela API.
 - A precificacao por milheiro usa: `(milhas / 1000) * valor do milheiro + taxa`.
-- A precificacao percentual para voos em milhas usa o total da API como base: `(price_money + taxa) * (1 + margem / 100)`.
+- A precificacao percentual para voos em milhas usa o total da API como base: `(price_money + taxa aplicavel) * (1 + margem / 100)`.
+- Para BDS em milhas, a `taxa aplicavel` dessa regra e a taxa normal da companhia, sem `TaxaServicoMilha`.
 - Para manter taxa separada no checkout, quando a regra de milhas por percentual for usada, o `money_price` congelado no pedido deve ser `total precificado - taxa`.
 - A ordem de prioridade de voos em milhas deve ser configuravel. Metodos sem dados suficientes ou desativados devem ser pulados ate encontrar uma regra aplicavel.
 - Voos convencionais devem ter regra separada de percentual. Essa regra aplica margem sobre `price_money` e soma a taxa sem desconto.

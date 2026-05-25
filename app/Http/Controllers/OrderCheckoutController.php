@@ -615,8 +615,12 @@ class OrderCheckoutController extends Controller
                 $ibFlight ? $this->buildRevalidationData($ibFlight) : null,
             );
 
-            $freshOb = $fresh['outbound'];
-            $freshIb = $fresh['inbound'];
+            $freshOb = $fresh['outbound']
+                ? $this->vdpService->normalizeTaxForAppliedPricing($fresh['outbound'])
+                : null;
+            $freshIb = $fresh['inbound']
+                ? $this->vdpService->normalizeTaxForAppliedPricing($fresh['inbound'])
+                : null;
 
             if (! $freshOb) {
                 return null;
@@ -631,8 +635,6 @@ class OrderCheckoutController extends Controller
             $newTotal = $newTotalPerPax * $payingPax;
 
             if (abs($newTotal - $oldTotal) >= 0.01) {
-                $freshOb = $this->vdpService->normalizeFlightFields($freshOb);
-
                 $obFlight->update([
                     'price_money' => $freshOb['price_money'] ?? $obFlight->price_money,
                     'price_miles' => $freshOb['price_miles'] ?? $obFlight->price_miles,
@@ -642,8 +644,6 @@ class OrderCheckoutController extends Controller
                 ]);
 
                 if ($freshIb && $ibFlight) {
-                    $freshIb = $this->vdpService->normalizeFlightFields($freshIb);
-
                     $ibFlight->update([
                         'price_money' => $freshIb['price_money'] ?? $ibFlight->price_money,
                         'price_miles' => $freshIb['price_miles'] ?? $ibFlight->price_miles,

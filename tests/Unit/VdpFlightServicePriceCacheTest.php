@@ -113,6 +113,42 @@ class VdpFlightServicePriceCacheTest extends TestCase
         $this->assertSame('1105.00', $service->calculateBasePrice($flight));
     }
 
+    public function test_bds_miles_percentage_pricing_uses_airline_tax_without_miles_service_tax(): void
+    {
+        Cache::forever('app_settings', [
+            'pricing_miles_enabled' => true,
+            'pricing_miles_pct_enabled' => true,
+            'pricing_pct_enabled' => false,
+            'pricing_miles_gol' => '20',
+            'pricing_miles_pct_gol' => '10',
+            'pricing_miles_priority_order' => [
+                PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE,
+                PricingSettingsService::MILES_METHOD_MILHEIRO,
+                PricingSettingsService::MILES_METHOD_API_ORIGINAL,
+            ],
+        ]);
+
+        $service = app(VdpFlightService::class);
+        $flight = [
+            'operator' => 'GOL',
+            'flight_number' => 'G3-1886',
+            'price_money' => '1.000,00',
+            'price_miles' => '10.000',
+            'boarding_tax' => '150,00',
+            'airline_boarding_tax' => '50,00',
+            'miles_service_tax' => '100,00',
+        ];
+
+        $this->assertSame(1155.0, round($service->calculateFlightPrice($flight), 2));
+        $this->assertSame('1105.00', $service->calculateBasePrice($flight));
+
+        $normalized = $service->normalizeTaxForAppliedPricing($flight);
+
+        $this->assertSame('50.00', $normalized['boarding_tax']);
+        $this->assertArrayNotHasKey('airline_boarding_tax', $normalized);
+        $this->assertArrayNotHasKey('miles_service_tax', $normalized);
+    }
+
     public function test_miles_flight_uses_api_original_when_configured_methods_are_disabled(): void
     {
         Cache::forever('app_settings', [

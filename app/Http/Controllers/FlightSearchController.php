@@ -362,6 +362,7 @@ class FlightSearchController extends Controller
             'departure_location', 'arrival_location', 'departure_label', 'arrival_label',
             'boarding_tax', 'class_service', 'price_money', 'price_miles', 'price_miles_vip',
             'total_flight_duration', 'unique_id', 'connection', 'baggage',
+            'airline_boarding_tax', 'miles_service_tax',
         ];
 
         $clean = [];
@@ -385,7 +386,7 @@ class FlightSearchController extends Controller
             $clean['baggage'] = $this->sanitizeBaggage($clean['baggage']);
         }
 
-        return $clean;
+        return $this->vdpService->normalizeTaxForAppliedPricing($clean);
     }
 
     private function sanitizeBaggage(array $baggage): array

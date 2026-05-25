@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Order;
 use App\Models\Setting;
+use App\Services\PricingSettingsService;
 use App\Services\VdpFlightService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -235,6 +236,51 @@ class FlightSearchControllerCoverageTest extends TestCase
         $this->assertTrue($flight['baggage']['carry_on']['included']);
         $this->assertFalse($flight['baggage']['checked']['included']);
         $this->assertGreaterThan(0, $flight['calculated_price']);
+    }
+
+    public function test_provider_endpoint_uses_airline_tax_for_bds_miles_percentage_pricing(): void
+    {
+        Setting::set('pricing_miles_enabled', true, 'boolean');
+        Setting::set('pricing_miles_pct_enabled', true, 'boolean');
+        Setting::set('pricing_miles_pct_gol', '10', 'string');
+        Setting::set('pricing_miles_priority_order', [
+            PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE,
+            PricingSettingsService::MILES_METHOD_MILHEIRO,
+            PricingSettingsService::MILES_METHOD_API_ORIGINAL,
+        ], 'json');
+
+        $vdp = Mockery::mock(VdpFlightService::class)->makePartial();
+        $vdp->shouldReceive('searchSingleProvider')
+            ->once()
+            ->with(Mockery::type('array'), 'bds_crawler', 'GOL')
+            ->andReturn([
+                'outbound' => [
+                    $this->flightPayload([
+                        'operator' => 'GOL',
+                        'flight_number' => 'G31234',
+                        'price_money' => '1.000,00',
+                        'price_miles' => '10000',
+                        'boarding_tax' => '150,00',
+                        'airline_boarding_tax' => '50,00',
+                        'miles_service_tax' => '100,00',
+                        'unique_id' => 'bds-miles-tax',
+                    ]),
+                ],
+                'inbound' => [],
+            ]);
+        $this->app->instance(VdpFlightService::class, $vdp);
+
+        $response = $this->getJson(route('api.search.provider', $this->providerQuery([
+            'slot' => encrypt('bds_crawler|GOL'),
+        ])))->assertOk();
+
+        $flight = $response->json('outbound.0');
+
+        $this->assertSame('bds-miles-tax', $flight['unique_id']);
+        $this->assertEqualsWithDelta(1155.0, $flight['calculated_price'], 0.01);
+        $this->assertSame('50.00', $flight['boarding_tax']);
+        $this->assertArrayNotHasKey('airline_boarding_tax', $flight);
+        $this->assertArrayNotHasKey('miles_service_tax', $flight);
     }
 
     public function test_unconfirmed_selection_handles_unavailable_and_changed_prices(): void
