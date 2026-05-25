@@ -72,7 +72,7 @@ class MyEmissions extends Page implements HasTable
             ],
             [
                 'label' => 'A receber',
-                'value' => 'R$ ' . number_format((float) $totalValue, 2, ',', '.'),
+                'value' => 'R$ '.number_format((float) $totalValue, 2, ',', '.'),
                 'icon' => 'heroicon-o-banknotes',
             ],
             [
@@ -105,7 +105,7 @@ class MyEmissions extends Page implements HasTable
                 Tables\Columns\TextColumn::make('route')
                     ->label('Rota')
                     ->getStateUsing(fn (OrderEmission $record) => $record->order
-                        ? strtoupper($record->order->departure_iata) . ' → ' . strtoupper($record->order->arrival_iata)
+                        ? strtoupper($record->order->departure_iata).' → '.strtoupper($record->order->arrival_iata)
                         : '-'),
 
                 Tables\Columns\TextColumn::make('duration_formatted')
@@ -118,6 +118,17 @@ class MyEmissions extends Page implements HasTable
                     ->label('Custo/milheiro')
                     ->prefix('R$ ')
                     ->placeholder('—'),
+
+                Tables\Columns\TextColumn::make('emission_provider')
+                    ->label('Origem')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => OrderEmission::emissionProviderLabel($state))
+                    ->color(fn (?string $state): string => match ($state) {
+                        'bds' => 'info',
+                        'travellink' => 'success',
+                        'airline' => 'warning',
+                        default => 'gray',
+                    }),
 
                 Tables\Columns\TextColumn::make('emission_value')
                     ->label('Valor')
@@ -150,11 +161,7 @@ class MyEmissions extends Page implements HasTable
         return "{$hours}h {$mins}min";
     }
 
-    public function updatedDateFrom(): void
-    {
-    }
+    public function updatedDateFrom(): void {}
 
-    public function updatedDateTo(): void
-    {
-    }
+    public function updatedDateTo(): void {}
 }

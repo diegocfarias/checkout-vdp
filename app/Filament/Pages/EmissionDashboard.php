@@ -155,6 +155,17 @@ class EmissionDashboard extends Page implements HasTable
                     ->prefix('R$ ')
                     ->placeholder('—'),
 
+                Tables\Columns\TextColumn::make('emission_provider')
+                    ->label('Origem')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => OrderEmission::emissionProviderLabel($state))
+                    ->color(fn (?string $state): string => match ($state) {
+                        'bds' => 'info',
+                        'travellink' => 'success',
+                        'airline' => 'warning',
+                        default => 'gray',
+                    }),
+
                 Tables\Columns\TextColumn::make('emission_value')
                     ->label('Valor')
                     ->money('BRL'),

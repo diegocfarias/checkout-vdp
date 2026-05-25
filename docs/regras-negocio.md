@@ -189,6 +189,8 @@ Este documento registra as regras esperadas para os fluxos principais. Os testes
 - Taxa paga na emissao e informacao operacional por voo; nao deve alterar a taxa cobrada do cliente.
 - Custos operacionais de emissao, taxa paga e milheiro nao devem aparecer para o cliente.
 - Ao concluir emissao, pedido deve ir para `completed`, emissao deve ir para `completed` e deve ser criado log de conclusao.
+- Emissao manual deve registrar a origem usada para emitir: BDS, milheiro/fornecedor, companhia, Travellink ou outro.
+- Quando o voo selecionado veio da BDS, o painel do emissor deve mostrar o custo estimado para emitir diretamente na BDS, preservando esse custo a partir do retorno original da busca.
 - Integracao Travellink deve ficar configuravel no painel, com chaves, ambiente, busca, emissao manual, emissao automatica e modo teste.
 - A busca Travellink entra como fonte propria; voos retornados por ela devem ser marcados internamente com `source_provider = travellink`.
 - Emissao Travellink so pode ser usada quando todos os voos selecionados no pedido vieram da Travellink.

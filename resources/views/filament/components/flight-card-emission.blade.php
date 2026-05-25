@@ -2,6 +2,8 @@
     $order = $getRecord();
     $order->loadMissing(['flights', 'flightSearch', 'passengers']);
     $flights = $order->flights;
+    $emissionCost = app(\App\Services\EmissionCostService::class);
+    $bdsSummary = $emissionCost->bdsSummary($order);
     $cabin = match($order->cabin) {
         'EC' => 'Econômica',
         'EX' => 'Executiva',
@@ -114,6 +116,29 @@
         <div style="border:1px solid #dbeafe; border-radius:10px; padding:14px 20px; background:#eff6ff; display:flex; align-items:center; justify-content:space-between;">
             <span style="font-size:14px; font-weight:600; color:#1e40af;">Total geral</span>
             <span style="font-size:20px; font-weight:800; color:#1e40af;">{{ number_format($totalMiles, 0, '', '.') }} milhas</span>
+        </div>
+    @endif
+
+    @if($bdsSummary['has_bds'])
+        <div style="border:1px solid #bae6fd; border-radius:10px; padding:14px 20px; background:#f0f9ff; margin-top:12px;">
+            <div style="font-size:14px; font-weight:700; color:#075985; margin-bottom:8px;">Custo estimado para emissão direta na BDS</div>
+            @foreach($bdsSummary['flights'] as $item)
+                <div style="font-size:13px; color:#0f172a; display:flex; justify-content:space-between; gap:12px; padding:2px 0;">
+                    <span>{{ $item['direction'] }} {{ $item['label'] }}</span>
+                    <strong>{{ $emissionCost->formatMoney($item['cost']) }}</strong>
+                </div>
+            @endforeach
+            <div style="border-top:1px solid #bae6fd; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; gap:12px; color:#075985;">
+                <span style="font-size:13px; font-weight:700;">Total por passageiro</span>
+                <strong>{{ $emissionCost->formatMoney($bdsSummary['total_per_passenger']) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:12px; color:#075985;">
+                <span style="font-size:13px; font-weight:700;">Total do pedido</span>
+                <strong>{{ $emissionCost->formatMoney($bdsSummary['total_order']) }}</strong>
+            </div>
+            <div style="font-size:11px; color:#64748b; margin-top:6px;">
+                Valor baseado no retorno original da BDS para {{ $bdsSummary['paying_passengers'] }} passageiro(s) pagante(s).
+            </div>
         </div>
     @endif
 </div>

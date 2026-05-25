@@ -38,6 +38,7 @@ class OrderFlight extends Model
         'source_provider',
         'source_airlines',
         'provider_payload',
+        'provider_direct_cost',
     ];
 
     protected $casts = [
@@ -45,6 +46,7 @@ class OrderFlight extends Model
         'baggage' => 'array',
         'provider_payload' => 'array',
         'paid_boarding_tax' => 'decimal:2',
+        'provider_direct_cost' => 'decimal:2',
     ];
 
     public function order(): BelongsTo

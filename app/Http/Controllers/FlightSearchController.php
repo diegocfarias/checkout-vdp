@@ -601,6 +601,8 @@ class FlightSearchController extends Controller
         $providerPayload = isset($data['provider_payload']) && is_array($data['provider_payload'])
             ? $data['provider_payload']
             : $this->cachedProviderPayload($data['unique_id'] ?? null, $sourceProvider, $sourceAirlines);
+        $providerDirectCost = $this->cachedProviderDirectCost($data['unique_id'] ?? null, $sourceProvider, $sourceAirlines)
+            ?? $this->providerDirectCost($data, (string) $sourceProvider);
 
         return [
             'direction' => $direction,
@@ -630,19 +632,30 @@ class FlightSearchController extends Controller
             'source_provider' => $sourceProvider,
             'source_airlines' => $sourceAirlines,
             'provider_payload' => $providerPayload,
+            'provider_direct_cost' => $providerDirectCost,
         ];
     }
 
     private function rememberProviderPayload(array $flight, string $provider, string $airlines): void
     {
-        if (empty($flight['unique_id']) || empty($flight['provider_payload']) || ! is_array($flight['provider_payload'])) {
+        if (empty($flight['unique_id'])) {
             return;
         }
 
-        session()->put(
-            $this->providerPayloadSessionKey((string) $flight['unique_id'], $provider, $airlines),
-            $flight['provider_payload']
-        );
+        if (! empty($flight['provider_payload']) && is_array($flight['provider_payload'])) {
+            session()->put(
+                $this->providerPayloadSessionKey((string) $flight['unique_id'], $provider, $airlines),
+                $flight['provider_payload']
+            );
+        }
+
+        $directCost = $this->providerDirectCost($flight, $provider);
+        if ($directCost !== null) {
+            session()->put(
+                $this->providerDirectCostSessionKey((string) $flight['unique_id'], $provider, $airlines),
+                $directCost
+            );
+        }
     }
 
     private function cachedProviderPayload(?string $uniqueId, ?string $provider, ?string $airlines): ?array
@@ -659,6 +672,35 @@ class FlightSearchController extends Controller
     private function providerPayloadSessionKey(string $uniqueId, string $provider, string $airlines): string
     {
         return 'flight_provider_payloads.'.sha1($provider.'|'.$airlines.'|'.$uniqueId);
+    }
+
+    private function cachedProviderDirectCost(?string $uniqueId, ?string $provider, ?string $airlines): ?float
+    {
+        if (! $uniqueId || ! $provider || ! $airlines) {
+            return null;
+        }
+
+        $cost = session()->get($this->providerDirectCostSessionKey($uniqueId, $provider, $airlines));
+
+        return is_numeric($cost) && (float) $cost > 0 ? round((float) $cost, 2) : null;
+    }
+
+    private function providerDirectCostSessionKey(string $uniqueId, string $provider, string $airlines): string
+    {
+        return 'flight_provider_direct_costs.'.sha1($provider.'|'.$airlines.'|'.$uniqueId);
+    }
+
+    private function providerDirectCost(array $flight, string $provider): ?float
+    {
+        if ($provider !== 'bds_crawler') {
+            return null;
+        }
+
+        $base = (float) $this->vdpService->parseMoneyValue($flight['price_money'] ?? '0');
+        $tax = (float) $this->vdpService->parseMoneyValue($this->vdpService->resolveBoardingTax($flight));
+        $cost = $base + $tax;
+
+        return $cost > 0 ? round($cost, 2) : null;
     }
 
     private function resolveDisplayCia(string $operator, string $flightNumber): string

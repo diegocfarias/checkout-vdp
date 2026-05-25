@@ -17,6 +17,7 @@ class OrderEmission extends Model
         'emission_value',
         'miles_cost_per_thousand',
         'status',
+        'emission_provider',
     ];
 
     protected $casts = [
@@ -75,5 +76,25 @@ class OrderEmission extends Model
     {
         return $query->where('status', 'completed')
             ->whereBetween('completed_at', [$from, $to]);
+    }
+
+    public static function emissionProviderOptions(): array
+    {
+        return [
+            'bds' => 'BDS',
+            'miles_supplier' => 'Milheiro / fornecedor',
+            'airline' => 'Companhia aérea',
+            'travellink' => 'Travellink',
+            'other' => 'Outro',
+        ];
+    }
+
+    public static function emissionProviderLabel(?string $provider): string
+    {
+        if (! $provider) {
+            return 'Não informado';
+        }
+
+        return self::emissionProviderOptions()[$provider] ?? ucfirst(str_replace('_', ' ', $provider));
     }
 }

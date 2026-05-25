@@ -108,6 +108,7 @@ class EmissionOperationalRulesTest extends TestCase
         Livewire::actingAs($issuer)
             ->test(EmissionQueue::class)
             ->callTableAction('complete', $emission, [
+                'emission_provider' => 'miles_supplier',
                 'loc_'.$outbound->id => 'ida123',
                 'paid_boarding_tax_'.$outbound->id => '42.17',
                 'miles_cost_'.$outbound->id => '26.50',
@@ -160,6 +161,7 @@ class EmissionOperationalRulesTest extends TestCase
         Livewire::actingAs($issuer)
             ->test(EmissionQueue::class)
             ->callTableAction('complete', $emission, [
+                'emission_provider' => 'bds',
                 'loc_'.$outbound->id => ' ida123 ',
                 'paid_boarding_tax_'.$outbound->id => '51.23',
                 'miles_cost_'.$outbound->id => '25.50',
@@ -193,6 +195,7 @@ class EmissionOperationalRulesTest extends TestCase
             'duration_seconds' => 1800,
             'emission_value' => 19.90,
             'miles_cost_per_thousand' => 31.40,
+            'emission_provider' => 'bds',
         ]);
 
         $log = OrderEmissionLog::where('order_emission_id', $emission->id)
@@ -200,9 +203,40 @@ class EmissionOperationalRulesTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame($issuer->id, $log->user_id);
+        $this->assertStringContainsString('Origem: BDS', $log->notes);
         $this->assertStringContainsString('Ida: IDA123', $log->notes);
         $this->assertStringContainsString('Volta: VOL456', $log->notes);
         $this->assertStringContainsString('taxa R$ 51,23', $log->notes);
         $this->assertStringContainsString('taxa R$ 61,45', $log->notes);
+    }
+
+    public function test_emission_detail_shows_bds_direct_emission_cost(): void
+    {
+        $issuer = User::factory()->create(['role' => 'issuer', 'is_active' => true]);
+        $order = $this->createOrder([
+            'tracking_code' => 'VDP-BDS1',
+            'status' => 'awaiting_emission',
+            'total_adults' => 2,
+            'total_children' => 0,
+        ]);
+        $this->addFlight($order, [
+            'source_provider' => 'bds_crawler',
+            'source_airlines' => 'PATRIA',
+            'cia' => 'AZUL',
+            'flight_number' => 'AD1234',
+            'provider_direct_cost' => 430.00,
+        ]);
+        OrderEmission::create([
+            'order_id' => $order->id,
+            'issuer_id' => $issuer->id,
+            'status' => 'assigned',
+        ]);
+
+        $this->actingAs($issuer)
+            ->get(route('filament.admin.pages.emission-order', ['order' => $order->id]))
+            ->assertOk()
+            ->assertSee('Custo estimado para emissão direta na BDS')
+            ->assertSee('R$ 430,00')
+            ->assertSee('R$ 860,00');
     }
 }

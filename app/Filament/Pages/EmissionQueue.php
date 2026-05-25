@@ -7,9 +7,11 @@ use App\Models\OrderEmission;
 use App\Models\OrderEmissionLog;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\EmissionCostService;
 use App\Services\TravellinkEmissionProcessor;
 use App\Services\TravellinkService;
 use Filament\Actions;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -20,6 +22,7 @@ use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\HtmlString;
 
 class EmissionQueue extends Page implements HasTable
 {
@@ -182,7 +185,19 @@ class EmissionQueue extends Page implements HasTable
                     ->visible(fn (OrderEmission $record) => $record->status === 'assigned' && $record->issuer_id === auth()->id())
                     ->form(function (OrderEmission $record): array {
                         $record->order->loadMissing('flights');
-                        $fields = [];
+                        $fields = [
+                            Select::make('emission_provider')
+                                ->label('Origem da emissão')
+                                ->options(OrderEmission::emissionProviderOptions())
+                                ->default(fn () => $this->defaultEmissionProvider($record))
+                                ->required()
+                                ->native(false),
+
+                            Placeholder::make('bds_direct_cost')
+                                ->label('Custo direto na BDS')
+                                ->content(fn () => $this->bdsDirectCostHtml($record))
+                                ->visible(fn () => app(EmissionCostService::class)->bdsSummary($record->order)['has_bds']),
+                        ];
 
                         foreach ($record->order->flights as $flight) {
                             $dir = $flight->direction === 'outbound' ? 'Ida' : 'Volta';
@@ -352,6 +367,8 @@ class EmissionQueue extends Page implements HasTable
         $locs = [];
         $totalMilesCost = 0;
         $locNotes = [];
+        $emissionProvider = $data['emission_provider'] ?? $this->defaultEmissionProvider($emission);
+        $emissionProviderLabel = OrderEmission::emissionProviderLabel($emissionProvider);
 
         foreach ($order->flights as $flight) {
             $loc = strtoupper(trim($data['loc_'.$flight->id] ?? ''));
@@ -382,6 +399,7 @@ class EmissionQueue extends Page implements HasTable
             'duration_seconds' => $duration ?? $emission->assigned_at?->diffInSeconds($now),
             'emission_value' => $emissionValue,
             'miles_cost_per_thousand' => $totalMilesCost,
+            'emission_provider' => $emissionProvider,
         ]);
 
         $locDisplay = implode(' / ', array_unique($locs));
@@ -395,7 +413,7 @@ class EmissionQueue extends Page implements HasTable
             'order_emission_id' => $emission->id,
             'action' => 'completed',
             'user_id' => auth()->id(),
-            'notes' => implode(' | ', $locNotes),
+            'notes' => 'Origem: '.$emissionProviderLabel.' | '.implode(' | ', $locNotes),
         ]);
 
         Notification::make()
@@ -443,5 +461,52 @@ class EmissionQueue extends Page implements HasTable
                 ->danger()
                 ->send();
         }
+    }
+
+    private function defaultEmissionProvider(OrderEmission $emission): string
+    {
+        $emission->loadMissing('order.flights');
+        $providers = $emission->order->flights
+            ->pluck('source_provider')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($providers->count() === 1) {
+            return match ($providers->first()) {
+                'bds_crawler' => 'bds',
+                'travellink' => 'travellink',
+                default => 'miles_supplier',
+            };
+        }
+
+        return 'miles_supplier';
+    }
+
+    private function bdsDirectCostHtml(OrderEmission $emission): HtmlString
+    {
+        $summary = app(EmissionCostService::class)->bdsSummary($emission->order);
+        $costService = app(EmissionCostService::class);
+
+        if (! $summary['has_bds']) {
+            return new HtmlString('-');
+        }
+
+        $lines = collect($summary['flights'])
+            ->map(fn (array $flight): string => e($flight['direction'].' '.$flight['label'].': '.$costService->formatMoney($flight['cost'])))
+            ->implode('<br>');
+
+        $paxLabel = $summary['paying_passengers'] === 1 ? '1 passageiro pagante' : $summary['paying_passengers'].' passageiros pagantes';
+        $totalPerPassenger = $costService->formatMoney($summary['total_per_passenger']);
+        $totalOrder = $costService->formatMoney($summary['total_order']);
+
+        return new HtmlString(
+            '<div style="line-height:1.5">'
+            .$lines
+            .'<br><strong>Total por passageiro: '.$totalPerPassenger.'</strong>'
+            .'<br><strong>Total do pedido: '.$totalOrder.'</strong>'
+            .'<br><span style="color:#6b7280">Baseado no retorno original da BDS para '.$paxLabel.'.</span>'
+            .'</div>'
+        );
     }
 }

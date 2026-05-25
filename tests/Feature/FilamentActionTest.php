@@ -211,6 +211,7 @@ class FilamentActionTest extends TestCase
         Livewire::actingAs($issuer)
             ->test(EmissionQueue::class)
             ->callTableAction('complete', $toComplete, [
+                'emission_provider' => 'miles_supplier',
                 'loc_'.$flight->id => ' loc789 ',
                 'paid_boarding_tax_'.$flight->id => '39.83',
                 'miles_cost_'.$flight->id => '27.5',
@@ -231,6 +232,7 @@ class FilamentActionTest extends TestCase
             'status' => 'completed',
             'emission_value' => 22.50,
             'miles_cost_per_thousand' => 27.50,
+            'emission_provider' => 'miles_supplier',
             'duration_seconds' => 600,
         ]);
         $this->assertDatabaseHas('order_emission_logs', [
@@ -364,6 +366,7 @@ class FilamentActionTest extends TestCase
             'status' => 'completed',
             'emission_value' => 22.50,
             'miles_cost_per_thousand' => 0,
+            'emission_provider' => 'travellink',
         ]);
         $this->assertDatabaseHas('order_emission_logs', [
             'order_emission_id' => $emission->id,

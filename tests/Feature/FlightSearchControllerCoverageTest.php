@@ -231,11 +231,27 @@ class FlightSearchControllerCoverageTest extends TestCase
         $this->assertSame('bds_crawler', $flight['_source_provider']);
         $this->assertSame('PATRIA', $flight['_source_airlines']);
         $this->assertArrayNotHasKey('raw_payload', $flight);
+        $this->assertArrayNotHasKey('provider_direct_cost', $flight);
         $this->assertArrayNotHasKey('EXTRA', $flight['connection'][0]);
         $this->assertSame('LIGHT', $flight['baggage']['fare']);
         $this->assertTrue($flight['baggage']['carry_on']['included']);
         $this->assertFalse($flight['baggage']['checked']['included']);
         $this->assertGreaterThan(0, $flight['calculated_price']);
+
+        $search = $this->createFlightSearch();
+        $this->post(route('search.select'), [
+            'search_id' => $search->id,
+            'outbound' => json_encode($flight),
+            'confirmed' => '1',
+            'ob_source_provider' => 'bds_crawler',
+            'ob_source_airlines' => 'PATRIA',
+        ])->assertRedirect();
+
+        $order = Order::with('flights')->firstOrFail();
+        $outbound = $order->flights->firstWhere('direction', 'outbound');
+
+        $this->assertSame('bds_crawler', $outbound->source_provider);
+        $this->assertEqualsWithDelta(430.0, (float) $outbound->provider_direct_cost, 0.01);
     }
 
     public function test_provider_endpoint_hides_provider_payload_but_keeps_it_for_order_creation(): void

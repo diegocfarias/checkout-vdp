@@ -60,6 +60,7 @@ class TravellinkEmissionProcessor
             'duration_seconds' => $emission->calculateDuration() ?? $emission->assigned_at?->diffInSeconds($now),
             'emission_value' => (float) Setting::get('emission_value_per_order', 0),
             'miles_cost_per_thousand' => 0,
+            'emission_provider' => 'travellink',
         ]);
 
         $order->update([
