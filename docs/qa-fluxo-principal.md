@@ -407,7 +407,7 @@ Validar:
 
 Orientacao:
 
-- Configuracoes controlam provedores, calendario, precificacao, fallback de taxa, gateways, Pix, cartao, indicacoes e emissao.
+- Configuracoes controlam provedores, calendario, gateways, Pix, cartao, indicacoes e emissao. Precificacao fica em menu proprio.
 
 Validar:
 
@@ -417,7 +417,9 @@ Validar:
 - Mix de companhias liga/desliga combinacoes de cias diferentes.
 - Precos no calendario liga/desliga barras no calendario.
 - Valor do milheiro altera preco de voos com milhas.
+- Margem percentual de milhas altera preco de voos com milhas conforme a prioridade configurada.
 - Percentual altera preco de voos convencionais quando aplicavel.
+- Historico de precificacao permite restaurar uma configuracao anterior.
 - Fallback de taxa e usado quando integracao retorna taxa vazia/zero.
 - Gateway Pix/cartao liga/desliga opcoes no checkout.
 - Desconto Pix altera total somente sobre passagem.

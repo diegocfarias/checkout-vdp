@@ -101,6 +101,20 @@ Este documento registra as regras esperadas para os fluxos principais. Os testes
 - Resposta da API de precos do calendario nao deve expor fonte, fornecedor ou metadados tecnicos da integracao externa.
 - Quando precos no calendario estiverem desligados, o endpoint deve retornar niveis vazios sem chamar a integracao externa.
 
+## Precificacao de voos da busca
+
+- A precificacao operacional fica em menu proprio no painel: `Precificacao`.
+- Voos em milhas podem ser precificados por milheiro ou por margem percentual sobre o total retornado pela API.
+- A precificacao por milheiro usa: `(milhas / 1000) * valor do milheiro + taxa`.
+- A precificacao percentual para voos em milhas usa o total da API como base: `(price_money + taxa) * (1 + margem / 100)`.
+- Para manter taxa separada no checkout, quando a regra de milhas por percentual for usada, o `money_price` congelado no pedido deve ser `total precificado - taxa`.
+- A ordem de prioridade de voos em milhas deve ser configuravel. Metodos sem dados suficientes ou desativados devem ser pulados ate encontrar uma regra aplicavel.
+- Voos convencionais devem ter regra separada de percentual. Essa regra aplica margem sobre `price_money` e soma a taxa sem desconto.
+- A opcao de milheiro nao deve ser removida.
+- Toda alteracao de precificacao deve gerar historico com snapshot das configuracoes aplicadas.
+- Deve ser possivel restaurar uma configuracao antiga de precificacao; a restauracao tambem deve criar novo registro no historico.
+- Alteracoes ou restauracoes de precificacao devem invalidar cache de busca de voos via `pricing_version`.
+
 ## Painel e configuracoes
 
 - Apenas administradores podem acessar configuracoes, cupons, usuarios e recursos administrativos financeiros.

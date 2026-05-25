@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Pages\EmissionDashboard;
+use App\Filament\Pages\ManagePricing;
 use App\Filament\Pages\ManageSettings;
 use App\Filament\Pages\PaidOrdersDashboard;
 use App\Filament\Pages\ReferralDashboard;
@@ -14,10 +15,12 @@ use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Widgets\LatestPendingEmissions;
 use App\Filament\Widgets\StatsOverview;
 use App\Models\Customer;
+use App\Models\PricingChangeLog;
 use App\Models\Setting;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketAttachment;
 use App\Models\User;
+use App\Services\PricingSettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -60,6 +63,7 @@ class FilamentAdminTest extends TestCase
         $this->assertTrue(UserResource::canAccess());
         $this->assertTrue(OrderResource::canAccess());
         $this->assertTrue(ManageSettings::canAccess());
+        $this->assertTrue(ManagePricing::canAccess());
         $this->assertTrue(PaidOrdersDashboard::canAccess());
         $this->assertTrue(EmissionDashboard::canAccess());
         $this->assertTrue(ReferralDashboard::canAccess());
@@ -72,6 +76,7 @@ class FilamentAdminTest extends TestCase
         $this->assertFalse(UserResource::canAccess());
         $this->assertFalse(OrderResource::canAccess());
         $this->assertFalse(ManageSettings::canAccess());
+        $this->assertFalse(ManagePricing::canAccess());
         $this->assertFalse(StatsOverview::canView());
         $this->assertFalse(SupportTicketResource::canAccess());
 
@@ -79,6 +84,7 @@ class FilamentAdminTest extends TestCase
         $this->assertFalse(UserResource::canAccess());
         $this->assertFalse(OrderResource::canAccess());
         $this->assertFalse(ManageSettings::canAccess());
+        $this->assertFalse(ManagePricing::canAccess());
         $this->assertTrue(SupportTicketResource::canAccess());
     }
 
@@ -111,7 +117,7 @@ class FilamentAdminTest extends TestCase
         $this->assertArrayHasKey('support', UserResource::roleOptions());
     }
 
-    public function test_manage_settings_saves_gateways_pricing_providers_and_interest_rates(): void
+    public function test_manage_settings_saves_gateways_providers_and_interest_rates(): void
     {
         Carbon::setTestNow('2026-05-14 12:34:56');
         $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
@@ -120,15 +126,6 @@ class FilamentAdminTest extends TestCase
             ->test(ManageSettings::class)
             ->fillForm([
                 'mix_enabled' => false,
-                'pricing_miles_enabled' => true,
-                'pricing_pct_enabled' => true,
-                'pricing_miles_azul' => '31.50',
-                'pricing_miles_gol' => '29.90',
-                'pricing_miles_latam' => '32.10',
-                'pricing_pct_azul' => '75',
-                'pricing_pct_gol' => '76',
-                'pricing_pct_latam' => '77',
-                'boarding_tax_fallback_pct' => '8.5',
                 'gateway_pix' => 'c6bank',
                 'pix_discount' => '4.5',
                 'gateway_credit_card' => 'c6bank',
@@ -166,8 +163,6 @@ class FilamentAdminTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertFalse(Setting::get('mix_enabled'));
-        $this->assertEqualsWithDelta(31.5, (float) Setting::get('pricing_miles_azul'), 0.01);
-        $this->assertEqualsWithDelta(8.5, (float) Setting::get('boarding_tax_fallback_pct'), 0.01);
         $this->assertSame('c6bank', Setting::get('gateway_pix'));
         $this->assertSame('c6bank', Setting::get('gateway_credit_card'));
         $this->assertTrue(Setting::get('pix_enabled'));
@@ -180,6 +175,65 @@ class FilamentAdminTest extends TestCase
         $this->assertSame(['vdp', 'bds_crawler'], Setting::get('provider_gol'));
         $this->assertTrue(Setting::get('bds_patria_enabled'));
         $this->assertSame((string) now()->timestamp, Setting::get('pricing_version'));
+    }
+
+    public function test_manage_pricing_saves_history_and_restores_snapshot(): void
+    {
+        Carbon::setTestNow('2026-05-24 09:10:11');
+        $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+
+        Livewire::actingAs($admin)
+            ->test(ManagePricing::class)
+            ->fillForm([
+                'pricing_miles_enabled' => true,
+                'pricing_miles_azul' => '31.50',
+                'pricing_miles_gol' => '29.90',
+                'pricing_miles_latam' => '32.10',
+                'pricing_miles_pct_enabled' => true,
+                'pricing_miles_pct_azul' => '12',
+                'pricing_miles_pct_gol' => '13',
+                'pricing_miles_pct_latam' => '14',
+                'pricing_miles_priority_order' => [
+                    PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE,
+                    PricingSettingsService::MILES_METHOD_MILHEIRO,
+                    PricingSettingsService::MILES_METHOD_API_ORIGINAL,
+                ],
+                'pricing_pct_enabled' => true,
+                'pricing_pct_azul' => '75',
+                'pricing_pct_gol' => '76',
+                'pricing_pct_latam' => '77',
+                'boarding_tax_fallback_pct' => '8.5',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $firstLog = PricingChangeLog::firstOrFail();
+
+        $this->assertEqualsWithDelta(31.5, (float) Setting::get('pricing_miles_azul'), 0.01);
+        $this->assertTrue(Setting::get('pricing_miles_pct_enabled'));
+        $this->assertSame([
+            PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE,
+            PricingSettingsService::MILES_METHOD_MILHEIRO,
+            PricingSettingsService::MILES_METHOD_API_ORIGINAL,
+        ], Setting::get('pricing_miles_priority_order'));
+        $this->assertEqualsWithDelta(8.5, (float) Setting::get('boarding_tax_fallback_pct'), 0.01);
+        $this->assertSame((string) now()->timestamp, Setting::get('pricing_version'));
+        $this->assertSame($admin->id, $firstLog->user_id);
+
+        Carbon::setTestNow('2026-05-24 09:20:00');
+        app(PricingSettingsService::class)->save([
+            'pricing_miles_enabled' => false,
+            'pricing_miles_pct_enabled' => false,
+            'pricing_pct_enabled' => false,
+        ]);
+
+        $this->assertFalse(Setting::get('pricing_miles_enabled'));
+
+        app(PricingSettingsService::class)->restore($firstLog);
+
+        $this->assertTrue(Setting::get('pricing_miles_enabled'));
+        $this->assertTrue(Setting::get('pricing_miles_pct_enabled'));
+        $this->assertSame($firstLog->id, PricingChangeLog::latest('id')->first()->restored_from_id);
     }
 
     public function test_manage_settings_invalidates_search_cache_when_provider_configuration_changes(): void
@@ -296,15 +350,6 @@ class FilamentAdminTest extends TestCase
     {
         return array_merge([
             'mix_enabled' => true,
-            'pricing_miles_enabled' => true,
-            'pricing_pct_enabled' => false,
-            'pricing_miles_azul' => '30.00',
-            'pricing_miles_gol' => '30.00',
-            'pricing_miles_latam' => '30.00',
-            'pricing_pct_azul' => '80',
-            'pricing_pct_gol' => '80',
-            'pricing_pct_latam' => '80',
-            'boarding_tax_fallback_pct' => '10',
             'gateway_pix' => '',
             'pix_discount' => '0',
             'gateway_credit_card' => 'appmax',

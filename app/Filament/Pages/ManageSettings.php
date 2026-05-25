@@ -81,15 +81,6 @@ class ManageSettings extends Page
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
-            'pricing_miles_enabled' => Setting::get('pricing_miles_enabled', true),
-            'pricing_pct_enabled' => Setting::get('pricing_pct_enabled', false),
-            'pricing_miles_azul' => Setting::get('pricing_miles_azul', '30.00'),
-            'pricing_miles_gol' => Setting::get('pricing_miles_gol', '30.00'),
-            'pricing_miles_latam' => Setting::get('pricing_miles_latam', '30.00'),
-            'pricing_pct_azul' => Setting::get('pricing_pct_azul', '80'),
-            'pricing_pct_gol' => Setting::get('pricing_pct_gol', '80'),
-            'pricing_pct_latam' => Setting::get('pricing_pct_latam', '80'),
-            'boarding_tax_fallback_pct' => Setting::get('boarding_tax_fallback_pct', '10'),
             'gateway_pix' => $gatewayPix,
             'pix_discount' => Setting::get('pix_discount', '0'),
             'gateway_credit_card' => $gatewayCc,
@@ -184,81 +175,6 @@ class ManageSettings extends Page
                             ->label('BDS Patria (voos convencionais)')
                             ->helperText('Voos convencionais da BDS entram automaticamente quando alguma cia usa BDS. Este toggle mantém o convencional ativo mesmo sem cias BDS selecionadas.')
                             ->default(false),
-                    ]),
-
-                Section::make('Precificação')
-                    ->icon('heroicon-o-currency-dollar')
-                    ->description('Quando ambos estão ligados, milhas tem prioridade. Se o voo não retornar milhas, usa o percentual. Se ambos estiverem desligados, usa o preço original da API.')
-                    ->schema([
-                        Toggle::make('pricing_miles_enabled')
-                            ->label('Precificação por milhas')
-                            ->helperText('Calcula o preço como: (milhas / 1000) × valor do milheiro + taxas.')
-                            ->default(true)
-                            ->live(),
-
-                        TextInput::make('pricing_miles_azul')
-                            ->label('Valor do milheiro — Azul (R$)')
-                            ->numeric()
-                            ->minValue(0.01)
-                            ->step(0.01)
-                            ->placeholder('30.00')
-                            ->visible(fn ($get) => $get('pricing_miles_enabled')),
-
-                        TextInput::make('pricing_miles_gol')
-                            ->label('Valor do milheiro — Gol (R$)')
-                            ->numeric()
-                            ->minValue(0.01)
-                            ->step(0.01)
-                            ->placeholder('30.00')
-                            ->visible(fn ($get) => $get('pricing_miles_enabled')),
-
-                        TextInput::make('pricing_miles_latam')
-                            ->label('Valor do milheiro — Latam (R$)')
-                            ->numeric()
-                            ->minValue(0.01)
-                            ->step(0.01)
-                            ->placeholder('30.00')
-                            ->visible(fn ($get) => $get('pricing_miles_enabled')),
-
-                        Toggle::make('pricing_pct_enabled')
-                            ->label('Precificação por percentual')
-                            ->helperText('Acréscimo sobre o preço da API. Ex: 10 = preço 10% acima da API. Fórmula: preço × (1 + %/100) + taxas.')
-                            ->default(false)
-                            ->live(),
-
-                        TextInput::make('pricing_pct_azul')
-                            ->label('Percentual — Azul (%)')
-                            ->numeric()
-                            ->minValue(1)
-                            ->step(0.01)
-                            ->placeholder('80')
-                            ->visible(fn ($get) => $get('pricing_pct_enabled')),
-
-                        TextInput::make('pricing_pct_gol')
-                            ->label('Percentual — Gol (%)')
-                            ->numeric()
-                            ->minValue(1)
-                            ->step(0.01)
-                            ->placeholder('80')
-                            ->visible(fn ($get) => $get('pricing_pct_enabled')),
-
-                        TextInput::make('pricing_pct_latam')
-                            ->label('Percentual — Latam (%)')
-                            ->numeric()
-                            ->minValue(1)
-                            ->step(0.01)
-                            ->placeholder('80')
-                            ->visible(fn ($get) => $get('pricing_pct_enabled')),
-
-                        TextInput::make('boarding_tax_fallback_pct')
-                            ->label('Taxa interna fallback (%)')
-                            ->helperText('Usada quando a integração retorna taxa vazia ou zerada. Calcula sobre o valor base da passagem.')
-                            ->numeric()
-                            ->minValue(0)
-                            ->maxValue(100)
-                            ->step(0.01)
-                            ->suffix('%')
-                            ->placeholder('10'),
                     ]),
 
                 Section::make('PIX')
@@ -508,10 +424,7 @@ class ManageSettings extends Page
             'provider_azul',
             'provider_latam',
             'bds_patria_enabled',
-            'pricing_miles_enabled', 'pricing_pct_enabled',
-            'pricing_miles_azul', 'pricing_miles_gol', 'pricing_miles_latam',
-            'pricing_pct_azul', 'pricing_pct_gol', 'pricing_pct_latam',
-            'boarding_tax_fallback_pct', 'pix_discount',
+            'pix_discount',
         ];
 
         $oldSearchConfig = [];
@@ -519,15 +432,6 @@ class ManageSettings extends Page
             $oldSearchConfig[$field] = Setting::get($field);
         }
 
-        Setting::set('pricing_miles_enabled', (bool) $data['pricing_miles_enabled'], 'boolean');
-        Setting::set('pricing_pct_enabled', (bool) $data['pricing_pct_enabled'], 'boolean');
-        Setting::set('pricing_miles_azul', $data['pricing_miles_azul'] ?? '30.00', 'string');
-        Setting::set('pricing_miles_gol', $data['pricing_miles_gol'] ?? '30.00', 'string');
-        Setting::set('pricing_miles_latam', $data['pricing_miles_latam'] ?? '30.00', 'string');
-        Setting::set('pricing_pct_azul', $data['pricing_pct_azul'] ?? '80', 'string');
-        Setting::set('pricing_pct_gol', $data['pricing_pct_gol'] ?? '80', 'string');
-        Setting::set('pricing_pct_latam', $data['pricing_pct_latam'] ?? '80', 'string');
-        Setting::set('boarding_tax_fallback_pct', $data['boarding_tax_fallback_pct'] ?? '10', 'string');
         Setting::set('gateway_pix', $data['gateway_pix'] ?? '', 'string');
         Setting::set('pix_discount', $data['pix_discount'] ?? '0', 'string');
         Setting::set('gateway_credit_card', $data['gateway_credit_card'] ?? '', 'string');

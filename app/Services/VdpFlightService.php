@@ -700,13 +700,18 @@ class VdpFlightService
     {
         return [
             'miles_enabled' => (bool) Setting::get('pricing_miles_enabled', false),
+            'miles_pct_enabled' => (bool) Setting::get('pricing_miles_pct_enabled', false),
             'pct_enabled' => (bool) Setting::get('pricing_pct_enabled', false),
             'miles_gol' => (float) Setting::get('pricing_miles_gol', 30),
             'miles_azul' => (float) Setting::get('pricing_miles_azul', 30),
             'miles_latam' => (float) Setting::get('pricing_miles_latam', 30),
+            'miles_pct_gol' => (float) Setting::get('pricing_miles_pct_gol', 0),
+            'miles_pct_azul' => (float) Setting::get('pricing_miles_pct_azul', 0),
+            'miles_pct_latam' => (float) Setting::get('pricing_miles_pct_latam', 0),
             'pct_gol' => (float) Setting::get('pricing_pct_gol', 100),
             'pct_azul' => (float) Setting::get('pricing_pct_azul', 100),
             'pct_latam' => (float) Setting::get('pricing_pct_latam', 100),
+            'miles_priority_order' => app(PricingSettingsService::class)->milesPriority(),
         ];
     }
 
@@ -994,7 +999,22 @@ class VdpFlightService
 
     public function resolveBoardingTax(array $flight, mixed $fallback = null): string
     {
-        $candidate = $this->firstMoneyCandidate($flight, [
+        $candidate = $this->explicitBoardingTaxCandidate($flight);
+
+        if ($candidate !== null) {
+            return $this->parseMoneyValue($candidate);
+        }
+
+        if ($fallback !== null && $this->parseMoneyFloat($fallback) > 0) {
+            return $this->parseMoneyValue($fallback);
+        }
+
+        return $this->calculateFallbackBoardingTax($flight);
+    }
+
+    private function explicitBoardingTaxCandidate(array $flight): mixed
+    {
+        return $this->firstMoneyCandidate($flight, [
             ['boarding_tax'],
             ['boardingTax'],
             ['boarding_tax_amount'],
@@ -1014,16 +1034,6 @@ class VdpFlightService
             ['taxes', 'total'],
             ['taxes', 'totalAmount'],
         ]);
-
-        if ($candidate !== null) {
-            return $this->parseMoneyValue($candidate);
-        }
-
-        if ($fallback !== null && $this->parseMoneyFloat($fallback) > 0) {
-            return $this->parseMoneyValue($fallback);
-        }
-
-        return $this->calculateFallbackBoardingTax($flight);
     }
 
     private function calculateFallbackBoardingTax(array $flight): string
@@ -1043,29 +1053,22 @@ class VdpFlightService
 
     /**
      * Calcula o preço total de um voo (base + taxa) usando a precificação configurada.
-     * Prioridade: milhas > percentual > preço original da API.
+     * Voos em milhas respeitam a ordem configurada no painel de precificação.
      */
     public function calculateFlightPrice(array $flight): float
     {
         $cia = $this->resolvePricingCia($flight);
         $tax = $this->parseMoneyFloat($this->resolveBoardingTax($flight));
 
-        $pctEnabled = Setting::get('pricing_pct_enabled', false);
-
         $miles = $this->shouldIgnoreMilesPricing($flight) ? 0.0 : $this->parseMilesValue($flight['price_miles'] ?? null);
         if ($miles > 0) {
-            $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
-            $price = ($miles / 1000) * $valorMilheiro + $tax;
-
-            Log::debug('Pricing: milhas', [
-                'cia' => $cia, 'miles' => $miles,
-                'valor_milheiro' => $valorMilheiro, 'tax' => $tax, 'price' => $price,
-            ]);
-
-            return $price;
+            $milesPrice = $this->calculateMilesFlightPrice($flight, $cia, $miles, $tax);
+            if ($milesPrice !== null) {
+                return $milesPrice;
+            }
         }
 
-        if ($pctEnabled) {
+        if (Setting::get('pricing_pct_enabled', false)) {
             $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
             $pct = (float) Setting::get("pricing_pct_{$cia}", 100);
             $price = $money * (1 + $pct / 100) + $tax;
@@ -1091,16 +1094,15 @@ class VdpFlightService
     {
         $cia = $this->resolvePricingCia($flight);
 
-        $pctEnabled = Setting::get('pricing_pct_enabled', false);
-
         $miles = $this->shouldIgnoreMilesPricing($flight) ? 0.0 : $this->parseMilesValue($flight['price_miles'] ?? null);
         if ($miles > 0) {
-            $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
-
-            return number_format(($miles / 1000) * $valorMilheiro, 2, '.', '');
+            $milesBasePrice = $this->calculateMilesBasePrice($flight, $cia, $miles);
+            if ($milesBasePrice !== null) {
+                return number_format($milesBasePrice, 2, '.', '');
+            }
         }
 
-        if ($pctEnabled) {
+        if (Setting::get('pricing_pct_enabled', false)) {
             $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
             $pct = (float) Setting::get("pricing_pct_{$cia}", 100);
 
@@ -1108,6 +1110,92 @@ class VdpFlightService
         }
 
         return $this->parseMoneyValue($flight['price_money'] ?? '0');
+    }
+
+    private function calculateMilesFlightPrice(array $flight, string $cia, float $miles, float $tax): ?float
+    {
+        foreach (app(PricingSettingsService::class)->milesPriority() as $method) {
+            if ($method === PricingSettingsService::MILES_METHOD_MILHEIRO
+                && Setting::get('pricing_miles_enabled', true)) {
+                $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
+                $price = ($miles / 1000) * $valorMilheiro + $tax;
+
+                Log::debug('Pricing: milhas por milheiro', [
+                    'cia' => $cia, 'miles' => $miles,
+                    'valor_milheiro' => $valorMilheiro, 'tax' => $tax, 'price' => $price,
+                ]);
+
+                return $price;
+            }
+
+            if ($method === PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE
+                && Setting::get('pricing_miles_pct_enabled', false)) {
+                $apiTotal = $this->apiTotalForMargin($flight, $tax);
+                if ($apiTotal <= 0) {
+                    continue;
+                }
+
+                $pct = (float) Setting::get("pricing_miles_pct_{$cia}", 0);
+                $price = $apiTotal * (1 + $pct / 100);
+
+                Log::debug('Pricing: milhas por percentual no total da API', [
+                    'cia' => $cia, 'api_total' => $apiTotal,
+                    'pct' => $pct, 'tax' => $tax, 'price' => $price,
+                ]);
+
+                return $price;
+            }
+
+            if ($method === PricingSettingsService::MILES_METHOD_API_ORIGINAL) {
+                $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
+                if ($money > 0) {
+                    return $money + $tax;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function calculateMilesBasePrice(array $flight, string $cia, float $miles): ?float
+    {
+        foreach (app(PricingSettingsService::class)->milesPriority() as $method) {
+            if ($method === PricingSettingsService::MILES_METHOD_MILHEIRO
+                && Setting::get('pricing_miles_enabled', true)) {
+                $valorMilheiro = (float) Setting::get("pricing_miles_{$cia}", 30);
+
+                return ($miles / 1000) * $valorMilheiro;
+            }
+
+            if ($method === PricingSettingsService::MILES_METHOD_TOTAL_PERCENTAGE
+                && Setting::get('pricing_miles_pct_enabled', false)) {
+                $explicitTax = $this->parseMoneyFloat($this->explicitBoardingTaxCandidate($flight) ?? '0');
+                $apiTotal = $this->apiTotalForMargin($flight, $explicitTax);
+                if ($apiTotal <= 0) {
+                    continue;
+                }
+
+                $pct = (float) Setting::get("pricing_miles_pct_{$cia}", 0);
+
+                return max(($apiTotal * (1 + $pct / 100)) - $explicitTax, 0);
+            }
+
+            if ($method === PricingSettingsService::MILES_METHOD_API_ORIGINAL) {
+                $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
+                if ($money > 0) {
+                    return $money;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function apiTotalForMargin(array $flight, float $tax): float
+    {
+        $money = $this->parseMoneyFloat($flight['price_money'] ?? '0');
+
+        return $money > 0 ? $money + $tax : 0.0;
     }
 
     /**
