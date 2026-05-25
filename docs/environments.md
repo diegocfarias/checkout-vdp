@@ -24,6 +24,14 @@ Checklist de infra:
    - user: `checkout_vdp_dev`
 4. Copiar `.env.development.example` para `.env` no servidor dev.
 5. Preencher `APP_KEY`, banco, crawlers, gateways e demais chaves com valores de dev/sandbox.
+   Para Travellink, use credenciais de sandbox no ambiente dev:
+   - `TRAVELLINK_BASE_URL`
+   - `TRAVELLINK_LOGIN`
+   - `TRAVELLINK_PASSWORD`
+   - `TRAVELLINK_DEVELOPER_TOKEN`
+   - `TRAVELLINK_DEVELOPER_ACCESS_CODE`
+   - `TRAVELLINK_TIMEOUT`
+   O payload de pagamento da emissao (`travellink_payment_payload`) fica no painel de configuracoes porque pode variar por ambiente/forma de pagamento. Mantenha `travellink_dry_run` ligado ate validar emissao ponta a ponta em sandbox.
 6. Rodar:
 
 ```bash

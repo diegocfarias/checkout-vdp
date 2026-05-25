@@ -97,6 +97,15 @@ return [
         'api_key' => env('BDS_CRAWLER_API_KEY'),
     ],
 
+    'travellink' => [
+        'base_url' => env('TRAVELLINK_BASE_URL', 'https://wooba-sandbox-api.travellink.com.br/wcfTravellinkJson/AereoNoSession.svc'),
+        'login' => env('TRAVELLINK_LOGIN'),
+        'password' => env('TRAVELLINK_PASSWORD'),
+        'developer_token' => env('TRAVELLINK_DEVELOPER_TOKEN'),
+        'developer_access_code' => env('TRAVELLINK_DEVELOPER_ACCESS_CODE'),
+        'timeout' => env('TRAVELLINK_TIMEOUT', 45),
+    ],
+
     'calendar_prices_123' => [
         'url' => env('CALENDAR_123_PRICES_URL', 'https://123milhas.com/api/flight/prices'),
         'timeout' => env('CALENDAR_123_PRICES_TIMEOUT', 8),

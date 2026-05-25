@@ -15,6 +15,8 @@ class VdpFlightService
 
     private ?BdsCrawlerService $bdsCrawlerService = null;
 
+    private ?TravellinkService $travellinkService = null;
+
     private function getCrawlerService(): LatamCrawlerService
     {
         if (! $this->crawlerService) {
@@ -31,6 +33,15 @@ class VdpFlightService
         }
 
         return $this->bdsCrawlerService;
+    }
+
+    private function getTravellinkService(): TravellinkService
+    {
+        if (! $this->travellinkService) {
+            $this->travellinkService = app(TravellinkService::class);
+        }
+
+        return $this->travellinkService;
     }
 
     private function getProvidersForCia(string $cia): array
@@ -166,15 +177,17 @@ class VdpFlightService
             $providers = $this->getProvidersForCia($normalized);
 
             if (empty($providers)) {
-                return ['outbound' => [], 'inbound' => []];
+                return $this->withTravellinkResults($params, ['outbound' => [], 'inbound' => []]);
             }
 
             if (count($providers) === 1) {
                 if ($providers[0] === 'bds_crawler') {
-                    return $this->fetchParallel($params, [], [], $this->bdsAirlinesForSearch([$normalized]));
+                    $results = $this->fetchParallel($params, [], [], $this->bdsAirlinesForSearch([$normalized]));
+
+                    return $this->withTravellinkResults($params, $results);
                 }
 
-                return $this->callForProvider($providers[0], $params);
+                return $this->withTravellinkResults($params, $this->callForProvider($providers[0], $params));
             }
 
             $vdpCias = [];
@@ -194,7 +207,9 @@ class VdpFlightService
                 $bdsCias = $this->bdsAirlinesForSearch($bdsCias);
             }
 
-            return $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
+            $results = $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
+
+            return $this->withTravellinkResults($params, $results);
         }
 
         $vdpCias = [];
@@ -227,40 +242,58 @@ class VdpFlightService
         $providerCount = ($needVdp ? 1 : 0) + ($needCrawler ? 1 : 0) + ($needBds ? 1 : 0);
 
         if ($providerCount > 1 || count($bdsCias) > 1) {
-            return $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
+            $results = $this->fetchParallel($params, $vdpCias, $crawlerCias, $bdsCias);
+
+            return $this->withTravellinkResults($params, $results);
         }
 
         if ($needVdp) {
             try {
-                return $this->callApi($params);
+                return $this->withTravellinkResults($params, $this->callApi($params));
             } catch (\Throwable $e) {
                 Log::warning('VDP API: falha na busca', ['error' => $e->getMessage()]);
 
-                return ['outbound' => [], 'inbound' => []];
+                return $this->withTravellinkResults($params, ['outbound' => [], 'inbound' => []]);
             }
         }
 
         if ($needCrawler) {
             try {
-                return $this->getCrawlerService()->searchFlights($params);
+                return $this->withTravellinkResults($params, $this->getCrawlerService()->searchFlights($params));
             } catch (\Throwable $e) {
                 Log::warning('LatamCrawler: falha na busca', ['error' => $e->getMessage()]);
 
-                return ['outbound' => [], 'inbound' => []];
+                return $this->withTravellinkResults($params, ['outbound' => [], 'inbound' => []]);
             }
         }
 
         if ($needBds) {
             try {
-                return $this->getBdsCrawlerService()->searchFlights($params, array_map('strtoupper', $bdsCias));
+                $results = $this->getBdsCrawlerService()->searchFlights($params, array_map('strtoupper', $bdsCias));
+
+                return $this->withTravellinkResults($params, $results);
             } catch (\Throwable $e) {
                 Log::warning('BdsCrawler: falha na busca', ['error' => $e->getMessage()]);
 
-                return ['outbound' => [], 'inbound' => []];
+                return $this->withTravellinkResults($params, ['outbound' => [], 'inbound' => []]);
             }
         }
 
-        return ['outbound' => [], 'inbound' => []];
+        return $this->withTravellinkResults($params, ['outbound' => [], 'inbound' => []]);
+    }
+
+    private function withTravellinkResults(array $params, array $results): array
+    {
+        if (! $this->getTravellinkService()->searchEnabled()) {
+            return $results;
+        }
+
+        $travellink = $this->getTravellinkService()->searchFlights($params);
+
+        return [
+            'outbound' => array_merge($results['outbound'] ?? [], $travellink['outbound'] ?? []),
+            'inbound' => array_merge($results['inbound'] ?? [], $travellink['inbound'] ?? []),
+        ];
     }
 
     /**
@@ -487,6 +520,10 @@ class VdpFlightService
             return $this->getBdsCrawlerService()->searchFlights($params, $cia ? [$cia] : null);
         }
 
+        if ($provider === 'travellink') {
+            return $this->getTravellinkService()->searchFlights($params);
+        }
+
         return $this->callApi($params);
     }
 
@@ -538,6 +575,10 @@ class VdpFlightService
 
         if ($this->shouldIncludeBdsPatria($bdsCias)) {
             $slots[] = ['provider' => 'bds_crawler', 'airlines' => 'PATRIA', 'patria' => true];
+        }
+
+        if ($this->getTravellinkService()->searchEnabled()) {
+            $slots[] = ['provider' => 'travellink', 'airlines' => 'ALL', 'patria' => false];
         }
 
         return $slots;
@@ -683,6 +724,14 @@ class VdpFlightService
                     'outbound' => $data['outbound'] ?? [],
                     'inbound' => $data['inbound'] ?? [],
                 ];
+            }
+
+            if ($provider === 'travellink') {
+                $airlineList = strtoupper($airlines) === 'ALL'
+                    ? null
+                    : array_map('trim', explode(',', strtoupper($airlines)));
+
+                return $this->getTravellinkService()->searchFlights($params, $airlineList);
             }
 
             return ['outbound' => [], 'inbound' => []];
@@ -1413,6 +1462,9 @@ class VdpFlightService
             'connection' => $flight['connection'] ?? null,
             'baggage' => isset($flight['baggage']) && is_array($flight['baggage'])
                 ? $this->sanitizeBaggage($flight['baggage'])
+                : null,
+            'provider_payload' => isset($flight['provider_payload']) && is_array($flight['provider_payload'])
+                ? $flight['provider_payload']
                 : null,
         ];
     }

@@ -164,7 +164,7 @@ class FlightSearchController extends Controller
 
         [$provider, $airlines] = explode('|', $decoded, 2);
 
-        if (! in_array($provider, ['vdp', 'latam_crawler', 'bds_crawler'], true)) {
+        if (! in_array($provider, ['vdp', 'latam_crawler', 'bds_crawler', 'travellink'], true)) {
             return response()->json(['outbound' => [], 'inbound' => []], 400);
         }
 
@@ -201,6 +201,8 @@ class FlightSearchController extends Controller
         $providerLabel = $this->providerLabel($provider, $airlines);
 
         $addMeta = function (array $flight) use ($provider, $airlines, $providerLabel, $isPatria): array {
+            $this->rememberProviderPayload($flight, $provider, $airlines);
+
             $flight = $this->sanitizeFlight($flight);
             $flight['calculated_price'] = round($this->vdpService->calculateFlightPrice($flight), 2);
             $flight['_provider'] = $providerLabel;
@@ -353,7 +355,7 @@ class FlightSearchController extends Controller
         return 'noite';
     }
 
-    private function sanitizeFlight(array $flight): array
+    private function sanitizeFlight(array $flight, bool $includeProviderPayload = false): array
     {
         $flight = $this->vdpService->normalizeFlightFields($flight);
 
@@ -364,6 +366,10 @@ class FlightSearchController extends Controller
             'total_flight_duration', 'unique_id', 'connection', 'baggage',
             'airline_boarding_tax', 'miles_service_tax',
         ];
+
+        if ($includeProviderPayload) {
+            $allowed[] = 'provider_payload';
+        }
 
         $clean = [];
         foreach ($allowed as $key) {
@@ -489,9 +495,22 @@ class FlightSearchController extends Controller
                 );
             }
 
-            $outboundData = $this->sanitizeFlight($fresh['outbound']);
+            $this->rememberProviderPayload(
+                $fresh['outbound'],
+                (string) ($meta['ob_source_provider'] ?? ''),
+                (string) ($meta['ob_source_airlines'] ?? '')
+            );
             if ($fresh['inbound']) {
-                $inboundData = $this->sanitizeFlight($fresh['inbound']);
+                $this->rememberProviderPayload(
+                    $fresh['inbound'],
+                    (string) ($meta['ib_source_provider'] ?? ''),
+                    (string) ($meta['ib_source_airlines'] ?? '')
+                );
+            }
+
+            $outboundData = $this->sanitizeFlight($fresh['outbound'], includeProviderPayload: true);
+            if ($fresh['inbound']) {
+                $inboundData = $this->sanitizeFlight($fresh['inbound'], includeProviderPayload: true);
             }
 
             $newObPrice = $this->parseFlightPrice($outboundData);
@@ -501,8 +520,8 @@ class FlightSearchController extends Controller
             if (abs($newTotal - $oldTotal) >= 0.01) {
                 return view('search.price-changed', [
                     'searchId' => $flightSearch->id,
-                    'outbound' => $outboundData,
-                    'inbound' => $inboundData,
+                    'outbound' => $this->sanitizeFlight($fresh['outbound']),
+                    'inbound' => $fresh['inbound'] ? $this->sanitizeFlight($fresh['inbound']) : null,
                     'oldTotal' => $oldTotal,
                     'newTotal' => $newTotal,
                     'diff' => round($newTotal - $oldTotal, 2),
@@ -577,6 +596,11 @@ class FlightSearchController extends Controller
         $data = $this->vdpService->normalizeFlightFields($data);
         $prefix = $direction === 'outbound' ? 'ob_' : 'ib_';
         $operator = $this->resolveDisplayCia($data['operator'] ?? '', $data['flight_number'] ?? '');
+        $sourceProvider = $meta[$prefix.'source_provider'] ?? null ?: null;
+        $sourceAirlines = $meta[$prefix.'source_airlines'] ?? null ?: null;
+        $providerPayload = isset($data['provider_payload']) && is_array($data['provider_payload'])
+            ? $data['provider_payload']
+            : $this->cachedProviderPayload($data['unique_id'] ?? null, $sourceProvider, $sourceAirlines);
 
         return [
             'direction' => $direction,
@@ -603,9 +627,38 @@ class FlightSearchController extends Controller
             'tax' => $this->vdpService->parseMoneyValue($data['boarding_tax']),
             'provider' => $meta[$prefix.'provider'] ?? null ?: null,
             'pricing_type' => $meta[$prefix.'pricing_type'] ?? null ?: null,
-            'source_provider' => $meta[$prefix.'source_provider'] ?? null ?: null,
-            'source_airlines' => $meta[$prefix.'source_airlines'] ?? null ?: null,
+            'source_provider' => $sourceProvider,
+            'source_airlines' => $sourceAirlines,
+            'provider_payload' => $providerPayload,
         ];
+    }
+
+    private function rememberProviderPayload(array $flight, string $provider, string $airlines): void
+    {
+        if (empty($flight['unique_id']) || empty($flight['provider_payload']) || ! is_array($flight['provider_payload'])) {
+            return;
+        }
+
+        session()->put(
+            $this->providerPayloadSessionKey((string) $flight['unique_id'], $provider, $airlines),
+            $flight['provider_payload']
+        );
+    }
+
+    private function cachedProviderPayload(?string $uniqueId, ?string $provider, ?string $airlines): ?array
+    {
+        if (! $uniqueId || ! $provider || ! $airlines) {
+            return null;
+        }
+
+        $payload = session()->get($this->providerPayloadSessionKey($uniqueId, $provider, $airlines));
+
+        return is_array($payload) ? $payload : null;
+    }
+
+    private function providerPayloadSessionKey(string $uniqueId, string $provider, string $airlines): string
+    {
+        return 'flight_provider_payloads.'.sha1($provider.'|'.$airlines.'|'.$uniqueId);
     }
 
     private function resolveDisplayCia(string $operator, string $flightNumber): string
@@ -642,6 +695,7 @@ class FlightSearchController extends Controller
                 'INTERLINE' => 'BDS Interline',
                 default => 'BDS Crawler',
             },
+            'travellink' => 'Travellink',
             default => $provider,
         };
     }

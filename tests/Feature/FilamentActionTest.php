@@ -22,6 +22,7 @@ use App\Services\PaymentGatewayResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -237,6 +238,139 @@ class FilamentActionTest extends TestCase
             'action' => 'completed',
             'user_id' => $issuer->id,
         ]);
+    }
+
+    public function test_emission_queue_travellink_action_respects_dry_run(): void
+    {
+        Setting::set('travellink_emission_enabled', true, 'boolean');
+        Setting::set('travellink_dry_run', true, 'boolean');
+
+        $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+        $order = $this->createOrder(['status' => 'awaiting_emission']);
+        $this->addPassenger($order);
+        $this->addFlight($order, [
+            'direction' => 'outbound',
+            'source_provider' => 'travellink',
+            'source_airlines' => 'ALL',
+            'provider_payload' => [
+                'viagem_id' => 111,
+                'identificacao_da_viagem' => 'OUTBOUND-TOKEN',
+                'classes_selecionadas' => [[
+                    'BaseTarifaria' => 'ABC',
+                    'Classe' => 'Y',
+                    'Familia' => 'LIG',
+                    'NumeroDoVoo' => '4111',
+                ]],
+            ],
+        ]);
+
+        $emission = OrderEmission::create([
+            'order_id' => $order->id,
+            'status' => 'pending',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(EmissionQueue::class)
+            ->callTableAction('issue_travellink', $emission);
+
+        $this->assertDatabaseHas('order_emission_logs', [
+            'order_emission_id' => $emission->id,
+            'action' => 'travellink_dry_run',
+            'user_id' => $admin->id,
+        ]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => 'awaiting_emission',
+            'loc' => null,
+        ]);
+        $this->assertDatabaseHas('order_emissions', [
+            'id' => $emission->id,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_emission_queue_travellink_action_completes_order_after_real_issue(): void
+    {
+        Setting::set('travellink_emission_enabled', true, 'boolean');
+        Setting::set('travellink_dry_run', false, 'boolean');
+        Setting::set('travellink_base_url', 'https://travellink.test/Aereo', 'string');
+        Setting::set('travellink_login', 'login', 'string');
+        Setting::set('travellink_password', 'secret', 'string');
+        Setting::set('travellink_developer_token', 'dev-token', 'string');
+        Setting::set('travellink_developer_access_code', 'access-code', 'string');
+        Setting::set('travellink_payment_payload', '{"FormaDePagamento":2}', 'string');
+        Setting::set('emission_value_per_order', '22.50', 'string');
+        Http::fake([
+            'https://travellink.test/Aereo/Tarifar' => Http::response([
+                'Exception' => null,
+                'Preco' => ['TotalGeral' => 1234.56],
+            ]),
+            'https://travellink.test/Aereo/Reservar' => Http::response([
+                'Exception' => null,
+                'Reservas' => [['Localizador' => 'abc123']],
+            ]),
+            'https://travellink.test/Aereo/IniciarEmissao' => Http::response([
+                'Exception' => null,
+                'ConfiguracoesDeEmissao' => [],
+            ]),
+            'https://travellink.test/Aereo/Emitir' => Http::response([
+                'Exception' => null,
+                'Bilhetes' => [['Numero' => '0011234567890']],
+            ]),
+        ]);
+
+        $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+        $order = $this->createOrder(['status' => 'awaiting_emission']);
+        $this->addPassenger($order);
+        $flight = $this->addFlight($order, [
+            'direction' => 'outbound',
+            'source_provider' => 'travellink',
+            'source_airlines' => 'ALL',
+            'tax' => '72.15',
+            'boarding_tax' => '72,15',
+            'provider_payload' => [
+                'viagem_id' => 111,
+                'identificacao_da_viagem' => 'OUTBOUND-TOKEN',
+                'classes_selecionadas' => [[
+                    'BaseTarifaria' => 'ABC',
+                    'Classe' => 'Y',
+                    'Familia' => 'LIG',
+                    'NumeroDoVoo' => '4111',
+                ]],
+            ],
+        ]);
+
+        $emission = OrderEmission::create([
+            'order_id' => $order->id,
+            'status' => 'pending',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(EmissionQueue::class)
+            ->callTableAction('issue_travellink', $emission);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => 'completed',
+            'loc' => 'ABC123',
+        ]);
+        $this->assertDatabaseHas('order_flights', [
+            'id' => $flight->id,
+            'loc' => 'ABC123',
+            'paid_boarding_tax' => 72.15,
+        ]);
+        $this->assertDatabaseHas('order_emissions', [
+            'id' => $emission->id,
+            'status' => 'completed',
+            'emission_value' => 22.50,
+            'miles_cost_per_thousand' => 0,
+        ]);
+        $this->assertDatabaseHas('order_emission_logs', [
+            'order_emission_id' => $emission->id,
+            'action' => 'completed',
+            'user_id' => $admin->id,
+        ]);
+        Http::assertSentCount(4);
     }
 
     public function test_support_ticket_view_actions_reply_assign_prioritize_resolve_and_close(): void

@@ -7,6 +7,8 @@ use App\Models\OrderEmission;
 use App\Models\OrderEmissionLog;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\TravellinkEmissionProcessor;
+use App\Services\TravellinkService;
 use Filament\Actions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -220,6 +222,23 @@ class EmissionQueue extends Page implements HasTable
                         $this->completeEmission($record, $data);
                     }),
 
+                Actions\Action::make('issue_travellink')
+                    ->label('Emitir Travellink')
+                    ->icon('heroicon-o-rocket-launch')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Emitir via Travellink')
+                    ->modalDescription('Esta ação só pode ser usada em pedidos em que todos os voos vieram da Travellink. Se o modo teste estiver ligado, nenhuma emissão real será feita.')
+                    ->visible(function (OrderEmission $record): bool {
+                        $canOperate = auth()->user()->isAdmin()
+                            || ($record->status === 'assigned' && $record->issuer_id === auth()->id());
+
+                        return $canOperate && app(TravellinkService::class)->canIssueOrder($record->order);
+                    })
+                    ->action(function (OrderEmission $record): void {
+                        $this->issueTravellinkEmission($record);
+                    }),
+
                 Actions\Action::make('view_detail')
                     ->label('Ver detalhes')
                     ->icon('heroicon-o-eye')
@@ -384,5 +403,45 @@ class EmissionQueue extends Page implements HasTable
             ->body("Localizador: {$locDisplay}")
             ->success()
             ->send();
+    }
+
+    private function issueTravellinkEmission(OrderEmission $emission): void
+    {
+        $processor = app(TravellinkEmissionProcessor::class);
+
+        try {
+            $result = $processor->process($emission, auth()->id());
+
+            if ($result['dry_run'] ?? false) {
+                Notification::make()
+                    ->title('Travellink em modo teste')
+                    ->body('Pedido elegível. O modo teste impediu a emissão real.')
+                    ->warning()
+                    ->send();
+
+                return;
+            }
+
+            $loc = strtoupper(trim((string) ($result['localizador'] ?? '')));
+
+            Notification::make()
+                ->title('Emissão Travellink concluída!')
+                ->body("Localizador: {$loc}")
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            OrderEmissionLog::create([
+                'order_emission_id' => $emission->id,
+                'action' => 'travellink_failed',
+                'user_id' => auth()->id(),
+                'notes' => $e->getMessage(),
+            ]);
+
+            Notification::make()
+                ->title('Falha na emissão Travellink')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 }

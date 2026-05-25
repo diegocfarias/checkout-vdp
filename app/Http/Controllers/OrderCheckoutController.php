@@ -641,6 +641,9 @@ class OrderCheckoutController extends Controller
                     'boarding_tax' => $this->vdpService->resolveBoardingTax($freshOb, $obFlight->boarding_tax ?? $obFlight->tax ?? '0'),
                     'money_price' => $this->vdpService->calculateBasePrice($freshOb),
                     'tax' => $this->vdpService->resolveBoardingTax($freshOb, $obFlight->boarding_tax ?? $obFlight->tax ?? '0'),
+                    'provider_payload' => isset($freshOb['provider_payload']) && is_array($freshOb['provider_payload'])
+                        ? $freshOb['provider_payload']
+                        : $obFlight->provider_payload,
                 ]);
 
                 if ($freshIb && $ibFlight) {
@@ -650,6 +653,9 @@ class OrderCheckoutController extends Controller
                         'boarding_tax' => $this->vdpService->resolveBoardingTax($freshIb, $ibFlight->boarding_tax ?? $ibFlight->tax ?? '0'),
                         'money_price' => $this->vdpService->calculateBasePrice($freshIb),
                         'tax' => $this->vdpService->resolveBoardingTax($freshIb, $ibFlight->boarding_tax ?? $ibFlight->tax ?? '0'),
+                        'provider_payload' => isset($freshIb['provider_payload']) && is_array($freshIb['provider_payload'])
+                            ? $freshIb['provider_payload']
+                            : $ibFlight->provider_payload,
                     ]);
                 }
 

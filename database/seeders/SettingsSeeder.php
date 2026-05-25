@@ -30,6 +30,16 @@ class SettingsSeeder extends Seeder
             ['key' => 'pricing_pct_gol', 'value' => '80', 'type' => 'string'],
             ['key' => 'pricing_pct_latam', 'value' => '80', 'type' => 'string'],
             ['key' => 'boarding_tax_fallback_pct', 'value' => '10', 'type' => 'string'],
+            ['key' => 'travellink_search_enabled', 'value' => '0', 'type' => 'boolean'],
+            ['key' => 'travellink_emission_enabled', 'value' => '0', 'type' => 'boolean'],
+            ['key' => 'travellink_auto_emission_enabled', 'value' => '0', 'type' => 'boolean'],
+            ['key' => 'travellink_dry_run', 'value' => '1', 'type' => 'boolean'],
+            ['key' => 'travellink_base_url', 'value' => config('services.travellink.base_url', ''), 'type' => 'string'],
+            ['key' => 'travellink_client_id', 'value' => '0', 'type' => 'integer'],
+            ['key' => 'travellink_system', 'value' => '0', 'type' => 'integer'],
+            ['key' => 'travellink_max_flights', 'value' => '50', 'type' => 'integer'],
+            ['key' => 'travellink_timeout', 'value' => (string) config('services.travellink.timeout', 45), 'type' => 'integer'],
+            ['key' => 'travellink_payment_payload', 'value' => '', 'type' => 'string'],
         ];
 
         foreach ($defaults as $setting) {

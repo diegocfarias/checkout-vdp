@@ -37,11 +37,13 @@ class OrderFlight extends Model
         'pricing_type',
         'source_provider',
         'source_airlines',
+        'provider_payload',
     ];
 
     protected $casts = [
         'connection' => 'array',
         'baggage' => 'array',
+        'provider_payload' => 'array',
         'paid_boarding_tax' => 'decimal:2',
     ];
 

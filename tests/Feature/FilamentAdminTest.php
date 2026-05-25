@@ -21,9 +21,11 @@ use App\Models\SupportTicket;
 use App\Models\SupportTicketAttachment;
 use App\Models\User;
 use App\Services\PricingSettingsService;
+use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -158,6 +160,20 @@ class FilamentAdminTest extends TestCase
                 'crawler_timeout' => 41,
                 'bds_crawler_timeout' => 42,
                 'bds_patria_enabled' => true,
+                'travellink_search_enabled' => true,
+                'travellink_emission_enabled' => true,
+                'travellink_auto_emission_enabled' => false,
+                'travellink_dry_run' => true,
+                'travellink_base_url' => 'https://travellink.test/Aereo',
+                'travellink_login' => 'travellink-login',
+                'travellink_password' => 'travellink-password',
+                'travellink_developer_token' => 'developer-token',
+                'travellink_developer_access_code' => 'developer-access-code',
+                'travellink_client_id' => 123,
+                'travellink_system' => 49,
+                'travellink_max_flights' => 75,
+                'travellink_timeout' => 55,
+                'travellink_payment_payload' => '{"FormaDePagamento":1}',
             ])
             ->call('save')
             ->assertHasNoFormErrors();
@@ -174,6 +190,16 @@ class FilamentAdminTest extends TestCase
         $this->assertFalse(Setting::get('referral_cumulative_with_pix'));
         $this->assertSame(['vdp', 'bds_crawler'], Setting::get('provider_gol'));
         $this->assertTrue(Setting::get('bds_patria_enabled'));
+        $this->assertTrue(Setting::get('travellink_search_enabled'));
+        $this->assertTrue(Setting::get('travellink_emission_enabled'));
+        $this->assertTrue(Setting::get('travellink_dry_run'));
+        $this->assertSame('https://travellink.test/Aereo', Setting::get('travellink_base_url'));
+        $this->assertSame('travellink-login', Setting::get('travellink_login'));
+        $this->assertSame('developer-token', Setting::get('travellink_developer_token'));
+        $this->assertSame(49, Setting::get('travellink_system'));
+        $this->assertSame(75, Setting::get('travellink_max_flights'));
+        $this->assertSame(55, Setting::get('travellink_timeout'));
+        $this->assertSame('{"FormaDePagamento":1}', Setting::get('travellink_payment_payload'));
         $this->assertSame((string) now()->timestamp, Setting::get('pricing_version'));
     }
 
@@ -267,6 +293,56 @@ class FilamentAdminTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertSame((string) now()->timestamp, Setting::get('pricing_version'));
+    }
+
+    public function test_manage_settings_tests_travellink_connection(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+        Setting::set('travellink_base_url', 'https://travellink.test/Aereo', 'string');
+        Setting::set('travellink_login', 'login', 'string');
+        Setting::set('travellink_password', 'secret', 'string');
+        Setting::set('travellink_developer_token', 'dev-token', 'string');
+        Setting::set('travellink_developer_access_code', 'access-code', 'string');
+        Setting::set('travellink_timeout', 12, 'integer');
+        Http::fake([
+            'https://travellink.test/Aereo/RecuperarSistemasPesquisa' => Http::response([
+                'Exception' => null,
+                'Sistemas' => [
+                    ['Id' => 49, 'Nome' => 'Sistema teste'],
+                ],
+            ]),
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ManageSettings::class)
+            ->callAction('test_travellink');
+
+        Notification::assertNotified('Travellink respondeu com sucesso');
+        Http::assertSent(function ($request): bool {
+            $payload = $request->data();
+
+            return $request->url() === 'https://travellink.test/Aereo/RecuperarSistemasPesquisa'
+                && $request->hasHeader('Developer-Token', 'dev-token')
+                && $request->hasHeader('Developer-Access-Code', 'access-code')
+                && $payload['Login'] === 'login'
+                && $payload['Senha'] === 'secret'
+                && $payload['Origem'] === 'GRU'
+                && $payload['Destino'] === 'SDU'
+                && $payload['Timeout'] === 12;
+        });
+    }
+
+    public function test_manage_settings_warns_when_testing_travellink_without_credentials(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+        Http::fake();
+
+        Livewire::actingAs($admin)
+            ->test(ManageSettings::class)
+            ->callAction('test_travellink');
+
+        Notification::assertNotified('Travellink não configurada');
+        Http::assertNothingSent();
     }
 
     public function test_support_ticket_resource_scopes_support_agent_visibility(): void
@@ -382,6 +458,20 @@ class FilamentAdminTest extends TestCase
             'crawler_timeout' => 35,
             'bds_crawler_timeout' => 60,
             'bds_patria_enabled' => false,
+            'travellink_search_enabled' => false,
+            'travellink_emission_enabled' => false,
+            'travellink_auto_emission_enabled' => false,
+            'travellink_dry_run' => true,
+            'travellink_base_url' => config('services.travellink.base_url', ''),
+            'travellink_login' => '',
+            'travellink_password' => '',
+            'travellink_developer_token' => '',
+            'travellink_developer_access_code' => '',
+            'travellink_client_id' => 0,
+            'travellink_system' => 0,
+            'travellink_max_flights' => 50,
+            'travellink_timeout' => 45,
+            'travellink_payment_payload' => '',
         ], $overrides);
     }
 }

@@ -3,8 +3,11 @@
 namespace App\Filament\Pages;
 
 use App\Models\Setting;
+use App\Services\TravellinkService;
+use Filament\Actions;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
@@ -30,6 +33,17 @@ class ManageSettings extends Page
     protected string $view = 'filament.pages.manage-settings';
 
     public ?array $data = [];
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\Action::make('test_travellink')
+                ->label('Testar Travellink')
+                ->icon('heroicon-o-signal')
+                ->color('gray')
+                ->action(fn () => $this->testTravellinkConnection()),
+        ];
+    }
 
     private function formatRates(array|string|null $rates): array
     {
@@ -78,6 +92,20 @@ class ManageSettings extends Page
             'crawler_timeout' => Setting::get('crawler_timeout', 35),
             'bds_crawler_timeout' => Setting::get('bds_crawler_timeout', 60),
             'bds_patria_enabled' => Setting::get('bds_patria_enabled', false),
+            'travellink_search_enabled' => Setting::get('travellink_search_enabled', false),
+            'travellink_emission_enabled' => Setting::get('travellink_emission_enabled', false),
+            'travellink_auto_emission_enabled' => Setting::get('travellink_auto_emission_enabled', false),
+            'travellink_dry_run' => Setting::get('travellink_dry_run', true),
+            'travellink_base_url' => Setting::get('travellink_base_url', config('services.travellink.base_url', '')),
+            'travellink_login' => Setting::get('travellink_login', config('services.travellink.login', '')),
+            'travellink_password' => Setting::get('travellink_password', config('services.travellink.password', '')),
+            'travellink_developer_token' => Setting::get('travellink_developer_token', config('services.travellink.developer_token', '')),
+            'travellink_developer_access_code' => Setting::get('travellink_developer_access_code', config('services.travellink.developer_access_code', '')),
+            'travellink_client_id' => Setting::get('travellink_client_id', 0),
+            'travellink_system' => Setting::get('travellink_system', 0),
+            'travellink_max_flights' => Setting::get('travellink_max_flights', 50),
+            'travellink_timeout' => Setting::get('travellink_timeout', config('services.travellink.timeout', 45)),
+            'travellink_payment_payload' => Setting::get('travellink_payment_payload', ''),
             'emission_value_per_order' => Setting::get('emission_value_per_order', '0'),
             'pushover_app_token' => Setting::get('pushover_app_token', ''),
             'mix_enabled' => Setting::get('mix_enabled', true),
@@ -175,6 +203,98 @@ class ManageSettings extends Page
                             ->label('BDS Patria (voos convencionais)')
                             ->helperText('Voos convencionais da BDS entram automaticamente quando alguma cia usa BDS. Este toggle mantém o convencional ativo mesmo sem cias BDS selecionadas.')
                             ->default(false),
+                    ]),
+
+                Section::make('Travellink')
+                    ->icon('heroicon-o-globe-alt')
+                    ->description('Integração de pesquisa e emissão. Voos vindos da Travellink ficam marcados para emissão pela própria Travellink.')
+                    ->schema([
+                        Toggle::make('travellink_search_enabled')
+                            ->label('Usar Travellink nas buscas')
+                            ->helperText('Adiciona a Travellink como fonte global de pesquisa, incluindo companhias fora do trio GOL/Azul/LATAM.')
+                            ->default(false)
+                            ->live(),
+
+                        Toggle::make('travellink_emission_enabled')
+                            ->label('Permitir emissão Travellink')
+                            ->helperText('Libera emissão manual pela Travellink apenas para pedidos cujos voos selecionados vieram da Travellink.')
+                            ->default(false)
+                            ->live(),
+
+                        Toggle::make('travellink_auto_emission_enabled')
+                            ->label('Emissão automática ao aprovar pagamento')
+                            ->helperText('Quando ativo, pedidos pagos com voos Travellink podem entrar no fluxo automático. Mantenha desligado até validarmos ponta a ponta.')
+                            ->default(false)
+                            ->visible(fn ($get) => (bool) $get('travellink_emission_enabled')),
+
+                        Toggle::make('travellink_dry_run')
+                            ->label('Modo teste (não emitir)')
+                            ->helperText('Mantém chamadas de emissão em modo seguro até a operação confirmar que podemos emitir de verdade.')
+                            ->default(true)
+                            ->visible(fn ($get) => (bool) $get('travellink_emission_enabled')),
+
+                        Textarea::make('travellink_payment_payload')
+                            ->label('Pagamento para emissão (JSON)')
+                            ->helperText('JSON enviado no campo Pagamento do Emitir. Deixe vazio em modo teste. Para faturado, valide o formato com a Travellink antes de desligar o modo teste.')
+                            ->rows(6)
+                            ->placeholder('{"FormaDePagamento":1}')
+                            ->visible(fn ($get) => (bool) $get('travellink_emission_enabled')),
+
+                        TextInput::make('travellink_base_url')
+                            ->label('URL base')
+                            ->placeholder('https://wooba-sandbox-api.travellink.com.br/wcfTravellinkJson/AereoNoSession.svc')
+                            ->maxLength(255),
+
+                        TextInput::make('travellink_login')
+                            ->label('Login')
+                            ->maxLength(255),
+
+                        TextInput::make('travellink_password')
+                            ->label('Senha')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255),
+
+                        TextInput::make('travellink_developer_token')
+                            ->label('Developer Token')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255),
+
+                        TextInput::make('travellink_developer_access_code')
+                            ->label('Developer Access Code')
+                            ->helperText('Código de acesso criptografado e codificado em Base64 conforme documentação da Travellink.')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(2048),
+
+                        TextInput::make('travellink_client_id')
+                            ->label('Cliente ID')
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(0),
+
+                        TextInput::make('travellink_system')
+                            ->label('Sistema')
+                            ->helperText('Use 0 para pesquisar todos os sistemas disponíveis.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(0),
+
+                        TextInput::make('travellink_max_flights')
+                            ->label('Quantidade máxima de voos')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(200)
+                            ->default(50),
+
+                        TextInput::make('travellink_timeout')
+                            ->label('Timeout — Travellink (segundos)')
+                            ->numeric()
+                            ->minValue(5)
+                            ->maxValue(180)
+                            ->default(45)
+                            ->suffix('s'),
                     ]),
 
                 Section::make('PIX')
@@ -424,6 +544,15 @@ class ManageSettings extends Page
             'provider_azul',
             'provider_latam',
             'bds_patria_enabled',
+            'travellink_search_enabled',
+            'travellink_base_url',
+            'travellink_login',
+            'travellink_password',
+            'travellink_developer_token',
+            'travellink_developer_access_code',
+            'travellink_client_id',
+            'travellink_system',
+            'travellink_max_flights',
             'pix_discount',
         ];
 
@@ -487,6 +616,20 @@ class ManageSettings extends Page
         Setting::set('crawler_timeout', (int) ($data['crawler_timeout'] ?? 35), 'integer');
         Setting::set('bds_crawler_timeout', (int) ($data['bds_crawler_timeout'] ?? 60), 'integer');
         Setting::set('bds_patria_enabled', (bool) ($data['bds_patria_enabled'] ?? false), 'boolean');
+        Setting::set('travellink_search_enabled', (bool) ($data['travellink_search_enabled'] ?? false), 'boolean');
+        Setting::set('travellink_emission_enabled', (bool) ($data['travellink_emission_enabled'] ?? false), 'boolean');
+        Setting::set('travellink_auto_emission_enabled', (bool) ($data['travellink_auto_emission_enabled'] ?? false), 'boolean');
+        Setting::set('travellink_dry_run', (bool) ($data['travellink_dry_run'] ?? true), 'boolean');
+        Setting::set('travellink_base_url', $data['travellink_base_url'] ?? '', 'string');
+        Setting::set('travellink_login', $data['travellink_login'] ?? '', 'string');
+        Setting::set('travellink_password', $data['travellink_password'] ?? '', 'string');
+        Setting::set('travellink_developer_token', $data['travellink_developer_token'] ?? '', 'string');
+        Setting::set('travellink_developer_access_code', $data['travellink_developer_access_code'] ?? '', 'string');
+        Setting::set('travellink_client_id', (int) ($data['travellink_client_id'] ?? 0), 'integer');
+        Setting::set('travellink_system', (int) ($data['travellink_system'] ?? 0), 'integer');
+        Setting::set('travellink_max_flights', (int) ($data['travellink_max_flights'] ?? 50), 'integer');
+        Setting::set('travellink_timeout', (int) ($data['travellink_timeout'] ?? 45), 'integer');
+        Setting::set('travellink_payment_payload', $data['travellink_payment_payload'] ?? '', 'string');
 
         $newSearchConfig = [];
         foreach ($cacheVersionFields as $field) {
@@ -501,6 +644,43 @@ class ManageSettings extends Page
             ->title('Configurações salvas com sucesso!')
             ->success()
             ->send();
+    }
+
+    public function testTravellinkConnection(): void
+    {
+        $travellink = app(TravellinkService::class);
+
+        if (! $travellink->configured()) {
+            Notification::make()
+                ->title('Travellink não configurada')
+                ->body('Preencha URL, login, senha, Developer Token e Developer Access Code antes de testar.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        try {
+            $response = $travellink->recuperarSistemasPesquisa([
+                'departure' => 'GRU',
+                'arrival' => 'SDU',
+            ]);
+
+            $systems = $response['Sistemas'] ?? $response['sistemas'] ?? $response;
+            $count = is_countable($systems) ? count($systems) : 0;
+
+            Notification::make()
+                ->title('Travellink respondeu com sucesso')
+                ->body("Consulta GRU → SDU executada. Sistemas retornados: {$count}.")
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Falha ao testar Travellink')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     private static function normalizeProviderSetting(mixed $value): array

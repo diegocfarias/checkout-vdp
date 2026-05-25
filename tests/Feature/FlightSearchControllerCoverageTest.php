@@ -238,6 +238,63 @@ class FlightSearchControllerCoverageTest extends TestCase
         $this->assertGreaterThan(0, $flight['calculated_price']);
     }
 
+    public function test_provider_endpoint_hides_provider_payload_but_keeps_it_for_order_creation(): void
+    {
+        $providerPayload = [
+            'viagem_id' => 111,
+            'identificacao_da_viagem' => 'OUTBOUND-TOKEN',
+            'classes_selecionadas' => [[
+                'BaseTarifaria' => 'ABC',
+                'Classe' => 'Y',
+                'Familia' => 'LIG',
+                'NumeroDoVoo' => '4111',
+            ]],
+        ];
+
+        $vdp = Mockery::mock(VdpFlightService::class)->makePartial();
+        $vdp->shouldReceive('searchSingleProvider')
+            ->once()
+            ->with(Mockery::type('array'), 'travellink', 'ALL')
+            ->andReturn([
+                'outbound' => [
+                    $this->flightPayload([
+                        'operator' => 'LATAM',
+                        'flight_number' => 'JJ4111',
+                        'unique_id' => 'travellink-secret-flight',
+                        'provider_payload' => $providerPayload,
+                    ]),
+                ],
+                'inbound' => [],
+            ]);
+        $this->app->instance(VdpFlightService::class, $vdp);
+
+        $response = $this->getJson(route('api.search.provider', $this->providerQuery([
+            'slot' => encrypt('travellink|ALL'),
+        ])))->assertOk();
+
+        $flight = $response->json('outbound.0');
+
+        $this->assertSame('travellink-secret-flight', $flight['unique_id']);
+        $this->assertSame('travellink', $flight['_source_provider']);
+        $this->assertArrayNotHasKey('provider_payload', $flight);
+
+        $search = $this->createFlightSearch();
+
+        $this->post(route('search.select'), [
+            'search_id' => $search->id,
+            'outbound' => json_encode($flight),
+            'confirmed' => '1',
+            'ob_source_provider' => 'travellink',
+            'ob_source_airlines' => 'ALL',
+        ])->assertRedirect();
+
+        $order = Order::with('flights')->firstOrFail();
+        $outbound = $order->flights->firstWhere('direction', 'outbound');
+
+        $this->assertSame('travellink', $outbound->source_provider);
+        $this->assertSame($providerPayload, $outbound->provider_payload);
+    }
+
     public function test_provider_endpoint_uses_airline_tax_for_bds_miles_percentage_pricing(): void
     {
         Setting::set('pricing_miles_enabled', true, 'boolean');

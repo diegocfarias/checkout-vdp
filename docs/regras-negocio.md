@@ -189,6 +189,16 @@ Este documento registra as regras esperadas para os fluxos principais. Os testes
 - Taxa paga na emissao e informacao operacional por voo; nao deve alterar a taxa cobrada do cliente.
 - Custos operacionais de emissao, taxa paga e milheiro nao devem aparecer para o cliente.
 - Ao concluir emissao, pedido deve ir para `completed`, emissao deve ir para `completed` e deve ser criado log de conclusao.
+- Integracao Travellink deve ficar configuravel no painel, com chaves, ambiente, busca, emissao manual, emissao automatica e modo teste.
+- A busca Travellink entra como fonte propria; voos retornados por ela devem ser marcados internamente com `source_provider = travellink`.
+- Emissao Travellink so pode ser usada quando todos os voos selecionados no pedido vieram da Travellink.
+- Pedido com voos BDS, VDP ou LATAM Crawler nao pode ser emitido pela Travellink por equivalencia aproximada de voo.
+- A acao manual de emissao Travellink deve ficar disponivel na fila de emissoes para pedidos elegiveis.
+- Quando `travellink_auto_emission_enabled` estiver ativo, o gatilho deve ser o pedido pago/aprovado entrando em `awaiting_emission`; nao deve exigir acao manual.
+- Enquanto `travellink_dry_run` estiver ativo, nenhuma chamada externa de emissao real deve ser executada; o sistema deve apenas validar elegibilidade e registrar log operacional.
+- Emissao real Travellink deve seguir a sequencia `Tarifar`, `Reservar`, `IniciarEmissao` e `Emitir`, salvando LOC retornado em maiusculo e bilhetes no log operacional quando retornados.
+- Emissao Travellink nao usa custo de milheiro; custo operacional deve considerar taxa paga/fallback da taxa do voo e valor de emissao configurado.
+- Os identificadores tecnicos necessarios para tarifar/reservar/emitir na Travellink devem ser armazenados no pedido, mas nao devem aparecer em telas do cliente.
 
 ## Indicadores financeiros
 

@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Jobs\IssueTravellinkOrder;
 use App\Jobs\NotifyIssuersNewEmission;
 use App\Mail\OrderStatusMail;
 use App\Models\Order;
@@ -10,6 +11,7 @@ use App\Models\OrderEmissionLog;
 use App\Models\OrderStatusHistory;
 use App\Services\BotpressNotifier;
 use App\Services\ReferralService;
+use App\Services\TravellinkService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -103,6 +105,10 @@ class OrderObserver
             ]);
 
             NotifyIssuersNewEmission::dispatch($order);
+
+            if (app(TravellinkService::class)->canAutoIssueOrder($order)) {
+                IssueTravellinkOrder::dispatch($emission);
+            }
         } catch (\Throwable $e) {
             Log::error('OrderObserver: falha ao criar emissão', [
                 'order_id' => $order->id,

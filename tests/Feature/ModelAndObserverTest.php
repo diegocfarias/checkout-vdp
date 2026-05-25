@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\IssueTravellinkOrder;
 use App\Jobs\NotifyIssuersNewEmission;
 use App\Mail\OrderStatusMail;
 use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\OrderEmission;
 use App\Models\OrderStatusHistory;
+use App\Models\Setting;
 use App\Models\ShowcaseRoute;
 use App\Models\SupportTicketAttachment;
 use App\Models\User;
@@ -216,6 +218,37 @@ class ModelAndObserverTest extends TestCase
         ]);
         Bus::assertDispatched(NotifyIssuersNewEmission::class);
         Mail::assertSent(OrderStatusMail::class, fn (OrderStatusMail $mail): bool => $mail->hasTo('passageiro@example.com'));
+    }
+
+    public function test_order_observer_dispatches_travellink_auto_emission_for_eligible_orders(): void
+    {
+        Bus::fake();
+        Mail::fake();
+        Setting::set('travellink_emission_enabled', true, 'boolean');
+        Setting::set('travellink_auto_emission_enabled', true, 'boolean');
+
+        $order = $this->createOrder();
+        $this->addPassenger($order, ['email' => 'passageiro@example.com']);
+        $this->addFlight($order, [
+            'source_provider' => 'travellink',
+            'source_airlines' => 'ALL',
+            'provider_payload' => [
+                'viagem_id' => 111,
+                'identificacao_da_viagem' => 'OUTBOUND-TOKEN',
+                'classes_selecionadas' => [[
+                    'BaseTarifaria' => 'ABC',
+                    'Classe' => 'Y',
+                    'Familia' => 'LIG',
+                    'NumeroDoVoo' => '4111',
+                ]],
+            ],
+        ]);
+
+        $order->update(['status' => 'awaiting_emission']);
+
+        $emission = OrderEmission::where('order_id', $order->id)->firstOrFail();
+        Bus::assertDispatched(NotifyIssuersNewEmission::class);
+        Bus::assertDispatched(IssueTravellinkOrder::class, fn (IssueTravellinkOrder $job): bool => $job->emission->is($emission));
     }
 
     public function test_order_status_whatsapp_notification_uses_tokenized_tracking_link(): void
