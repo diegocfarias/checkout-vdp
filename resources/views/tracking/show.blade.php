@@ -178,7 +178,10 @@
                     <div class="bg-gray-50 rounded-lg p-4 mb-3">
                         <div class="flex items-center justify-between gap-2 mb-2">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA</span>
+                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'shrink-0'])
+                                    IDA
+                                </span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
                                 @if($outbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
@@ -212,7 +215,10 @@
                     <div class="bg-gray-50 rounded-lg p-4">
                         <div class="flex items-center justify-between gap-2 mb-2">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">VOLTA</span>
+                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'shrink-0'])
+                                    VOLTA
+                                </span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
                                 @if($inbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>

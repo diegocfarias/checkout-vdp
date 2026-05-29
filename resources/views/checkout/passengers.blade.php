@@ -568,7 +568,10 @@
                         @endphp
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="flex flex-wrap items-center gap-2 mb-2">
-                                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA</span>
+                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'shrink-0'])
+                                    IDA
+                                </span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
                                 @if($outbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
@@ -583,7 +586,6 @@
                             @endif
                             <div class="flex items-center justify-between text-sm">
                                 <div class="text-center">
-                                    @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'mx-auto mb-1'])
                                     <p class="font-medium text-gray-800">{{ $outbound->departure_location }}</p>
                                     <p class="text-gray-500">{{ $outbound->departure_time }}</p>
                                 </div>
@@ -593,7 +595,6 @@
                                     @endif
                                 </div>
                                 <div class="text-right">
-                                    @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'ml-auto mb-1'])
                                     <p class="font-medium text-gray-800">{{ $outbound->arrival_location }}</p>
                                     <p class="text-gray-500">{{ $outbound->arrival_time }}</p>
                                 </div>
@@ -612,7 +613,10 @@
                         @endphp
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="flex flex-wrap items-center gap-2 mb-2">
-                                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">VOLTA</span>
+                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'shrink-0'])
+                                    VOLTA
+                                </span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
                                 @if($inbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
@@ -627,7 +631,6 @@
                             @endif
                             <div class="flex items-center justify-between text-sm">
                                 <div class="text-center">
-                                    @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'mx-auto mb-1'])
                                     <p class="font-medium text-gray-800">{{ $inbound->departure_location }}</p>
                                     <p class="text-gray-500">{{ $inbound->departure_time }}</p>
                                 </div>
@@ -637,7 +640,6 @@
                                     @endif
                                 </div>
                                 <div class="text-right">
-                                    @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'ml-auto mb-1'])
                                     <p class="font-medium text-gray-800">{{ $inbound->arrival_location }}</p>
                                     <p class="text-gray-500">{{ $inbound->arrival_time }}</p>
                                 </div>

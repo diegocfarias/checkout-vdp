@@ -9,7 +9,7 @@ test.describe('QA stage 2 UI adjustments', () => {
         await page.goto('/dev/fake-checkout');
 
         await expect(page.locator('[data-step="1"][data-step-state="current"]')).toBeVisible();
-        await expect(page.getByLabel('Voo de ida').first()).toBeVisible();
+        await expect(page.getByLabel(/avião decolando/i).first()).toBeVisible();
 
         await page.getByRole('link', { name: /Continuar/i }).click();
 
@@ -17,7 +17,7 @@ test.describe('QA stage 2 UI adjustments', () => {
         await expect(page.locator('[data-step="2"][data-step-state="current"]')).toBeVisible();
         await page.locator('#btn-detalhes-compra').click();
         await expect(page.locator('#modal-detalhes')).toBeVisible();
-        await expect(page.locator('[aria-label="Voo de ida"]:visible').first()).toBeVisible();
+        await expect(page.locator('[aria-label*="avião decolando"]:visible').first()).toBeVisible();
     });
 
     test('search results keep skeleton cards while provider response has not arrived', async ({ page }) => {

@@ -108,7 +108,8 @@
                     <div class="p-3 rounded-lg bg-gray-50 mb-2 last:mb-0">
                         <div class="flex items-center justify-between gap-2 mb-2">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                    @include('partials._flight_direction_icon', ['direction' => $flight->direction, 'class' => 'shrink-0'])
                                     {{ $flight->direction === 'outbound' ? 'IDA' : 'VOLTA' }}
                                 </span>
                                 <span class="text-xs text-gray-500 uppercase">{{ $flight->cia }}</span>

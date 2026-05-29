@@ -14,7 +14,10 @@
             @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div class="flex flex-wrap items-center gap-2 mb-4">
-                    <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA</span>
+                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'shrink-0'])
+                        IDA
+                    </span>
                     <span class="text-sm text-gray-600 font-medium uppercase">{{ $outbound->cia }}</span>
                     @if($outbound->flight_number)
                         <span class="text-sm text-gray-400">{{ $outbound->flight_number }}</span>
@@ -30,7 +33,6 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="shrink-0 text-center min-w-[60px]">
-                        @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'mx-auto mb-1'])
                         <p class="text-xl font-bold text-gray-800">{{ $outbound->departure_time }}</p>
                         <p class="text-sm font-semibold text-gray-600">{{ $outbound->departure_location }}</p>
                     </div>
@@ -43,7 +45,6 @@
                         </p>
                     </div>
                     <div class="shrink-0 text-center min-w-[60px]">
-                        @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'mx-auto mb-1'])
                         <p class="text-xl font-bold text-gray-800">{{ $outbound->arrival_time }}</p>
                         <p class="text-sm font-semibold text-gray-600">{{ $outbound->arrival_location }}</p>
                     </div>
@@ -64,7 +65,10 @@
             @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div class="flex flex-wrap items-center gap-2 mb-4">
-                    <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">VOLTA</span>
+                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'shrink-0'])
+                        VOLTA
+                    </span>
                     <span class="text-sm text-gray-600 font-medium uppercase">{{ $inbound->cia }}</span>
                     @if($inbound->flight_number)
                         <span class="text-sm text-gray-400">{{ $inbound->flight_number }}</span>
@@ -80,7 +84,6 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="shrink-0 text-center min-w-[60px]">
-                        @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'mx-auto mb-1'])
                         <p class="text-xl font-bold text-gray-800">{{ $inbound->departure_time }}</p>
                         <p class="text-sm font-semibold text-gray-600">{{ $inbound->departure_location }}</p>
                     </div>
@@ -93,7 +96,6 @@
                         </p>
                     </div>
                     <div class="shrink-0 text-center min-w-[60px]">
-                        @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'mx-auto mb-1'])
                         <p class="text-xl font-bold text-gray-800">{{ $inbound->arrival_time }}</p>
                         <p class="text-sm font-semibold text-gray-600">{{ $inbound->arrival_location }}</p>
                     </div>
@@ -207,7 +209,7 @@
                     'adults' => $fs->adults,
                     'children' => $fs->children,
                     'infants' => $fs->infants,
-                ]));
+                ], fn ($value) => $value !== null && $value !== ''));
             }
         @endphp
         <a href="{{ $backUrl }}" class="text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1">

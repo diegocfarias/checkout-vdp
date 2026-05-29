@@ -87,9 +87,9 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertViewHas('pixEnabled', false)
             ->assertSee('Mala de mao inclusa', false)
             ->assertSee('Mala despachada nao inclusa', false)
-            ->assertSee('Voo de ida', false)
+            ->assertSee('Voo de ida - avião decolando', false)
             ->assertSee('data-step-state="current"', false)
-            ->assertSee('text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA', false)
+            ->assertSee('inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide', false)
             ->assertDontSee('bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded">IDA', false);
 
         $this->actingAs($customer, 'customer')
@@ -106,7 +106,7 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertViewHas('refCookie', 'IND-COOKIE')
             ->assertViewHas('savedPassengers', fn ($passengers): bool => $passengers->count() === 1)
             ->assertSee('Mala de mao inclusa', false)
-            ->assertSee('Voo de ida', false)
+            ->assertSee('Voo de ida - avião decolando', false)
             ->assertSee('data-step-state="completed"', false)
             ->assertSee('data-step-state="current"', false)
             ->assertSee('required-label block text-sm font-medium text-gray-700 mb-1">Nome completo', false)
@@ -174,6 +174,34 @@ class OrderCheckoutFlowCoverageTest extends TestCase
                 ->assertNotFound()
                 ->assertViewIs('checkout.not-found');
         }
+    }
+
+    public function test_checkout_summary_back_to_search_link_keeps_zero_passenger_counts(): void
+    {
+        $flightSearch = $this->createFlightSearch([
+            'departure_iata' => 'CNF',
+            'arrival_iata' => 'VIX',
+            'outbound_date' => '2026-07-16',
+            'inbound_date' => '2026-07-20',
+            'trip_type' => 'roundtrip',
+            'adults' => 1,
+            'children' => 0,
+            'infants' => 0,
+            'cabin' => 'EC',
+        ]);
+        $order = $this->createOrder([
+            'flight_search_id' => $flightSearch->id,
+            'departure_iata' => 'CNF',
+            'arrival_iata' => 'VIX',
+        ]);
+        $this->addFlight($order);
+
+        $this->get(route('checkout.show', $order->token))
+            ->assertOk()
+            ->assertSee('Voltar para busca')
+            ->assertSee('children=0', false)
+            ->assertSee('infants=0', false)
+            ->assertSee('trip_type=roundtrip', false);
     }
 
     public function test_checkout_success_marks_all_steps_completed_and_separates_emission_status(): void

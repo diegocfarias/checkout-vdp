@@ -28,7 +28,10 @@
             @if($outbound)
                 <div class="text-left bg-gray-50 rounded-lg p-4 mb-3">
                     <div class="flex items-center justify-between mb-1">
-                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA</p>
+                        <p class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                            @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'shrink-0'])
+                            IDA
+                        </p>
                         @if($order->flightSearch && $order->flightSearch->outbound_date)
                             <p class="text-xs font-medium text-gray-500">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}</p>
                         @endif
@@ -49,7 +52,10 @@
             @if($inbound)
                 <div class="text-left bg-gray-50 rounded-lg p-4 mb-3">
                     <div class="flex items-center justify-between mb-1">
-                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">VOLTA</p>
+                        <p class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                            @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'shrink-0'])
+                            VOLTA
+                        </p>
                         @if($order->flightSearch && $order->flightSearch->inbound_date)
                             <p class="text-xs font-medium text-gray-500">{{ $order->flightSearch->inbound_date->format('d/m/Y') }}</p>
                         @endif
