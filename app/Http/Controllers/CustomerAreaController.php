@@ -14,7 +14,7 @@ class CustomerAreaController extends Controller
     {
         $customer = auth('customer')->user();
         $recentOrders = Order::where('customer_id', $customer->id)
-            ->with(['flights', 'flightSearch'])
+            ->with(['flights', 'flightSearch', 'latestPayment'])
             ->orderByDesc('created_at')
             ->limit(5)
             ->get();
@@ -26,7 +26,7 @@ class CustomerAreaController extends Controller
     {
         $customer = auth('customer')->user();
         $orders = Order::where('customer_id', $customer->id)
-            ->with(['flights', 'flightSearch'])
+            ->with(['flights', 'flightSearch', 'latestPayment'])
             ->orderByDesc('created_at')
             ->paginate(10);
 
@@ -41,7 +41,7 @@ class CustomerAreaController extends Controller
             abort(404);
         }
 
-        $order->load(['flights', 'passengers', 'payments', 'flightSearch', 'coupon', 'supportTickets']);
+        $order->load(['flights', 'passengers', 'payments', 'latestPayment', 'flightSearch', 'coupon', 'supportTickets']);
         $cancellationEvaluation = $cancellationPolicy->evaluate($order);
         $cancellationReasons = CancellationPolicyService::REASONS;
 
@@ -101,7 +101,7 @@ class CustomerAreaController extends Controller
             ->limit(20)
             ->get();
 
-        $referralLink = url('/?ref=' . $customer->referral_code);
+        $referralLink = url('/?ref='.$customer->referral_code);
 
         return view('customer.referrals', compact(
             'customer',

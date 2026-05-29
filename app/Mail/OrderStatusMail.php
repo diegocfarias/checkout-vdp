@@ -28,15 +28,19 @@ class OrderStatusMail extends Mailable
     {
         $this->order = $order;
         $this->newStatus = $newStatus;
-        $this->statusLabel = OrderStatusHistory::statusLabel($newStatus);
-        $this->trackingUrl = route('tracking.show', ['trackingCode' => $order->tracking_code]) . '?token=' . $order->token;
+        $this->statusLabel = $newStatus === 'awaiting_payment' && $payment?->payment_method === 'credit_card'
+            ? 'Pagamento em análise'
+            : OrderStatusHistory::statusLabel($newStatus);
+        $this->trackingUrl = route('tracking.show', ['trackingCode' => $order->tracking_code]).'?token='.$order->token;
         $this->payment = $payment;
     }
 
     public function envelope(): Envelope
     {
         $subject = match ($this->newStatus) {
-            'awaiting_payment' => "Pedido {$this->order->tracking_code} - Aguardando pagamento",
+            'awaiting_payment' => $this->payment?->payment_method === 'credit_card'
+                ? "Pedido {$this->order->tracking_code} - Pagamento em análise"
+                : "Pedido {$this->order->tracking_code} - Aguardando pagamento",
             'awaiting_emission' => "Pedido {$this->order->tracking_code} - Pagamento confirmado!",
             'completed' => "Pedido {$this->order->tracking_code} - Passagens emitidas!",
             'cancelled' => "Pedido {$this->order->tracking_code} - Cancelado",

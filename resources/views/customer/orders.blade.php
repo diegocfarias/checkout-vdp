@@ -16,20 +16,6 @@
             <div class="space-y-4">
                 @foreach($orders as $order)
                     @php
-                        $statusColors = [
-                            'pending' => 'bg-amber-100 text-amber-700',
-                            'awaiting_payment' => 'bg-blue-100 text-blue-700',
-                            'awaiting_emission' => 'bg-purple-100 text-purple-700',
-                            'completed' => 'bg-emerald-100 text-emerald-700',
-                            'cancelled' => 'bg-red-100 text-red-700',
-                        ];
-                        $statusLabels = [
-                            'pending' => 'Pendente',
-                            'awaiting_payment' => 'Aguardando pagamento',
-                            'awaiting_emission' => 'Aguardando emissão',
-                            'completed' => 'Concluído',
-                            'cancelled' => 'Cancelado',
-                        ];
                         $payingPax = $order->total_adults + $order->total_children;
                         if ($payingPax < 1) $payingPax = 1;
                         $total = $order->flights->sum(fn($f) => (float)($f->money_price ?? 0) + (float)($f->tax ?? 0)) * $payingPax - (float)($order->discount_amount ?? 0);
@@ -37,8 +23,8 @@
                     <a href="{{ route('customer.order.show', $order) }}" class="block bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-300 hover:shadow-md transition-all">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-mono font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ $order->tracking_code }}</span>
-                            <span class="text-xs px-2 py-1 rounded-full font-medium {{ $statusColors[$order->status] ?? 'bg-gray-100 text-gray-600' }}">
-                                {{ $statusLabels[$order->status] ?? $order->status }}
+                            <span class="text-xs px-2 py-1 rounded-full font-medium {{ $order->displayStatusBadgeClasses() }}">
+                                {{ $order->displayStatusLabel() }}
                             </span>
                         </div>
                         <div class="flex items-center justify-between">

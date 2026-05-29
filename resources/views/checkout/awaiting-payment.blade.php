@@ -1,6 +1,6 @@
 @extends('layouts.public')
 
-@section('title', 'Aguardando Pagamento')
+@section('title', (isset($payment) && $payment->payment_method === 'credit_card') ? 'Pagamento em Análise' : 'Aguardando Pagamento')
 
 @section('content')
     @include('partials._checkout_stepper', ['currentStep' => 3])
@@ -9,6 +9,7 @@
             @php
                 $pixExpiresAt = $payment->expires_at ?? $order->expires_at ?? null;
                 $isExpired = $pixExpiresAt && $pixExpiresAt->isPast();
+                $isCreditCard = isset($payment) && $payment->payment_method === 'credit_card';
             @endphp
 
             @if($isExpired)
@@ -26,7 +27,7 @@
                     </svg>
                 </div>
 
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">Aguardando pagamento</h2>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">{{ $isCreditCard ? 'Pagamento em análise' : 'Aguardando pagamento' }}</h2>
 
                 @if(isset($payment) && $payment->amount)
                     <p class="text-3xl font-bold text-emerald-600 mb-1">R$ {{ number_format($payment->amount, 2, ',', '.') }}</p>
@@ -72,20 +73,22 @@
                         <p class="text-gray-500 mb-6">Seu pagamento ainda não foi confirmado. Se você já realizou o pagamento, aguarde alguns instantes e atualize esta página.</p>
                     @endif
                 @else
-                    <p class="text-gray-500 mb-6">Seu pagamento ainda não foi confirmado. Se você já realizou o pagamento, aguarde alguns instantes e atualize esta página.</p>
+                    <p class="text-gray-500 mb-6">{{ $isCreditCard ? 'Seu pagamento está em análise pela operadora. Assim que recebermos a confirmação, o pedido seguirá para emissão.' : 'Seu pagamento ainda não foi confirmado. Se você já realizou o pagamento, aguarde alguns instantes e atualize esta página.' }}</p>
                 @endif
 
-                <button type="button" id="btn-verificar"
-                        class="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition cursor-pointer">
-                    Verificar pagamento
-                </button>
+                @unless($isCreditCard)
+                    <button type="button" id="btn-verificar"
+                            class="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition cursor-pointer">
+                        Verificar pagamento
+                    </button>
+                @endunless
 
-                <p class="text-xs text-gray-400 mt-4" id="status-msg">Verificando automaticamente a cada 5 segundos...</p>
+                <p class="text-xs text-gray-400 mt-4" id="status-msg">{{ $isCreditCard ? 'A confirmação acontece automaticamente após o retorno da operadora.' : 'Verificando automaticamente a cada 5 segundos...' }}</p>
             @endif
         </div>
     </div>
 
-    @if(!$isExpired)
+    @if(!$isExpired && !$isCreditCard)
     @push('scripts')
     <script>
         (function() {

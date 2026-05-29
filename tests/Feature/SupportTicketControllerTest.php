@@ -345,8 +345,13 @@ class SupportTicketControllerTest extends TestCase
     {
         $customer = $this->createCustomer(['email' => 'cliente@example.com']);
         $other = $this->createCustomer(['email' => 'outro@example.com']);
+        $order = $this->createOrder([
+            'customer_id' => $customer->id,
+            'tracking_code' => 'VDP-TCK1',
+        ]);
         $ticket = SupportTicket::create([
             'customer_id' => $customer->id,
+            'order_id' => $order->id,
             'subject' => 'general',
             'message' => 'Mensagem',
             'status' => 'open',
@@ -356,7 +361,9 @@ class SupportTicketControllerTest extends TestCase
         $this->actingAs($customer, 'customer')
             ->get(route('customer.support.show', $ticket))
             ->assertOk()
-            ->assertViewIs('customer.support-detail');
+            ->assertViewIs('customer.support-detail')
+            ->assertSee('Ir para o pedido')
+            ->assertSee('VDP-TCK1');
 
         $this->actingAs($other, 'customer')
             ->get(route('customer.support.show', $ticket))

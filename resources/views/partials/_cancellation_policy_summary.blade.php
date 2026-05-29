@@ -12,7 +12,6 @@
         <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
                 <h3 class="font-semibold text-blue-950">Cancelamento da viagem</h3>
-                <a href="{{ route('cancellation-policy') }}" target="_blank" class="text-xs font-semibold text-blue-700 hover:text-blue-800 hover:underline">Ver política completa</a>
             </div>
             <p class="mt-2 text-sm leading-relaxed text-blue-900">
                 Se seus planos mudarem, avise a gente o quanto antes. A regra é simples:

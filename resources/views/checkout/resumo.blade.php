@@ -14,7 +14,7 @@
             @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div class="flex flex-wrap items-center gap-2 mb-4">
-                    <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded">IDA</span>
+                    <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA</span>
                     <span class="text-sm text-gray-600 font-medium uppercase">{{ $outbound->cia }}</span>
                     @if($outbound->flight_number)
                         <span class="text-sm text-gray-400">{{ $outbound->flight_number }}</span>
@@ -62,7 +62,7 @@
             @endphp
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div class="flex flex-wrap items-center gap-2 mb-4">
-                    <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded">VOLTA</span>
+                    <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">VOLTA</span>
                     <span class="text-sm text-gray-600 font-medium uppercase">{{ $inbound->cia }}</span>
                     @if($inbound->flight_number)
                         <span class="text-sm text-gray-400">{{ $inbound->flight_number }}</span>

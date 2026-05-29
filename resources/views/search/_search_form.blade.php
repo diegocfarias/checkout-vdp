@@ -737,7 +737,7 @@
             var isEnd = sameDay(date, dpInbound);
             if (isStart || isEnd) {
                 var labelTag = document.createElement('span');
-                labelTag.className = 'absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase whitespace-nowrap ' + (isStart ? 'text-blue-600' : 'text-blue-600');
+                labelTag.className = 'absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase whitespace-nowrap text-gray-600';
                 labelTag.textContent = isStart ? 'IDA' : 'VOLTA';
                 cellWrapper.appendChild(labelTag);
             }
@@ -793,7 +793,7 @@
                 var isEnd = sameDay(dt, dpInbound);
                 if (isStart || isEnd) {
                     var labelTag = document.createElement('span');
-                    labelTag.className = 'absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase whitespace-nowrap ' + (isStart ? 'text-blue-600' : 'text-blue-600');
+                    labelTag.className = 'absolute -top-3.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase whitespace-nowrap text-gray-600';
                     labelTag.textContent = isStart ? 'IDA' : 'VOLTA';
                     wrapper.insertBefore(labelTag, wrapper.firstChild);
                 }
@@ -931,14 +931,14 @@
         container.innerHTML = '';
         if (dpOutbound) {
             var chip1 = document.createElement('span');
-            chip1.className = 'inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full';
-            chip1.innerHTML = '<span class="text-[10px] font-bold uppercase">IDA</span> ' + formatShort(dpOutbound);
+            chip1.className = 'inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full';
+            chip1.innerHTML = '<span class="text-[10px] font-bold uppercase text-gray-500">IDA</span> ' + formatShort(dpOutbound);
             container.appendChild(chip1);
         }
         if (dpInbound) {
             var chip2 = document.createElement('span');
-            chip2.className = 'inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full';
-            chip2.innerHTML = '<span class="text-[10px] font-bold uppercase">VOLTA</span> ' + formatShort(dpInbound);
+            chip2.className = 'inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full';
+            chip2.innerHTML = '<span class="text-[10px] font-bold uppercase text-gray-500">VOLTA</span> ' + formatShort(dpInbound);
             container.appendChild(chip2);
         }
         if (!dpOutbound && !dpInbound) {

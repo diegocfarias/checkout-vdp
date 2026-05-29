@@ -19,7 +19,6 @@
             $stopsLabel = $stops === 0 ? 'Direto' : $stops . ' conexão' . ($stops > 1 ? 'es' : '');
             $miles = $flight->price_miles ?? $flight->miles_price ?? null;
             $dirLabel = $flight->direction === 'outbound' ? 'IDA' : 'VOLTA';
-            $dirColor = $flight->direction === 'outbound' ? '#2563eb' : '#7c3aed';
 
             $flightDate = null;
             if ($order->flightSearch) {
@@ -35,7 +34,7 @@
         <div style="border:1px solid #e5e7eb; border-radius:12px; padding:20px 24px; margin-bottom:12px; background:#fff; font-family:'Inter',system-ui,sans-serif;">
             {{-- Header: direction badge + date --}}
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
-                <span style="display:inline-block; background:{{ $dirColor }}; color:#fff; font-size:11px; font-weight:700; padding:3px 10px; border-radius:6px; letter-spacing:0.5px;">{{ $dirLabel }}</span>
+                <span style="display:inline-block; color:#4b5563; font-size:11px; font-weight:700; letter-spacing:0.5px;">{{ $dirLabel }}</span>
                 @if($flightDate)
                     <span style="font-size:13px; color:#6b7280;">{{ $flightDate->format('d/m/Y') }} ({{ $flightDate->translatedFormat('l') }})</span>
                 @endif

@@ -8,10 +8,11 @@
         $inbound = $order->flights->firstWhere('direction', 'inbound');
         $histories = $order->statusHistories->sortByDesc('created_at');
         $currentStatus = $order->status;
+        $isCardAnalysis = $order->isAwaitingCreditCardAnalysis();
 
         $statusConfig = [
             'pending' => ['label' => 'Pedido criado', 'color' => 'gray', 'bg' => 'bg-gray-100', 'text' => 'text-gray-700', 'dot' => 'bg-gray-400'],
-            'awaiting_payment' => ['label' => 'Aguardando pagamento', 'color' => 'yellow', 'bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'dot' => 'bg-yellow-500'],
+            'awaiting_payment' => ['label' => $isCardAnalysis ? 'Pagamento em análise' : 'Aguardando pagamento', 'color' => 'yellow', 'bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'dot' => 'bg-yellow-500'],
             'awaiting_emission' => ['label' => 'Pagamento confirmado', 'color' => 'blue', 'bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'dot' => 'bg-blue-500'],
             'completed' => ['label' => 'Passagens emitidas', 'color' => 'green', 'bg' => 'bg-green-100', 'text' => 'text-green-800', 'dot' => 'bg-green-500'],
             'cancelled' => ['label' => 'Cancelado', 'color' => 'red', 'bg' => 'bg-red-100', 'text' => 'text-red-800', 'dot' => 'bg-red-500'],
@@ -66,7 +67,9 @@
                 @endif
             @elseif($currentStatus === 'awaiting_payment')
                 <div class="bg-yellow-50 rounded-lg p-3">
-                    <p class="text-sm text-yellow-700">Seu pagamento ainda não foi confirmado. Se você já pagou, aguarde a confirmação.</p>
+                    <p class="text-sm text-yellow-700">
+                        {{ $isCardAnalysis ? 'Seu pagamento no cartão está em análise. Você receberá a confirmação assim que a operadora responder.' : 'Seu pagamento ainda não foi confirmado. Se você já pagou, aguarde a confirmação.' }}
+                    </p>
                 </div>
             @elseif($currentStatus === 'cancelled')
                 <div class="bg-red-50 rounded-lg p-3">
@@ -158,7 +161,7 @@
                     <div class="bg-gray-50 rounded-lg p-4 mb-3">
                         <div class="flex items-center justify-between gap-2 mb-2">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">IDA</span>
+                                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA</span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
                                 @if($outbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
@@ -192,7 +195,7 @@
                     <div class="bg-gray-50 rounded-lg p-4">
                         <div class="flex items-center justify-between gap-2 mb-2">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">VOLTA</span>
+                                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">VOLTA</span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
                                 @if($inbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
@@ -250,6 +253,9 @@
                     @php
                         $hConfig = $statusConfig[$history->status] ?? $statusConfig['pending'];
                         $isFirst = $loop->first;
+                        $historyLabel = $isCardAnalysis && $history->status === 'awaiting_payment'
+                            ? 'Pagamento em análise'
+                            : $history->description;
                     @endphp
                     <div class="flex gap-4 {{ $loop->last ? '' : 'pb-6' }}">
                         <div class="flex flex-col items-center">
@@ -259,7 +265,7 @@
                             @endif
                         </div>
                         <div class="pb-1">
-                            <p class="text-sm font-semibold {{ $isFirst ? 'text-gray-900' : 'text-gray-500' }}">{{ $history->description }}</p>
+                            <p class="text-sm font-semibold {{ $isFirst ? 'text-gray-900' : 'text-gray-500' }}">{{ $historyLabel }}</p>
                             <p class="text-xs text-gray-400 mt-0.5">{{ $history->created_at->format('d/m/Y \à\s H:i') }}</p>
                         </div>
                     </div>

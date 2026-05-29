@@ -86,7 +86,9 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertViewHas('order', fn (Order $viewOrder): bool => $viewOrder->is($order))
             ->assertViewHas('pixEnabled', false)
             ->assertSee('Mala de mao inclusa', false)
-            ->assertSee('Mala despachada nao inclusa', false);
+            ->assertSee('Mala despachada nao inclusa', false)
+            ->assertSee('text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA', false)
+            ->assertDontSee('bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded">IDA', false);
 
         $this->actingAs($customer, 'customer')
             ->withCookie('ref_code', 'IND-COOKIE')
@@ -101,7 +103,10 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertViewHas('isAffiliate', true)
             ->assertViewHas('refCookie', 'IND-COOKIE')
             ->assertViewHas('savedPassengers', fn ($passengers): bool => $passengers->count() === 1)
-            ->assertSee('Mala de mao inclusa', false);
+            ->assertSee('Mala de mao inclusa', false)
+            ->assertSee('required-label block text-sm font-medium text-gray-700 mb-1">Nome completo', false)
+            ->assertSee('required-label block text-sm font-medium text-gray-700 mb-1">CPF', false)
+            ->assertSee('required-label block text-sm font-medium text-gray-700 mb-1">Número do cartão', false);
 
         $expired = $this->createOrder([
             'expires_at' => now()->subMinute(),
@@ -158,6 +163,23 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertOk()
             ->assertViewIs('checkout.awaiting-payment')
             ->assertViewHas('payment', null);
+
+        $cardOrder = $this->createOrder(['status' => 'awaiting_payment']);
+        $cardPayment = $this->addPayment($cardOrder, [
+            'payment_method' => 'credit_card',
+            'status' => 'pending',
+            'expires_at' => now()->addHour(),
+        ]);
+        $resolver->shouldReceive('resolveForPayment')
+            ->once()
+            ->with(Mockery::on(fn ($payment): bool => $payment->is($cardPayment)))
+            ->andThrow(new \RuntimeException('operadora em análise'));
+        $this->get(route('checkout.payment-callback', $cardOrder))
+            ->assertOk()
+            ->assertViewIs('checkout.awaiting-payment')
+            ->assertSee('Pagamento em análise')
+            ->assertDontSee('Aguardando pagamento')
+            ->assertDontSee('Verificar pagamento');
 
         $expiredOrder = $this->createOrder(['status' => 'awaiting_payment']);
         $expiredPayment = $this->addPayment($expiredOrder, [

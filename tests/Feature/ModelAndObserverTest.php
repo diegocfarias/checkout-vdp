@@ -220,6 +220,40 @@ class ModelAndObserverTest extends TestCase
         Mail::assertSent(OrderStatusMail::class, fn (OrderStatusMail $mail): bool => $mail->hasTo('passageiro@example.com'));
     }
 
+    public function test_order_status_mail_uses_card_analysis_copy_and_neutral_direction_labels(): void
+    {
+        $flightSearch = $this->createFlightSearch([
+            'trip_type' => 'roundtrip',
+            'inbound_date' => '2026-06-17',
+        ]);
+        $order = $this->createOrder([
+            'flight_search_id' => $flightSearch->id,
+            'status' => 'awaiting_payment',
+        ]);
+        $this->addPassenger($order, ['email' => 'passageiro@example.com']);
+        $this->addFlight($order, ['direction' => 'outbound']);
+        $this->addFlight($order, [
+            'direction' => 'inbound',
+            'departure_location' => 'SDU',
+            'arrival_location' => 'GRU',
+        ]);
+        $payment = $this->addPayment($order, [
+            'payment_method' => 'credit_card',
+            'gateway' => 'appmax',
+        ]);
+
+        $mail = new OrderStatusMail($order->fresh(), 'awaiting_payment', $payment);
+        $html = $mail->render();
+
+        $this->assertSame("Pedido {$order->tracking_code} - Pagamento em análise", $mail->envelope()->subject);
+        $this->assertStringContainsString('PAGAMENTO EM ANÁLISE', $html);
+        $this->assertStringContainsString('o pagamento está em análise', $html);
+        $this->assertStringNotContainsString('está aguardando pagamento', $html);
+        $this->assertStringContainsString('color: #4b5563; font-size: 10px; font-weight: 700; text-transform: uppercase', $html);
+        $this->assertStringContainsString('>Ida</span>', $html);
+        $this->assertStringContainsString('>Volta</span>', $html);
+    }
+
     public function test_order_observer_dispatches_travellink_auto_emission_for_eligible_orders(): void
     {
         Bus::fake();

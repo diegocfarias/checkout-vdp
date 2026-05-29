@@ -50,10 +50,18 @@
             </h1>
 
             @if($ticket->order)
-                <p class="text-sm text-gray-500 mb-3">
-                    Referente ao pedido
-                    <a href="{{ route('customer.order.show', $ticket->order) }}" class="text-blue-600 hover:underline font-medium">{{ $ticket->order->tracking_code }}</a>
-                </p>
+                <div class="mb-3 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                    <span>
+                        Referente ao pedido
+                        <a href="{{ route('customer.order.show', $ticket->order) }}" class="text-blue-600 hover:underline font-medium">{{ $ticket->order->tracking_code }}</a>
+                    </span>
+                    <a href="{{ route('customer.order.show', $ticket->order) }}" class="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 transition-colors">
+                        Ir para o pedido
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
             @endif
 
             <div class="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ $ticket->message }}</div>

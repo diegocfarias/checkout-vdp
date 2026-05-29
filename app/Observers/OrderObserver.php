@@ -74,7 +74,9 @@ class OrderObserver
         $code = $order->tracking_code;
 
         return match ($status) {
-            'awaiting_payment' => "Seu pedido {$code} está aguardando pagamento. Acesse o link para pagar.",
+            'awaiting_payment' => $order->isAwaitingCreditCardAnalysis()
+                ? "Seu pedido {$code} está com o pagamento em análise. Você receberá a confirmação assim que a operadora retornar."
+                : "Seu pedido {$code} está aguardando pagamento. Acesse o link para pagar.",
             'awaiting_emission' => "Pagamento confirmado! Acompanhe seu pedido {$code}: {$trackingUrl}",
             'completed' => "Suas passagens foram emitidas! Confira os detalhes do pedido {$code}: {$trackingUrl}",
             'cancelled' => "Seu pedido {$code} foi cancelado.",

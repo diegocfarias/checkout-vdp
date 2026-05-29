@@ -281,7 +281,8 @@ class FilamentSupportCoverageTest extends TestCase
             ->assertSee('resposta.png')
             ->assertSee('3,0 MB')
             ->assertSee('Nota interna da equipe.')
-            ->assertSee('Obrigado pelo retorno.');
+            ->assertSee('Obrigado pelo retorno.')
+            ->assertActionVisible('go_to_order');
 
         $emptyTicket = $this->createTicket($customer, [
             'subject' => 'other',

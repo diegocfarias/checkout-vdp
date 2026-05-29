@@ -20,20 +20,33 @@ class CustomerAreaControllerTest extends TestCase
         $customer = $this->createCustomer(['email' => 'cliente@example.com']);
         $other = $this->createCustomer(['email' => 'outro@example.com']);
         $ownOrder = $this->createOrder(['customer_id' => $customer->id]);
+        $cardOrder = $this->createOrder([
+            'customer_id' => $customer->id,
+            'status' => 'awaiting_payment',
+            'tracking_code' => 'VDP-CARD',
+        ]);
+        $this->addPayment($cardOrder, [
+            'payment_method' => 'credit_card',
+            'status' => 'pending',
+        ]);
         $otherOrder = $this->createOrder(['customer_id' => $other->id]);
 
         $this->actingAs($customer, 'customer')
             ->get(route('customer.dashboard'))
             ->assertOk()
             ->assertViewIs('customer.dashboard')
+            ->assertSee('Pagamento em análise')
             ->assertViewHas('recentOrders', fn ($orders): bool => $orders->pluck('id')->contains($ownOrder->id)
+                && $orders->pluck('id')->contains($cardOrder->id)
                 && ! $orders->pluck('id')->contains($otherOrder->id));
 
         $this->actingAs($customer, 'customer')
             ->get(route('customer.orders'))
             ->assertOk()
             ->assertViewIs('customer.orders')
+            ->assertSee('Pagamento em análise')
             ->assertViewHas('orders', fn ($orders): bool => $orders->getCollection()->pluck('id')->contains($ownOrder->id)
+                && $orders->getCollection()->pluck('id')->contains($cardOrder->id)
                 && ! $orders->getCollection()->pluck('id')->contains($otherOrder->id));
     }
 

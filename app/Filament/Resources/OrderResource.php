@@ -4,7 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrderResource\Pages;
 use App\Models\Order;
-use App\Models\OrderStatusHistory;
 use App\Services\PaymentGatewayResolver;
 use BackedEnum;
 use Filament\Actions;
@@ -51,7 +50,7 @@ class OrderResource extends Resource
                 Tables\Columns\TextColumn::make('route')
                     ->label('Rota')
                     ->getStateUsing(fn (Order $record) => $record->departure_iata && $record->arrival_iata
-                        ? strtoupper($record->departure_iata) . ' → ' . strtoupper($record->arrival_iata)
+                        ? strtoupper($record->departure_iata).' → '.strtoupper($record->arrival_iata)
                         : '-'),
                 Tables\Columns\TextColumn::make('passengers.full_name')
                     ->label('Passageiro')
@@ -61,26 +60,30 @@ class OrderResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
+                    ->getStateUsing(fn (Order $record): string => $record->displayStatusLabel())
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'pending' => 'warning',
-                        'awaiting_payment' => 'info',
-                        'awaiting_emission' => 'primary',
-                        'completed' => 'success',
-                        'cancelled' => 'danger',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (string $state): string => self::statusLabel($state)),
+                    ->color(fn (Order $record): string => $record->isAwaitingCreditCardAnalysis()
+                        ? 'warning'
+                        : match ($record->status) {
+                            'pending' => 'warning',
+                            'awaiting_payment' => 'info',
+                            'awaiting_emission' => 'primary',
+                            'completed' => 'success',
+                            'cancelled' => 'danger',
+                            default => 'gray',
+                        }),
                 Tables\Columns\TextColumn::make('total_price')
                     ->label('Valor')
                     ->getStateUsing(function (Order $record) {
                         $record->loadMissing('flights');
                         $payingPax = $record->total_adults + $record->total_children;
-                        if ($payingPax < 1) $payingPax = 1;
+                        if ($payingPax < 1) {
+                            $payingPax = 1;
+                        }
                         $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0)) * $payingPax;
                         $total -= (float) ($record->discount_amount ?? 0);
 
-                        return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';
+                        return $total > 0 ? 'R$ '.number_format($total, 2, ',', '.') : '-';
                     }),
                 Tables\Columns\TextColumn::make('device_type')
                     ->label('Dispositivo')
@@ -131,14 +134,15 @@ class OrderResource extends Resource
                         $fields = [];
                         foreach ($record->flights as $flight) {
                             $dir = $flight->direction === 'outbound' ? 'Ida' : 'Volta';
-                            $label = $dir . ' — ' . strtoupper($flight->cia ?? '');
-                            $fields[] = TextInput::make('loc_' . $flight->id)
+                            $label = $dir.' — '.strtoupper($flight->cia ?? '');
+                            $fields[] = TextInput::make('loc_'.$flight->id)
                                 ->label($label)
                                 ->placeholder('Ex: ABC123')
                                 ->required()
                                 ->maxLength(20)
                                 ->extraInputAttributes(['style' => 'text-transform: uppercase']);
                         }
+
                         return $fields;
                     })
                     ->visible(fn (Order $record): bool => $record->status === 'awaiting_emission')
@@ -146,7 +150,7 @@ class OrderResource extends Resource
                         $record->loadMissing('flights');
                         $locs = [];
                         foreach ($record->flights as $flight) {
-                            $loc = strtoupper(trim($data['loc_' . $flight->id] ?? ''));
+                            $loc = strtoupper(trim($data['loc_'.$flight->id] ?? ''));
                             if ($loc) {
                                 $flight->update(['loc' => $loc]);
                                 $locs[] = $loc;
@@ -187,6 +191,7 @@ class OrderResource extends Resource
                         $payment = $record->latestPayment;
                         if (! $payment) {
                             Notification::make()->title('Nenhum pagamento encontrado')->danger()->send();
+
                             return;
                         }
 
@@ -237,16 +242,18 @@ class OrderResource extends Resource
                             ->copyable(),
                         Infolists\Components\TextEntry::make('status')
                             ->label('Status')
+                            ->getStateUsing(fn (Order $record): string => $record->displayStatusLabel())
                             ->badge()
-                            ->color(fn (string $state): string => match ($state) {
-                                'pending' => 'warning',
-                                'awaiting_payment' => 'info',
-                                'awaiting_emission' => 'primary',
-                                'completed' => 'success',
-                                'cancelled' => 'danger',
-                                default => 'gray',
-                            })
-                            ->formatStateUsing(fn (string $state): string => self::statusLabel($state)),
+                            ->color(fn (Order $record): string => $record->isAwaitingCreditCardAnalysis()
+                                ? 'warning'
+                                : match ($record->status) {
+                                    'pending' => 'warning',
+                                    'awaiting_payment' => 'info',
+                                    'awaiting_emission' => 'primary',
+                                    'completed' => 'success',
+                                    'cancelled' => 'danger',
+                                    default => 'gray',
+                                }),
                         Infolists\Components\TextEntry::make('loc')
                             ->label('LOC')
                             ->badge()
@@ -256,7 +263,7 @@ class OrderResource extends Resource
                         Infolists\Components\TextEntry::make('route')
                             ->label('Rota')
                             ->getStateUsing(fn (Order $record) => $record->departure_iata && $record->arrival_iata
-                                ? strtoupper($record->departure_iata) . ' → ' . strtoupper($record->arrival_iata)
+                                ? strtoupper($record->departure_iata).' → '.strtoupper($record->arrival_iata)
                                 : '-'),
                         Infolists\Components\TextEntry::make('outbound_date')
                             ->label('Data ida')
@@ -284,13 +291,13 @@ class OrderResource extends Resource
                             ->getStateUsing(function (Order $record) {
                                 $parts = [];
                                 if ($record->total_adults > 0) {
-                                    $parts[] = $record->total_adults . ' adulto' . ($record->total_adults > 1 ? 's' : '');
+                                    $parts[] = $record->total_adults.' adulto'.($record->total_adults > 1 ? 's' : '');
                                 }
                                 if ($record->total_children > 0) {
-                                    $parts[] = $record->total_children . ' criança' . ($record->total_children > 1 ? 's' : '');
+                                    $parts[] = $record->total_children.' criança'.($record->total_children > 1 ? 's' : '');
                                 }
                                 if ($record->total_babies > 0) {
-                                    $parts[] = $record->total_babies . ' bebê' . ($record->total_babies > 1 ? 's' : '');
+                                    $parts[] = $record->total_babies.' bebê'.($record->total_babies > 1 ? 's' : '');
                                 }
 
                                 return implode(', ', $parts) ?: '-';
@@ -300,11 +307,13 @@ class OrderResource extends Resource
                             ->getStateUsing(function (Order $record) {
                                 $record->loadMissing('flights');
                                 $payingPax = $record->total_adults + $record->total_children;
-                                if ($payingPax < 1) $payingPax = 1;
+                                if ($payingPax < 1) {
+                                    $payingPax = 1;
+                                }
                                 $total = $record->flights->sum(fn ($f) => (float) ($f->money_price ?? 0) + (float) ($f->tax ?? 0)) * $payingPax;
                                 $total -= (float) ($record->discount_amount ?? 0);
 
-                                return $total > 0 ? 'R$ ' . number_format($total, 2, ',', '.') : '-';
+                                return $total > 0 ? 'R$ '.number_format($total, 2, ',', '.') : '-';
                             }),
                         Infolists\Components\TextEntry::make('total_miles')
                             ->label('Total em milhas')
@@ -315,7 +324,7 @@ class OrderResource extends Resource
                                     $miles = $f->price_miles ?? $f->miles_price ?? null;
                                     if ($miles) {
                                         $dir = $f->direction === 'outbound' ? 'Ida' : 'Volta';
-                                        $parts[] = $dir . ': ' . number_format((float) $miles, 0, '', '.') . ' mi';
+                                        $parts[] = $dir.': '.number_format((float) $miles, 0, '', '.').' mi';
                                     }
                                 }
 
@@ -371,7 +380,7 @@ class OrderResource extends Resource
                                     return $state ?? '-';
                                 }
 
-                                return substr($state, 0, 3) . '.' . substr($state, 3, 3) . '.' . substr($state, 6, 3) . '-' . substr($state, 9, 2);
+                                return substr($state, 0, 3).'.'.substr($state, 3, 3).'.'.substr($state, 6, 3).'-'.substr($state, 9, 2);
                             })
                             ->placeholder('-'),
                         Infolists\Components\TextEntry::make('customer.phone')
@@ -399,8 +408,8 @@ class OrderResource extends Resource
                                 }
 
                                 return $record->coupon->type === 'percent'
-                                    ? $record->coupon->value . '% de desconto'
-                                    : 'R$ ' . number_format($record->coupon->value, 2, ',', '.') . ' de desconto';
+                                    ? $record->coupon->value.'% de desconto'
+                                    : 'R$ '.number_format($record->coupon->value, 2, ',', '.').' de desconto';
                             }),
                         Infolists\Components\TextEntry::make('discount_amount')
                             ->label('Valor descontado')
@@ -421,13 +430,13 @@ class OrderResource extends Resource
                                     ->color(fn (string $state): string => $state === 'outbound' ? 'info' : 'success'),
                                 Infolists\Components\TextEntry::make('flight_info')
                                     ->label('Voo')
-                                    ->getStateUsing(fn ($record) => strtoupper(trim(($record->cia ?? '') . ' ' . ($record->flight_number ?? ''))) ?: '-'),
+                                    ->getStateUsing(fn ($record) => strtoupper(trim(($record->cia ?? '').' '.($record->flight_number ?? ''))) ?: '-'),
                                 Infolists\Components\TextEntry::make('departure_info')
                                     ->label('Origem')
-                                    ->getStateUsing(fn ($record) => ($record->departure_location ?? '-') . ($record->departure_time ? ' · ' . $record->departure_time : '')),
+                                    ->getStateUsing(fn ($record) => ($record->departure_location ?? '-').($record->departure_time ? ' · '.$record->departure_time : '')),
                                 Infolists\Components\TextEntry::make('arrival_info')
                                     ->label('Destino')
-                                    ->getStateUsing(fn ($record) => ($record->arrival_location ?? '-') . ($record->arrival_time ? ' · ' . $record->arrival_time : '')),
+                                    ->getStateUsing(fn ($record) => ($record->arrival_location ?? '-').($record->arrival_time ? ' · '.$record->arrival_time : '')),
                                 Infolists\Components\TextEntry::make('flight_date')
                                     ->label('Data do voo')
                                     ->getStateUsing(function ($record) {
@@ -456,7 +465,7 @@ class OrderResource extends Resource
                                 Infolists\Components\TextEntry::make('miles_display')
                                     ->label('Milhas')
                                     ->getStateUsing(fn ($record) => ($record->price_miles ?? $record->miles_price)
-                                        ? number_format((float) ($record->price_miles ?? $record->miles_price), 0, '', '.') . ' mi'
+                                        ? number_format((float) ($record->price_miles ?? $record->miles_price), 0, '', '.').' mi'
                                         : '-')
                                     ->placeholder('-'),
                                 Infolists\Components\TextEntry::make('loc')
@@ -549,7 +558,7 @@ class OrderResource extends Resource
                                         }
                                         $d = preg_replace('/\D/', '', $state);
 
-                                        return substr($d, 0, 3) . '.' . substr($d, 3, 3) . '.' . substr($d, 6, 3) . '-' . substr($d, 9, 2);
+                                        return substr($d, 0, 3).'.'.substr($d, 3, 3).'.'.substr($d, 6, 3).'-'.substr($d, 9, 2);
                                     })
                                     ->placeholder('-')
                                     ->visible(fn ($record) => ! empty($record->document)),

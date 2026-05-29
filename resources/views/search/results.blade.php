@@ -1465,8 +1465,8 @@
                 btn.textContent = 'Aguarde...';
             });
             showTravelLoading({
-                title: 'Carregando detalhes do voo...',
-                messages: ['Verificando disponibilidade...', 'Consultando preço atualizado...', 'Preparando seu checkout...'],
+                title: 'Revalidando preço e disponibilidade...',
+                messages: ['Confirmando disponibilidade do voo...', 'Consultando preço atualizado...', 'Preparando seu checkout...'],
                 timeoutMs: 45000
             });
         }

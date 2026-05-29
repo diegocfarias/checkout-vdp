@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\SupportTicketResource\Pages;
 
+use App\Filament\Resources\OrderResource;
 use App\Filament\Resources\SupportTicketResource;
 use App\Mail\SupportTicketReplyMail;
 use App\Models\SupportTicket;
@@ -26,6 +27,15 @@ class ViewSupportTicket extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('go_to_order')
+                ->label('Ir para o pedido')
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->color('gray')
+                ->url(fn (): ?string => $this->record->order_id
+                    ? OrderResource::getUrl('view', ['record' => $this->record->order_id])
+                    : null)
+                ->visible(fn (): bool => (bool) $this->record->order_id),
+
             Actions\Action::make('reply')
                 ->label('Responder')
                 ->icon('heroicon-o-chat-bubble-left-ellipsis')
@@ -44,7 +54,7 @@ class ViewSupportTicket extends ViewRecord
                         ->maxFiles(5)
                         ->maxSize(10240)
                         ->disk('local')
-                        ->directory(fn () => 'support-ticket-attachments/' . $this->record->uuid)
+                        ->directory(fn () => 'support-ticket-attachments/'.$this->record->uuid)
                         ->storeFileNamesIn('attachment_names')
                         ->acceptedFileTypes([
                             'image/jpeg',

@@ -195,7 +195,7 @@ class OrderCheckoutControllerTest extends TestCase
         $this->get(route('checkout.show', $order->token))
             ->assertOk()
             ->assertSee('Cancelamento da viagem')
-            ->assertSee('Ver política completa')
+            ->assertDontSee('Ver política completa')
             ->assertSee('Depois desse prazo, cancelamento voluntário não gera reembolso');
 
         $this->get(route('checkout.passengers', $order->token))

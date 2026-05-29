@@ -63,6 +63,21 @@ class SearchResultsViewRulesTest extends TestCase
             ->assertSee('data-period', false)
             ->assertSee('function applyOptionFilters()', false)
             ->assertSee('option-filter-hidden', false)
-            ->assertSee('syncSelectedFlight(firstVisible)', false);
+            ->assertSee('syncSelectedFlight(firstVisible)', false)
+            ->assertSee('Revalidando preço e disponibilidade')
+            ->assertDontSee('Carregando detalhes do voo');
+    }
+
+    public function test_search_calendar_direction_labels_are_neutral(): void
+    {
+        $response = $this->get(route('search.home'));
+
+        $response->assertOk()
+            ->assertSee('whitespace-nowrap text-gray-600', false)
+            ->assertSee('bg-gray-100 text-gray-700 text-xs font-semibold', false)
+            ->assertSee('text-[10px] font-bold uppercase text-gray-500">IDA', false)
+            ->assertSee('text-[10px] font-bold uppercase text-gray-500">VOLTA', false)
+            ->assertDontSee('whitespace-nowrap text-blue-600', false)
+            ->assertDontSee('bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full', false);
     }
 }

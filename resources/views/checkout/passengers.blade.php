@@ -94,7 +94,7 @@
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label for="passengers_{{ $i }}_full_name" class="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
+                                    <label for="passengers_{{ $i }}_full_name" class="required-label block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
                                     <input type="text" name="passengers[{{ $i }}][full_name]" id="passengers_{{ $i }}_full_name"
                                            value="{{ old("passengers.{$i}.full_name") }}"
                                            data-validate="name"
@@ -105,7 +105,7 @@
                                 </div>
 
                                 <div>
-                                    <label for="passengers_{{ $i }}_nationality" class="block text-sm font-medium text-gray-700 mb-1">Nacionalidade</label>
+                                    <label for="passengers_{{ $i }}_nationality" class="required-label block text-sm font-medium text-gray-700 mb-1">Nacionalidade</label>
                                     <select name="passengers[{{ $i }}][nationality]" id="passengers_{{ $i }}_nationality"
                                             class="nationality-select v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                             data-index="{{ $i }}" required>
@@ -133,7 +133,7 @@
                                 </div>
 
                                 <div id="passengers_{{ $i }}_cpf_wrapper">
-                                    <label for="passengers_{{ $i }}_document" class="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                                    <label for="passengers_{{ $i }}_document" class="required-label block text-sm font-medium text-gray-700 mb-1">CPF</label>
                                     <input type="text" name="passengers[{{ $i }}][document]" id="passengers_{{ $i }}_document"
                                            value="{{ old("passengers.{$i}.document") }}"
                                            placeholder="000.000.000-00"
@@ -147,7 +147,7 @@
                                 </div>
 
                                 <div id="passengers_{{ $i }}_passport_wrapper" class="hidden">
-                                    <label for="passengers_{{ $i }}_passport_number" class="block text-sm font-medium text-gray-700 mb-1">Passaporte</label>
+                                    <label for="passengers_{{ $i }}_passport_number" class="required-label block text-sm font-medium text-gray-700 mb-1">Passaporte</label>
                                     <input type="text" name="passengers[{{ $i }}][passport_number]" id="passengers_{{ $i }}_passport_number"
                                            value="{{ old("passengers.{$i}.passport_number") }}"
                                            placeholder="Nº do passaporte"
@@ -157,7 +157,7 @@
                                 </div>
 
                                 <div id="passengers_{{ $i }}_passport_expiry_wrapper" class="hidden">
-                                    <label for="passengers_{{ $i }}_passport_expiry" class="block text-sm font-medium text-gray-700 mb-1">Validade do passaporte</label>
+                                    <label for="passengers_{{ $i }}_passport_expiry" class="required-label block text-sm font-medium text-gray-700 mb-1">Validade do passaporte</label>
                                     <input type="text" name="passengers[{{ $i }}][passport_expiry]" id="passengers_{{ $i }}_passport_expiry"
                                            value="{{ old("passengers.{$i}.passport_expiry") }}"
                                            placeholder="dd/mm/aaaa"
@@ -169,7 +169,7 @@
                                 </div>
 
                                 <div>
-                                    <label for="passengers_{{ $i }}_birth_date" class="block text-sm font-medium text-gray-700 mb-1">Data de nascimento</label>
+                                    <label for="passengers_{{ $i }}_birth_date" class="required-label block text-sm font-medium text-gray-700 mb-1">Data de nascimento</label>
                                     <input type="text" name="passengers[{{ $i }}][birth_date]" id="passengers_{{ $i }}_birth_date"
                                            value="{{ old("passengers.{$i}.birth_date") }}"
                                            placeholder="dd/mm/aaaa"
@@ -183,7 +183,7 @@
                                 </div>
 
                                 <div>
-                                    <label for="passengers_{{ $i }}_email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                                    <label for="passengers_{{ $i }}_email" class="required-label block text-sm font-medium text-gray-700 mb-1">E-mail</label>
                                     <input type="email" name="passengers[{{ $i }}][email]" id="passengers_{{ $i }}_email"
                                            value="{{ old("passengers.{$i}.email") }}"
                                            data-validate="email"
@@ -194,7 +194,7 @@
                                 </div>
 
                                 <div>
-                                    <label for="passengers_{{ $i }}_phone" class="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                                    <label for="passengers_{{ $i }}_phone" class="required-label block text-sm font-medium text-gray-700 mb-1">Telefone</label>
                                     <input type="tel" name="passengers[{{ $i }}][phone]" id="passengers_{{ $i }}_phone"
                                            value="{{ old("passengers.{$i}.phone") }}"
                                            placeholder="(00) 00000-0000"
@@ -243,7 +243,7 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="payer_name" class="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
+                            <label for="payer_name" class="required-label block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
                             <input type="text" name="payer_name" id="payer_name"
                                    value="{{ old('payer_name', auth('customer')->user()?->name) }}"
                                    data-validate="name"
@@ -252,7 +252,7 @@
                             <span class="error-msg"></span>
                         </div>
                         <div>
-                            <label for="payer_email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                            <label for="payer_email" class="required-label block text-sm font-medium text-gray-700 mb-1">E-mail</label>
                             <input type="email" name="payer_email" id="payer_email"
                                    value="{{ old('payer_email', auth('customer')->user()?->email) }}"
                                    data-validate="email"
@@ -261,7 +261,7 @@
                             <span class="error-msg"></span>
                         </div>
                         <div>
-                            <label for="payer_document" class="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                            <label for="payer_document" class="required-label block text-sm font-medium text-gray-700 mb-1">CPF</label>
                             @php
                                 $customerCpf = auth('customer')->user()?->document;
                                 $customerCpfFormatted = $customerCpf && strlen($customerCpf) === 11
@@ -381,7 +381,7 @@
                         <h4 class="text-sm font-semibold text-gray-700 mb-4">Dados do cartão</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="md:col-span-2">
-                                <label for="card_number" class="block text-sm font-medium text-gray-700 mb-1">Número do cartão</label>
+                                <label for="card_number" class="required-label block text-sm font-medium text-gray-700 mb-1">Número do cartão</label>
                                 <input type="text" name="card_number" id="card_number" maxlength="19" placeholder="0000 0000 0000 0000"
                                        inputmode="numeric" data-mask="card" data-validate="card"
                                        class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
@@ -389,7 +389,7 @@
                                 <span class="error-msg"></span>
                             </div>
                             <div>
-                                <label for="card_name" class="block text-sm font-medium text-gray-700 mb-1">Nome no cartão</label>
+                                <label for="card_name" class="required-label block text-sm font-medium text-gray-700 mb-1">Nome no cartão</label>
                                 <input type="text" name="card_name" id="card_name" placeholder="Como está no cartão"
                                        class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border"
                                        value="{{ old('card_name') }}">
@@ -397,7 +397,7 @@
                             </div>
                             <div class="md:col-span-2 card-validity-row flex flex-wrap gap-4">
                                 <div class="card-validity-group">
-                                    <label for="card_month" class="block text-sm font-medium text-gray-700 mb-1">Validade</label>
+                                    <label for="card_month" class="required-label block text-sm font-medium text-gray-700 mb-1">Validade</label>
                                     <div class="flex items-center gap-1">
                                         <input type="text" name="card_month" id="card_month" maxlength="2" placeholder="MM"
                                                inputmode="numeric" data-mask="card-month" data-validate="card-month"
@@ -412,7 +412,7 @@
                                     <span class="error-msg card-validity-error"></span>
                                 </div>
                                 <div>
-                                    <label for="card_cvv" class="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                                    <label for="card_cvv" class="required-label block text-sm font-medium text-gray-700 mb-1">CVV</label>
                                     <input type="text" name="card_cvv" id="card_cvv" maxlength="4" placeholder="123"
                                            inputmode="numeric" data-mask="cvv" data-validate="cvv"
                                            class="card-input v-input w-20 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-2 py-2 border"
@@ -421,7 +421,7 @@
                                 </div>
                             </div>
                             <div>
-                                <label for="installments" class="block text-sm font-medium text-gray-700 mb-1">Parcelas</label>
+                                <label for="installments" class="required-label block text-sm font-medium text-gray-700 mb-1">Parcelas</label>
                                 <select name="installments" id="installments" class="card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                     @for($i = 1; $i <= ($maxInstallments ?? 12); $i++)
                                         @php
@@ -441,7 +441,7 @@
                             <h4 class="text-sm font-semibold text-gray-700 mb-4">Endereço de cobrança</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label for="billing_zipcode" class="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                                    <label for="billing_zipcode" class="required-label block text-sm font-medium text-gray-700 mb-1">CEP</label>
                                     <div class="relative">
                                         <input type="text" name="billing_zipcode" id="billing_zipcode"
                                                value="{{ old('billing_zipcode') }}"
@@ -459,7 +459,7 @@
                                     <span id="cep-hint" class="hidden text-xs text-amber-600 mt-1"></span>
                                 </div>
                                 <div>
-                                    <label for="billing_street" class="block text-sm font-medium text-gray-700 mb-1">Rua</label>
+                                    <label for="billing_street" class="required-label block text-sm font-medium text-gray-700 mb-1">Rua</label>
                                     <input type="text" name="billing_street" id="billing_street"
                                            value="{{ old('billing_street') }}"
                                            data-validate="required"
@@ -467,7 +467,7 @@
                                     <span class="error-msg"></span>
                                 </div>
                                 <div>
-                                    <label for="billing_number" class="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                                    <label for="billing_number" class="required-label block text-sm font-medium text-gray-700 mb-1">Número</label>
                                     <input type="text" name="billing_number" id="billing_number"
                                            value="{{ old('billing_number') }}"
                                            data-validate="required"
@@ -481,7 +481,7 @@
                                            class="billing-input card-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
                                 </div>
                                 <div>
-                                    <label for="billing_neighborhood" class="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                                    <label for="billing_neighborhood" class="required-label block text-sm font-medium text-gray-700 mb-1">Bairro</label>
                                     <input type="text" name="billing_neighborhood" id="billing_neighborhood"
                                            value="{{ old('billing_neighborhood') }}"
                                            data-validate="required"
@@ -489,7 +489,7 @@
                                     <span class="error-msg"></span>
                                 </div>
                                 <div>
-                                    <label for="billing_city" class="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                                    <label for="billing_city" class="required-label block text-sm font-medium text-gray-700 mb-1">Cidade</label>
                                     <input type="text" name="billing_city" id="billing_city"
                                            value="{{ old('billing_city') }}"
                                            data-validate="required"
@@ -497,7 +497,7 @@
                                     <span class="error-msg"></span>
                                 </div>
                                 <div>
-                                    <label for="billing_state" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                                    <label for="billing_state" class="required-label block text-sm font-medium text-gray-700 mb-1">Estado</label>
                                     <select name="billing_state" id="billing_state"
                                             data-validate="required"
                                             class="billing-input card-input v-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-3 border">
@@ -568,7 +568,7 @@
                         @endphp
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="flex flex-wrap items-center gap-2 mb-2">
-                                <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">IDA</span>
+                                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA</span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $outbound->cia }}</span>
                                 @if($outbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $outbound->flight_number }}</span>
@@ -610,7 +610,7 @@
                         @endphp
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="flex flex-wrap items-center gap-2 mb-2">
-                                <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded">VOLTA</span>
+                                <span class="text-xs font-semibold text-gray-600 uppercase tracking-wide">VOLTA</span>
                                 <span class="text-sm text-gray-500 uppercase">{{ $inbound->cia }}</span>
                                 @if($inbound->flight_number)
                                     <span class="text-sm text-gray-500">{{ $inbound->flight_number }}</span>
@@ -691,6 +691,7 @@
 
     <style>
         details[open] .details-open-rotate { transform: rotate(180deg); }
+        .required-label::after { content: ' *'; color: #dc2626; font-weight: 700; }
         .input-error { border-color: #ef4444 !important; }
         .input-error:focus { border-color: #ef4444 !important; --tw-ring-color: #ef4444 !important; }
         .error-msg { display: none; color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; }

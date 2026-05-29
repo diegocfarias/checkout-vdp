@@ -94,7 +94,11 @@
                             <p style="margin: 0 0 4px; font-size: 15px; color: #6b7280; line-height: 1.6;">
                                 @switch($newStatus)
                                     @case('awaiting_payment')
-                                        Seu pedido <strong style="color: #111827;">{{ $order->tracking_code }}</strong> foi criado com sucesso e está aguardando pagamento.
+                                        @if($isCard)
+                                            Seu pedido <strong style="color: #111827;">{{ $order->tracking_code }}</strong> foi criado com sucesso e o pagamento está em análise.
+                                        @else
+                                            Seu pedido <strong style="color: #111827;">{{ $order->tracking_code }}</strong> foi criado com sucesso e está aguardando pagamento.
+                                        @endif
                                         @break
                                     @case('awaiting_emission')
                                         Pagamento confirmado! Seu pedido <strong style="color: #111827;">{{ $order->tracking_code }}</strong> está sendo encaminhado para emissão das passagens.
@@ -211,7 +215,7 @@
                                         <table width="100%" cellpadding="0" cellspacing="0">
                                             <tr>
                                                 <td>
-                                                    <span style="display: inline-block; background-color: #059669; color: #ffffff; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Ida</span>
+                                                    <span style="display: inline-block; color: #4b5563; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Ida</span>
                                                 </td>
                                                 @if($flightSearch && $flightSearch->outbound_date)
                                                 <td align="right">
@@ -248,7 +252,7 @@
                                         <table width="100%" cellpadding="0" cellspacing="0">
                                             <tr>
                                                 <td>
-                                                    <span style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Volta</span>
+                                                    <span style="display: inline-block; color: #4b5563; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Volta</span>
                                                 </td>
                                                 @if($flightSearch && $flightSearch->inbound_date)
                                                 <td align="right">
@@ -417,6 +421,9 @@
                                         'awaiting_payment' => '#f59e0b',
                                         default => '#d1d5db',
                                     };
+                                    $historyLabel = $isCard && $history->status === 'awaiting_payment'
+                                        ? 'Pagamento em análise'
+                                        : $history->description;
                                 @endphp
                                 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: {{ $loop->last ? '0' : '4px' }};">
                                     <tr>
@@ -424,7 +431,7 @@
                                             <div style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ $dotColor }};"></div>
                                         </td>
                                         <td style="padding-bottom: 12px; {{ !$loop->last ? 'border-bottom: 1px solid #f3f4f6;' : '' }}">
-                                            <p style="margin: 0; font-size: 13px; font-weight: 600; color: #374151;">{{ $history->description }}</p>
+                                            <p style="margin: 0; font-size: 13px; font-weight: 600; color: #374151;">{{ $historyLabel }}</p>
                                             <p style="margin: 2px 0 0; font-size: 11px; color: #9ca3af;">{{ $history->created_at->format('d/m/Y \à\s H:i') }}</p>
                                         </td>
                                     </tr>
