@@ -463,6 +463,7 @@
     var searchStarted = false;
     var FILTER_SELECTOR = '.filter-ob-cia, .filter-ib-cia, .filter-ob-stops, .filter-ib-stops, .filter-ob-period, .filter-ib-period';
     var FILTER_CHECKED_SELECTOR = '.filter-ob-cia:checked, .filter-ib-cia:checked, .filter-ob-stops:checked, .filter-ib-stops:checked, .filter-ob-period:checked, .filter-ib-period:checked';
+    var initialSkeletonHtml = document.getElementById('combinations-list').innerHTML;
 
     // --- Toggle inline search form ---
     var toggleBtn = document.getElementById('toggle-search-form');
@@ -1031,8 +1032,23 @@
     // ========================================
     // RENDER ALL GROUPS
     // ========================================
+    function renderSearchSkeleton() {
+        var list = document.getElementById('combinations-list');
+        if (!list) return;
+
+        list.innerHTML = initialSkeletonHtml;
+        document.getElementById('results-count').textContent = 'Buscando...';
+        document.getElementById('no-results-msg').classList.add('hidden');
+        document.getElementById('load-more-wrap').style.display = 'none';
+    }
+
     function renderGroups() {
         var list = document.getElementById('combinations-list');
+
+        if (groupsData.length === 0 && !isSearchComplete()) {
+            renderSearchSkeleton();
+            return;
+        }
 
         var html = '';
         for (var i = 0; i < groupsData.length; i++) {
@@ -1531,7 +1547,7 @@
         }
 
         document.getElementById('results-count').textContent = 'Buscando...';
-        document.getElementById('combinations-list').innerHTML = '';
+        renderSearchSkeleton();
         document.getElementById('no-results-msg').classList.add('hidden');
         document.getElementById('load-more-wrap').style.display = 'none';
 

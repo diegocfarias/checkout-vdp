@@ -3,7 +3,7 @@
 @section('title', 'Pagamento Confirmado')
 
 @section('content')
-    @include('partials._checkout_stepper', ['currentStep' => 3])
+    @include('partials._checkout_stepper', ['currentStep' => 3, 'completedStep' => 3])
     <div class="max-w-lg mx-auto text-center">
         <div class="bg-white rounded-lg shadow border border-gray-200 p-8">
             <div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
@@ -14,6 +14,11 @@
 
             <h2 class="text-2xl font-bold text-gray-800 mb-2">Pagamento confirmado!</h2>
             <p class="text-gray-500 mb-6">Seu pedido está sendo encaminhado para emissão. Em breve você receberá a confirmação.</p>
+
+            <div class="mb-6 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-left">
+                <p class="text-xs font-semibold uppercase tracking-wide text-blue-500">Status atual</p>
+                <p class="text-sm font-semibold text-blue-800">Aguardando emissão</p>
+            </div>
 
             @php
                 $outbound = $order->flights->firstWhere('direction', 'outbound');

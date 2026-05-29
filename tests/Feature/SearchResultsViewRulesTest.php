@@ -64,6 +64,10 @@ class SearchResultsViewRulesTest extends TestCase
             ->assertSee('function applyOptionFilters()', false)
             ->assertSee('option-filter-hidden', false)
             ->assertSee('syncSelectedFlight(firstVisible)', false)
+            ->assertSee('initialSkeletonHtml', false)
+            ->assertSee('function renderSearchSkeleton()', false)
+            ->assertSee('groupsData.length === 0 && !isSearchComplete()', false)
+            ->assertSee("window.addEventListener('pageshow'", false)
             ->assertSee('Revalidando preço e disponibilidade')
             ->assertDontSee('Carregando detalhes do voo');
     }
@@ -79,5 +83,35 @@ class SearchResultsViewRulesTest extends TestCase
             ->assertSee('text-[10px] font-bold uppercase text-gray-500">VOLTA', false)
             ->assertDontSee('whitespace-nowrap text-blue-600', false)
             ->assertDontSee('bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full', false);
+    }
+
+    public function test_expired_search_session_shows_refresh_modal(): void
+    {
+        $vdp = Mockery::mock(VdpFlightService::class);
+        $vdp->shouldReceive('getActiveProviderSlots')
+            ->once()
+            ->andReturn([
+                ['provider' => 'vdp', 'airlines' => 'GOL', 'patria' => false],
+            ]);
+        $this->app->instance(VdpFlightService::class, $vdp);
+
+        $this->withSession([
+            'search_refresh_modal' => [
+                'message' => 'Sua pesquisa expirou. Vamos refazer a busca com disponibilidade e preços atualizados.',
+            ],
+        ])->get(route('search.results', [
+            'trip_type' => 'oneway',
+            'departure' => 'GIG',
+            'arrival' => 'FOR',
+            'outbound_date' => '2026-07-16',
+            'adults' => 1,
+            'children' => 0,
+            'infants' => 0,
+            'cabin' => 'EC',
+        ]))
+            ->assertOk()
+            ->assertSee('Disponibilidade alterada')
+            ->assertSee('Sua pesquisa expirou')
+            ->assertSee('Nova busca');
     }
 }

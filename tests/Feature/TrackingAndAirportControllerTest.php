@@ -94,6 +94,24 @@ class TrackingAndAirportControllerTest extends TestCase
             ->assertSessionHas("tracking_verified_{$order->tracking_code}", true);
     }
 
+    public function test_tracking_show_separates_confirmed_payment_from_awaiting_emission(): void
+    {
+        $order = $this->createOrder([
+            'tracking_code' => 'VDP-EMIT',
+            'status' => 'awaiting_emission',
+        ]);
+
+        $this->get(route('tracking.show', [
+            'trackingCode' => 'VDP-EMIT',
+            'token' => $order->token,
+        ]))
+            ->assertOk()
+            ->assertSee('Pagamento confirmado')
+            ->assertSee('Recebemos a confirmação do pagamento do seu pedido.')
+            ->assertSee('Aguardando emissão')
+            ->assertSee('Nossa equipe está emitindo as passagens');
+    }
+
     public function test_tracking_show_rejects_invalid_token_without_prior_session(): void
     {
         $order = $this->createOrder([

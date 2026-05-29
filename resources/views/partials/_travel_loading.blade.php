@@ -112,5 +112,11 @@
         if (msgInterval) { clearInterval(msgInterval); msgInterval = null; }
         if (timeoutTimer) { clearTimeout(timeoutTimer); timeoutTimer = null; }
     };
+
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            window.hideTravelLoading();
+        }
+    });
 })();
 </script>

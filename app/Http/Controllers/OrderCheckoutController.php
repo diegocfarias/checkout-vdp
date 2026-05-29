@@ -31,11 +31,17 @@ class OrderCheckoutController extends Controller
     {
         $order = Order::with(['flights', 'flightSearch', 'coupon'])
             ->where('token', $token)
-            ->pending()
-            ->notExpired()
             ->first();
 
         if (! $order) {
+            return response()->view('checkout.not-found', [], 404);
+        }
+
+        if ($redirect = $this->redirectExpiredPendingOrder($order)) {
+            return $redirect;
+        }
+
+        if (! $order->isAccessible()) {
             return response()->view('checkout.not-found', [], 404);
         }
 
@@ -55,11 +61,17 @@ class OrderCheckoutController extends Controller
     {
         $order = Order::with(['flights', 'flightSearch'])
             ->where('token', $token)
-            ->pending()
-            ->notExpired()
             ->first();
 
         if (! $order) {
+            return response()->view('checkout.not-found', [], 404);
+        }
+
+        if ($redirect = $this->redirectExpiredPendingOrder($order)) {
+            return $redirect;
+        }
+
+        if (! $order->isAccessible()) {
             return response()->view('checkout.not-found', [], 404);
         }
 
@@ -102,6 +114,36 @@ class OrderCheckoutController extends Controller
             'referralEnabled' => $referralEnabled,
             'refCookie' => $refCookie,
         ]);
+    }
+
+    private function redirectExpiredPendingOrder(Order $order)
+    {
+        if ($order->status !== 'pending' || ! $order->expires_at?->isPast()) {
+            return null;
+        }
+
+        $search = $order->flightSearch;
+        if (! $search || ! $search->outbound_date) {
+            return null;
+        }
+
+        $params = array_filter([
+            'trip_type' => $search->trip_type ?: ($search->inbound_date ? 'roundtrip' : 'oneway'),
+            'departure' => $search->departure_iata ?: $order->departure_iata,
+            'arrival' => $search->arrival_iata ?: $order->arrival_iata,
+            'outbound_date' => $search->outbound_date?->format('Y-m-d'),
+            'inbound_date' => $search->inbound_date?->format('Y-m-d'),
+            'adults' => $search->adults ?? $order->total_adults ?? 1,
+            'children' => $search->children ?? $order->total_children ?? 0,
+            'infants' => $search->infants ?? $order->total_babies ?? 0,
+            'cabin' => $search->cabin ?: $order->cabin ?: 'EC',
+        ], fn ($value) => $value !== null && $value !== '');
+
+        return redirect()
+            ->route('search.results', $params)
+            ->with('search_refresh_modal', [
+                'message' => 'Sua pesquisa expirou. Vamos refazer a busca com disponibilidade e preços atualizados.',
+            ]);
     }
 
     public function store(StoreOrderPassengersRequest $request, Order $order)

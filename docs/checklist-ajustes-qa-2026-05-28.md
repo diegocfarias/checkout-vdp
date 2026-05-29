@@ -11,7 +11,7 @@ Status:
 
 - ✅ Etapa 1 concluída: textos, labels e pequenos ajustes de UI.
 - ✅ Etapa 1 validada com testes de funcionalidade, suíte completa PHPUnit e Playwright.
-- [ ] Etapa 2 pendente: busca, checkout e estados visuais.
+- ✅ Etapa 2 concluída: busca, checkout e estados visuais.
 - [ ] Etapa 3 pendente: checkout e dados de passageiro.
 - [ ] Etapa 4 pendente: painel operacional essencial.
 - [ ] Etapa 5 pendente: e-mails e autenticação.
@@ -68,21 +68,32 @@ Objetivo: corrigir navegação e deixar o fluxo visual mais claro.
 
 ### Implementação
 
-- [ ] Corrigir bug ao voltar na busca.
-- [ ] Adicionar skeleton de carregamento até trazer os primeiros resultados na busca.
-- [ ] Adicionar ícones de avião de ida e volta acima do horário no checkout.
-- [ ] Ajustar componentes de status para preencher com check as etapas já concluídas.
-- [ ] Separar visualmente os estados "Pagamento confirmado" e "Aguardando emissão".
-- [ ] Implementar validação ou modal de expiração da pesquisa conforme referência visual.
+- ✅ Corrigir bug ao voltar na busca.
+- ✅ Adicionar skeleton de carregamento até trazer os primeiros resultados na busca.
+- ✅ Adicionar ícones de avião de ida e volta acima do horário no checkout.
+- ✅ Ajustar componentes de status para preencher com check as etapas já concluídas.
+- ✅ Separar visualmente os estados "Pagamento confirmado" e "Aguardando emissão".
+- ✅ Implementar validação ou modal de expiração da pesquisa conforme referência visual.
 
 ### Testes e validações
 
-- [ ] Testes de funcionalidade para estados de pedido, stepper, status e expiração.
-- [ ] Playwright para voltar da busca e validar consistência de filtros e resultados.
-- [ ] Playwright para skeleton antes dos primeiros resultados.
-- [ ] Playwright para ícones de ida e volta no checkout.
-- [ ] Playwright para stepper com checks em pedido avançado.
-- [ ] Playwright para checkout com pesquisa expirada e modal.
+- ✅ Testes de funcionalidade para estados de pedido, stepper, status e expiração.
+- ✅ Playwright para voltar da busca e validar consistência visual dos resultados.
+- ✅ Playwright para skeleton antes dos primeiros resultados.
+- ✅ Playwright para ícones de ida e volta no checkout.
+- ✅ Playwright para stepper com checks em pedido avançado.
+- ✅ Teste de funcionalidade para checkout com pesquisa expirada e modal de nova busca.
+
+### Evidências da etapa 2
+
+- ✅ Formatação executada:
+  - `php -d memory_limit=-1 vendor/bin/pint --dirty`
+- ✅ Testes de funcionalidade executados:
+  - `php artisan test tests/Feature/OrderCheckoutFlowCoverageTest.php tests/Feature/SearchResultsViewRulesTest.php tests/Feature/TrackingAndAirportControllerTest.php`
+  - Resultado: `19 passed, 204 assertions`
+- ✅ Playwright executado:
+  - `APP_URL=http://127.0.0.1:8000 DB_CONNECTION=sqlite DB_DATABASE=/private/tmp/checkout-vdp-e2e.sqlite SESSION_DRIVER=file CACHE_STORE=array QUEUE_CONNECTION=sync E2E_START_SERVER=true E2E_ENABLE_DEV_FIXTURES=true E2E_RETRIES=0 npx playwright test tests/e2e/stage2-ui.spec.ts --project=chromium`
+  - Resultado: `3 passed`
 
 ## Etapa 3 - Checkout e dados de passageiro
 

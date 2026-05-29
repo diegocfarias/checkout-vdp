@@ -13,7 +13,7 @@
         $statusConfig = [
             'pending' => ['label' => 'Pedido criado', 'color' => 'gray', 'bg' => 'bg-gray-100', 'text' => 'text-gray-700', 'dot' => 'bg-gray-400'],
             'awaiting_payment' => ['label' => $isCardAnalysis ? 'Pagamento em análise' : 'Aguardando pagamento', 'color' => 'yellow', 'bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'dot' => 'bg-yellow-500'],
-            'awaiting_emission' => ['label' => 'Pagamento confirmado', 'color' => 'blue', 'bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'dot' => 'bg-blue-500'],
+            'awaiting_emission' => ['label' => 'Aguardando emissão', 'color' => 'blue', 'bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'dot' => 'bg-blue-500'],
             'completed' => ['label' => 'Passagens emitidas', 'color' => 'green', 'bg' => 'bg-green-100', 'text' => 'text-green-800', 'dot' => 'bg-green-500'],
             'cancelled' => ['label' => 'Cancelado', 'color' => 'red', 'bg' => 'bg-red-100', 'text' => 'text-red-800', 'dot' => 'bg-red-500'],
         ];
@@ -36,8 +36,25 @@
             </div>
 
             @if($currentStatus === 'awaiting_emission')
-                <div class="bg-blue-50 rounded-lg p-3">
-                    <p class="text-sm text-blue-700">Seu pagamento foi confirmado. Estamos encaminhando para emissão das passagens.</p>
+                <div class="space-y-2">
+                    <div class="flex items-start gap-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+                        <span class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </span>
+                        <div>
+                            <p class="text-sm font-semibold text-emerald-800">Pagamento confirmado</p>
+                            <p class="text-xs text-emerald-700">Recebemos a confirmação do pagamento do seu pedido.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                        <span class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
+                        <div>
+                            <p class="text-sm font-semibold text-blue-800">Aguardando emissão</p>
+                            <p class="text-xs text-blue-700">Nossa equipe está emitindo as passagens e avisaremos assim que o localizador estiver disponível.</p>
+                        </div>
+                    </div>
                 </div>
             @elseif($currentStatus === 'completed')
                 <div class="bg-green-50 rounded-lg p-3">
@@ -362,7 +379,7 @@
                     .then(function(html) {
                         autoChecking = false;
                         if (html === null) return;
-                        if (html && (html.includes('Pagamento confirmado') || html.includes('awaiting_emission') || html.includes('completed'))) {
+                        if (html && (html.includes('Pagamento confirmado') || html.includes('Aguardando emissão') || html.includes('awaiting_emission') || html.includes('completed'))) {
                             window.location.reload();
                             return;
                         }

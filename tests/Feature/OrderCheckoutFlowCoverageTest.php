@@ -87,6 +87,8 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertViewHas('pixEnabled', false)
             ->assertSee('Mala de mao inclusa', false)
             ->assertSee('Mala despachada nao inclusa', false)
+            ->assertSee('Voo de ida', false)
+            ->assertSee('data-step-state="current"', false)
             ->assertSee('text-xs font-semibold text-gray-600 uppercase tracking-wide">IDA', false)
             ->assertDontSee('bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded">IDA', false);
 
@@ -104,9 +106,47 @@ class OrderCheckoutFlowCoverageTest extends TestCase
             ->assertViewHas('refCookie', 'IND-COOKIE')
             ->assertViewHas('savedPassengers', fn ($passengers): bool => $passengers->count() === 1)
             ->assertSee('Mala de mao inclusa', false)
+            ->assertSee('Voo de ida', false)
+            ->assertSee('data-step-state="completed"', false)
+            ->assertSee('data-step-state="current"', false)
             ->assertSee('required-label block text-sm font-medium text-gray-700 mb-1">Nome completo', false)
             ->assertSee('required-label block text-sm font-medium text-gray-700 mb-1">CPF', false)
             ->assertSee('required-label block text-sm font-medium text-gray-700 mb-1">Número do cartão', false);
+
+        $flightSearch = $this->createFlightSearch([
+            'departure_iata' => 'GRU',
+            'arrival_iata' => 'SDU',
+            'outbound_date' => '2026-06-10',
+            'inbound_date' => '2026-06-17',
+            'trip_type' => 'roundtrip',
+            'adults' => 1,
+            'children' => 0,
+            'infants' => 0,
+            'cabin' => 'EC',
+        ]);
+        $expiredWithSearch = $this->createOrder([
+            'flight_search_id' => $flightSearch->id,
+            'expires_at' => now()->subMinute(),
+        ]);
+        $refreshUrl = route('search.results', [
+            'trip_type' => 'roundtrip',
+            'departure' => 'GRU',
+            'arrival' => 'SDU',
+            'outbound_date' => '2026-06-10',
+            'inbound_date' => '2026-06-17',
+            'adults' => 1,
+            'children' => 0,
+            'infants' => 0,
+            'cabin' => 'EC',
+        ]);
+
+        $this->get("/r/{$expiredWithSearch->token}")
+            ->assertRedirect($refreshUrl)
+            ->assertSessionHas('search_refresh_modal');
+
+        $this->get("/r/{$expiredWithSearch->token}/passageiros")
+            ->assertRedirect($refreshUrl)
+            ->assertSessionHas('search_refresh_modal');
 
         $expired = $this->createOrder([
             'expires_at' => now()->subMinute(),
@@ -134,6 +174,20 @@ class OrderCheckoutFlowCoverageTest extends TestCase
                 ->assertNotFound()
                 ->assertViewIs('checkout.not-found');
         }
+    }
+
+    public function test_checkout_success_marks_all_steps_completed_and_separates_emission_status(): void
+    {
+        $order = $this->createOrder(['status' => 'awaiting_emission']);
+        $this->addFlight($order);
+
+        $html = view('checkout.success', [
+            'order' => $order->load(['flights', 'flightSearch']),
+        ])->render();
+
+        $this->assertSame(3, substr_count($html, 'data-step-state="completed"'));
+        $this->assertStringContainsString('Pagamento confirmado!', $html);
+        $this->assertStringContainsString('Aguardando emissão', $html);
     }
 
     public function test_payment_callback_covers_terminal_missing_expired_exception_paid_and_failed_states(): void

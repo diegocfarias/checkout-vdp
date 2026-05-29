@@ -582,7 +582,8 @@
                                 <p class="text-xs font-medium text-gray-600 mb-1">{{ $order->flightSearch->outbound_date->format('d/m/Y') }}</p>
                             @endif
                             <div class="flex items-center justify-between text-sm">
-                                <div>
+                                <div class="text-center">
+                                    @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'mx-auto mb-1'])
                                     <p class="font-medium text-gray-800">{{ $outbound->departure_location }}</p>
                                     <p class="text-gray-500">{{ $outbound->departure_time }}</p>
                                 </div>
@@ -592,6 +593,7 @@
                                     @endif
                                 </div>
                                 <div class="text-right">
+                                    @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'ml-auto mb-1'])
                                     <p class="font-medium text-gray-800">{{ $outbound->arrival_location }}</p>
                                     <p class="text-gray-500">{{ $outbound->arrival_time }}</p>
                                 </div>
@@ -624,7 +626,8 @@
                                 <p class="text-xs font-medium text-gray-600 mb-1">{{ $order->flightSearch->inbound_date->format('d/m/Y') }}</p>
                             @endif
                             <div class="flex items-center justify-between text-sm">
-                                <div>
+                                <div class="text-center">
+                                    @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'mx-auto mb-1'])
                                     <p class="font-medium text-gray-800">{{ $inbound->departure_location }}</p>
                                     <p class="text-gray-500">{{ $inbound->departure_time }}</p>
                                 </div>
@@ -634,6 +637,7 @@
                                     @endif
                                 </div>
                                 <div class="text-right">
+                                    @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'ml-auto mb-1'])
                                     <p class="font-medium text-gray-800">{{ $inbound->arrival_location }}</p>
                                     <p class="text-gray-500">{{ $inbound->arrival_time }}</p>
                                 </div>

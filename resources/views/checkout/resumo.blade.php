@@ -30,6 +30,7 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="shrink-0 text-center min-w-[60px]">
+                        @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'mx-auto mb-1'])
                         <p class="text-xl font-bold text-gray-800">{{ $outbound->departure_time }}</p>
                         <p class="text-sm font-semibold text-gray-600">{{ $outbound->departure_location }}</p>
                     </div>
@@ -42,6 +43,7 @@
                         </p>
                     </div>
                     <div class="shrink-0 text-center min-w-[60px]">
+                        @include('partials._flight_direction_icon', ['direction' => 'outbound', 'class' => 'mx-auto mb-1'])
                         <p class="text-xl font-bold text-gray-800">{{ $outbound->arrival_time }}</p>
                         <p class="text-sm font-semibold text-gray-600">{{ $outbound->arrival_location }}</p>
                     </div>
@@ -78,6 +80,7 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="shrink-0 text-center min-w-[60px]">
+                        @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'mx-auto mb-1'])
                         <p class="text-xl font-bold text-gray-800">{{ $inbound->departure_time }}</p>
                         <p class="text-sm font-semibold text-gray-600">{{ $inbound->departure_location }}</p>
                     </div>
@@ -90,6 +93,7 @@
                         </p>
                     </div>
                     <div class="shrink-0 text-center min-w-[60px]">
+                        @include('partials._flight_direction_icon', ['direction' => 'inbound', 'class' => 'mx-auto mb-1'])
                         <p class="text-xl font-bold text-gray-800">{{ $inbound->arrival_time }}</p>
                         <p class="text-sm font-semibold text-gray-600">{{ $inbound->arrival_location }}</p>
                     </div>
